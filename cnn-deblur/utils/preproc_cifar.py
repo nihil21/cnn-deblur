@@ -23,7 +23,7 @@ def preproc_subset(target: np.ndarray,
             std_dev = rnd.uniform(0, 3)
         else:
             std_dev = np.random.uniform(0, 3)
-        return cv2.GaussianBlur(img, (0, 0), std_dev, cv2.BORDER_DEFAULT)
+        return cv2.GaussianBlur(src=img, ksize=(0, 0), sigmaX=std_dev, borderType=cv2.BORDER_DEFAULT)
 
     # Create predictor
     predictor = np.zeros(shape=target.shape, dtype=target.dtype)
@@ -36,6 +36,11 @@ def preproc_subset(target: np.ndarray,
 
 
 def preproc_cifar():
+    """Function that loads Cifar10 dataset and produces a training and test set in which the predictors are randomly
+    Gaussian blurred images and the targets are the clear version of such images
+        :return train: tuple containing predictor and target images of the train set
+        :return test: tuple containing predictor and target images of the test set"""
+
     # Load training and test sets from Cifar10 dataset (labels are ignored)
     (train_set, _), (test_set, _) = keras.datasets.cifar10.load_data()
 
