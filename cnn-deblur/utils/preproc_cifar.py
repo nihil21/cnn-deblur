@@ -1,9 +1,9 @@
-from typing import Optional
-
 import keras
 import numpy as np
 import cv2
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Optional
 
 
 def preproc_subset(target: np.ndarray,
@@ -48,6 +48,7 @@ def preproc_cifar():
     rnd = np.random.RandomState(42)
 
     # Concurrently produce train and test sets
+    start_time = time.time()
     with ThreadPoolExecutor(max_workers=2) as executor:
         futureTrain = executor.submit(preproc_subset, train_set, rnd)
         futureTest = executor.submit(preproc_subset, test_set, rnd)
@@ -59,5 +60,6 @@ def preproc_cifar():
             else:
                 testX = future.result()
                 testY = test_set
+    print('Time elapsed: {0:.2f} s'.format(time.time() - start_time))
 
     return (trainX, trainY), (testX, testY)

@@ -5,6 +5,9 @@ def main():
     # Preprocess Cifar10 dataset
     (trainX, trainY), (testX, testY) = preproc_cifar()
 
+    print('Train set size: {0:d}'.format(trainX.shape[0]))
+    print('Test set size: {0:d}'.format(testX.shape[0]))
+
     # Chose random images
     train_idx = np.random.randint(0, trainX.shape[0])
     test_idx = np.random.randint(0, testX.shape[0])
