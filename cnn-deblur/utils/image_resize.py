@@ -1,7 +1,6 @@
+import cv2
 from os import listdir
 from os.path import isfile, join
-
-import cv2
 
 
 def resize_from_folder(input_folder, output_folder, new_dimensions):
@@ -13,9 +12,9 @@ def resize_from_folder(input_folder, output_folder, new_dimensions):
     """
 
     # !Attention! all the files in the folder will be considered
-    onlyfiles = [f for f in listdir(input_folder) if isfile(join(input_folder, f))]
+    only_files = [f for f in listdir(input_folder) if isfile(join(input_folder, f))]
     
-    for filename in onlyfiles:
+    for filename in only_files:
         full_path_input = join(input_folder, filename)
         img = cv2.imread(full_path_input, cv2.IMREAD_UNCHANGED)
 
@@ -24,4 +23,3 @@ def resize_from_folder(input_folder, output_folder, new_dimensions):
         full_path_output = join(output_folder, filename)
         if not cv2.imwrite(full_path_output, resized):
             print("[ERROR] Impossible to save resized image {}".format(full_path_output))
-

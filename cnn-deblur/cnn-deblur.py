@@ -1,38 +1,49 @@
 from utils.preproc_cifar import *
+from model.ConvNet import ConvNet
+import tensorflow as tf
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 def main():
-    # Preprocess Cifar10 dataset
-    (trainX, trainY), (testX, testY) = preproc_cifar()
+    print(tf.config.experimental.list_physical_devices('GPU'))
 
-    print('Train set size: {0:d}'.format(trainX.shape[0]))
+    # Preprocess Cifar10 dataset
+    (trainX, trainY), (testX, testY) = preproc_cifar(normalize=True)
+
+    # Reserve samples for validation
+    valX = trainX[-10000:]
+    valY = trainY[-10000:]
+
+    print('Training set size: {0:d}'.format(trainX.shape[0]))
+    print('Validation set size: {0:d}'.format(valX.shape[0]))
     print('Test set size: {0:d}'.format(testX.shape[0]))
 
-    # Chose random images
-    train_idx = np.random.randint(0, trainX.shape[0])
-    test_idx = np.random.randint(0, testX.shape[0])
+    # Create ResNet and plot model
+    conv_net = ConvNet(input_shape=(32, 32, 3))
+    conv_net.plot_model(os.path.join('..', 'res', 'model.png'))
 
-    # Prepare sample results for displaying
-    sample_trainX = cv2.cvtColor(trainX[train_idx], cv2.COLOR_BGR2RGB)
-    sample_trainY = cv2.cvtColor(trainY[train_idx], cv2.COLOR_BGR2RGB)
+    # Train model
+    conv_net.fit(trainX, trainY,
+                 batch_size=64,
+                 epochs=5,
+                 validation_data=(valX, valY))
 
-    sample_testX = cv2.cvtColor(testX[test_idx], cv2.COLOR_BGR2RGB)
-    sample_testY = cv2.cvtColor(testY[test_idx], cv2.COLOR_BGR2RGB)
+    # Evaluate the model on the test data
+    results = conv_net.model.evaluate(testX, testY, batch_size=128)
+    print('test loss, test acc:', results)
 
-    sample_trainX = cv2.resize(sample_trainX, (300, 300), interpolation=cv2.INTER_LINEAR)
-    sample_trainY = cv2.resize(sample_trainY, (300, 300), interpolation=cv2.INTER_LINEAR)
-
-    sample_testX = cv2.resize(sample_testX, (300, 300), interpolation=cv2.INTER_LINEAR)
-    sample_testY = cv2.resize(sample_testY, (300, 300), interpolation=cv2.INTER_LINEAR)
-
-    # Display results
-    sample_train = np.hstack((sample_trainX, sample_trainY))
-    sample_test = np.hstack((sample_testX, sample_testY))
-    cv2.imshow('Sample train [{:d}]'.format(train_idx), sample_train)
-    cv2.imshow('Sample test [{:d}]'.format(test_idx), sample_test)
-
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # Generate predictions on new data
+    predictions = conv_net.predict(testX[:3])
+    idx = 0
+    for img in predictions:
+        img = cv2.normalize(img,
+                            dst=None,
+                            alpha=0,
+                            beta=255,
+                            norm_type=cv2.NORM_MINMAX)
+        cv2.imwrite(os.path.join('..', 'res', 'Out{0:d}.jpg'.format(idx)), img)
+        idx += 1
 
 
 if __name__ == '__main__':

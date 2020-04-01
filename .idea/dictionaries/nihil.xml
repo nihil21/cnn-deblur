@@ -2,7 +2,11 @@
   <dictionary name="nihil">
     <words>
       <w>cifar</w>
+      <w>conv</w>
+      <w>fltr</w>
+      <w>maxpool</w>
       <w>preproc</w>
+      <w>relu</w>
     </words>
   </dictionary>
 </component>

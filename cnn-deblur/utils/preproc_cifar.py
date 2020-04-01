@@ -35,9 +35,11 @@ def preproc_subset(target: np.ndarray,
     return predictor
 
 
-def preproc_cifar():
+def preproc_cifar(normalize: Optional[bool] = False):
     """Function that loads Cifar10 dataset and produces a training and test set in which the predictors are randomly
     Gaussian blurred images and the targets are the clear version of such images
+        :param normalize: boolean indicating whether the pixel values should be normalized between 0 and 1 (optional)
+
         :return train: tuple containing predictor and target images of the train set
         :return test: tuple containing predictor and target images of the test set"""
 
@@ -48,6 +50,10 @@ def preproc_cifar():
     rnd = np.random.RandomState(42)
 
     # Concurrently produce train and test sets
+    trainX = None
+    trainY = None
+    testX = None
+    testY = None
     start_time = time.time()
     with ThreadPoolExecutor(max_workers=2) as executor:
         futureTrain = executor.submit(preproc_subset, train_set, rnd)
@@ -60,6 +66,12 @@ def preproc_cifar():
             else:
                 testX = future.result()
                 testY = test_set
+    # Normalize if required
+    if normalize:
+        trainX = trainX.astype(np.float)/255
+        trainY = trainY.astype(np.float)/255
+        testX = testX.astype(np.float)/255
+        testY = testY.astype(np.float)/255
     print('Time elapsed: {0:.2f} s'.format(time.time() - start_time))
 
     return (trainX, trainY), (testX, testY)
