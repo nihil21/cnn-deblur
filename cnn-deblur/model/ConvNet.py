@@ -119,5 +119,8 @@ class ConvNet:
     def predict(self, X: np.ndarray):
         return self.model.predict(X)
 
+    def summary(self):
+        self.model.summary()
+
     def plot_model(self, path):
         plot_model(self.model, to_file=path, show_shapes=True)
