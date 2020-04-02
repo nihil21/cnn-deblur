@@ -1,8 +1,9 @@
-from keras.models import Model
-from keras.layers import Layer, Input, Conv2D, Conv2DTranspose, BatchNormalization, Activation, Add, MaxPooling2D
-from keras.optimizers import RMSprop
-from keras.losses import MeanSquaredError
-from keras.utils import plot_model
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Layer, Input, Conv2D, Conv2DTranspose, \
+    BatchNormalization, Activation, Add, MaxPooling2D
+from tensorflow.keras.optimizers import RMSprop
+from tensorflow.keras.losses import MeanSquaredError
+from tensorflow.keras.utils import plot_model
 import numpy as np
 from typing import List, Tuple, Optional
 
