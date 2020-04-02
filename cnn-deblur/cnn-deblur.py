@@ -1,5 +1,5 @@
 from utils.preproc_cifar import *
-from model.ConvNet import ConvNet
+from model.conv_net import ConvNet
 import tensorflow as tf
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'

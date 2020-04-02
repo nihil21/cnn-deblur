@@ -58,6 +58,7 @@ def add_res_layer(kernels: List[int],
 
 
 class ConvNet:
+    """Class implementing a ResNet architecture"""
 
     def __init__(self, input_shape: Tuple[int, int, int]):
         visible = Input(shape=input_shape)
