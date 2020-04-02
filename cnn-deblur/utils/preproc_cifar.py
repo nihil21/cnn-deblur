@@ -1,4 +1,4 @@
-import tensorflow as tf
+from keras.datasets import cifar10
 import numpy as np
 import cv2
 import time
@@ -44,7 +44,7 @@ def preproc_cifar(normalize: Optional[bool] = False):
         :return test: tuple containing predictor and target images of the test set"""
 
     # Load training and test sets from Cifar10 dataset (labels are ignored)
-    (train_set, _), (test_set, _) = tf.keras.datasets.cifar10.load_data()
+    (train_set, _), (test_set, _) = cifar10.load_data()
 
     # Set random state to ensure reproducible results
     rnd = np.random.RandomState(42)
