@@ -1,8 +1,8 @@
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Layer, Input, Conv2D, Conv2DTranspose, \
     BatchNormalization, Activation, Add, MaxPooling2D
-from tensorflow.keras.optimizers import SGD
-from tensorflow.keras.losses import CategoricalCrossentropy
+from tensorflow.keras.optimizers import Adagrad
+from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.utils import plot_model
 import numpy as np
 from typing import List, Tuple, Optional
@@ -98,8 +98,7 @@ class ConvNet:
         t_conv1 = Conv2DTranspose(3, kernel_size=3, strides=2, padding='same', name='t_conv1')(layer3)
         t_conv2 = Conv2DTranspose(3, kernel_size=3, strides=2, padding='same', name='t_conv2')(t_conv1)
         self.model = Model(inputs=visible, outputs=t_conv2)
-        sgd = SGD(learning_rate=0.001, momentum=0.9)
-        self.model.compile(sgd, loss=CategoricalCrossentropy(), metrics=['accuracy'])
+        self.model.compile(Adagrad, loss=MeanSquaredError(), metrics=['accuracy'])
 
     def fit(self,
             trainX: np.ndarray,
