@@ -98,7 +98,7 @@ class ConvNet:
         t_conv1 = Conv2DTranspose(3, kernel_size=3, strides=2, padding='same', name='t_conv1')(layer3)
         t_conv2 = Conv2DTranspose(3, kernel_size=3, strides=2, padding='same', name='t_conv2')(t_conv1)
         self.model = Model(inputs=visible, outputs=t_conv2)
-        self.model.compile(Adagrad, loss=MeanSquaredError(), metrics=['accuracy'])
+        self.model.compile(Adagrad(), loss=MeanSquaredError(), metrics=['accuracy'])
 
     def fit(self,
             trainX: np.ndarray,
