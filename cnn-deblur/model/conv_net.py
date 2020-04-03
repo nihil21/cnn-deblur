@@ -1,6 +1,6 @@
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Layer, Input, Conv2D, Conv2DTranspose, \
-    BatchNormalization, Activation, Add, MaxPooling2D
+from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, BatchNormalization,
+                                     Activation, Add, MaxPooling2D)
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.utils import plot_model
