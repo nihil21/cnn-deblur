@@ -3,13 +3,13 @@ from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, Acti
                                      AveragePooling2D, Flatten, Dense, Reshape, BatchNormalization)
 from tensorflow.keras.optimizers import Adam
 from tensorflow.image import ssim_multiscale
+from tensorflow.math import reduce_mean
 from tensorflow.keras.utils import plot_model
-import numpy as np
 from typing import List, Tuple, Optional
 
 
 def loss_ms_ssim(trueY, predY):
-    return np.mean(1 - ssim_multiscale(trueY, predY, max_val=1, filter_size=3))
+    return reduce_mean(1 - ssim_multiscale(trueY, predY, max_val=1, filter_size=3))
 
 
 """
@@ -180,23 +180,23 @@ class ConvNet:
         self.model.compile(Adam(learning_rate=0.1), loss=loss_ms_ssim, metrics=['accuracy'])
 
     def fit(self,
-            trainX: np.ndarray,
-            trainY: np.ndarray,
+            trainX,
+            trainY,
             batch_size: int,
             epochs: int,
-            validation_data: Tuple[np.ndarray, np.ndarray]):
+            validation_data):
         return self.model.fit(trainX, trainY,
                               batch_size=batch_size,
                               epochs=epochs,
                               validation_data=validation_data)
 
     def evaluate(self,
-                 testX: np.ndarray,
-                 testY: np.ndarray,
+                 testX,
+                 testY,
                  batch_size: int):
         self.model.evaluate(testX, testY, batch_size=batch_size)
 
-    def predict(self, X: np.ndarray):
+    def predict(self, X):
         return self.model.predict(X)
 
     def summary(self):
