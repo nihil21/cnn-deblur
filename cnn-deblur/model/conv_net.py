@@ -100,7 +100,7 @@ class ConvNet:
         avg_pool = AveragePooling2D(pool_size=(8, 8))(layer3)
         flat = Flatten()(avg_pool)
         # Dense bottleneck
-        dense = Dense(64, input_shape=(64,))(flat)
+        dense = Dense(64, input_shape=(64,), activation='softmax')(flat)
         # DECODER
         reshape = Reshape((8, 8, 1))(dense)
         t_conv1 = Conv2DTranspose(3, kernel_size=3, strides=2, padding='same', name='t_conv1')(reshape)

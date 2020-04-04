@@ -8,6 +8,7 @@
       <w>maxpool</w>
       <w>preproc</w>
       <w>relu</w>
+      <w>softmax</w>
       <w>upscales</w>
     </words>
   </dictionary>
