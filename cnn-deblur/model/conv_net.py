@@ -1,6 +1,6 @@
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, BatchNormalization, Activation, Add,
-                                     AveragePooling2D, Flatten, Dense, Reshape, UpSampling2D, MaxPooling2D)
+from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, Activation, Add,
+                                     AveragePooling2D, Flatten, Dense, Reshape, UpSampling2D)
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.utils import plot_model
@@ -17,15 +17,8 @@ def ResConv(kernels: List[int],
             use_res_conv: Optional[bool] = False,
             res_filter: Optional[int] = None,
             res_size: Optional[int] = None,
-            res_stride: Optional[int] = None,
-            use_maxpool: Optional[bool] = False,
-            pool_size: Optional[int] = None,
-            pool_stride: Optional[int] = None):
-    # If 'use_maxpool' is set, apply a MaxPooling with specified parameters as first layer of the block
-    if use_maxpool:
-        x = MaxPooling2D(pool_size=pool_size, strides=pool_stride, name='pool{0:d}'.format(layer_idx))
-    else:
-        x = res_in
+            res_stride: Optional[int] = None):
+    x = res_in
 
     # If 'use_res_conv' is set, apply a convolution on the residual path instead of an identity
     if use_res_conv:
@@ -43,10 +36,12 @@ def ResConv(kernels: List[int],
             else:
                 stride = 1
 
-            x = Conv2D(fltr, kernel_size=kernel, strides=stride, padding='same',
+            x = Conv2D(fltr, kernel_size=kernel, strides=stride, padding='same', activation='relu',
                        name='conv{0:s}'.format(layer_suffix))(x)
+            """
             x = BatchNormalization(axis=3, name='bn{0:s}'.format(layer_suffix))(x)
             x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
+            """
 
             # Update sub-block counter
             n_sub += 1
@@ -84,10 +79,12 @@ def ResConvTranspose(kernels: List[int],
             else:
                 stride = 1
 
-            x = Conv2DTranspose(fltr, kernel_size=kernel, strides=stride, padding='same',
+            x = Conv2DTranspose(fltr, kernel_size=kernel, strides=stride, padding='same', activation='relu',
                                 name='t_conv{0:s}'.format(layer_suffix))(x)
+            """
             x = BatchNormalization(axis=3, name='bn{0:s}'.format(layer_suffix))(x)
             x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
+            """
 
             # Update sub-block counter
             n_sub += 1
@@ -109,9 +106,12 @@ class ConvNet:
                       kernel_size=3,
                       strides=1,
                       padding='same',
-                      name='conv')(visible)
+                      name='conv',
+                      activation='relu')(visible)
+        """
         conv = BatchNormalization(axis=3, name='bn')(conv)
         conv = Activation('relu', name='relu')(conv)
+        """
         # First layer: 2x(Conv + BatchNorm) + Identity Residual (16 filters)
         layer1 = ResConv(kernels=[3, 3],
                          filters_num=[16, 16],
@@ -141,12 +141,12 @@ class ConvNet:
         avg_pool = AveragePooling2D(pool_size=(8, 8))(layer3)
         flat = Flatten()(avg_pool)
         # Dense bottleneck
-        dense = Dense(64, input_shape=(64,), activation='softmax')(flat)
+        dense = Dense(64, input_shape=(64,), activation='relu')(flat)
         # DECODER
         reshape = Reshape((1, 1, 64))(dense)
         upsample = UpSampling2D(8, interpolation='nearest')(reshape)
         layer4 = ResConvTranspose(kernels=[3, 3],
-                                  filters_num=[32, 32],
+                                  filters_num=[64, 32],
                                   res_in=upsample,
                                   layer_idx=4,
                                   double_last_stride=True,
@@ -155,7 +155,7 @@ class ConvNet:
                                   res_size=3,
                                   res_stride=2)
         layer5 = ResConvTranspose(kernels=[3, 3],
-                                  filters_num=[16, 16],
+                                  filters_num=[32, 16],
                                   res_in=layer4,
                                   layer_idx=5,
                                   double_last_stride=True,
