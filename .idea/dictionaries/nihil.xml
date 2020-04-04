@@ -9,6 +9,7 @@
       <w>preproc</w>
       <w>relu</w>
       <w>softmax</w>
+      <w>ssim</w>
       <w>tconv</w>
       <w>upsample</w>
       <w>upscales</w>
