@@ -9,6 +9,8 @@
       <w>preproc</w>
       <w>relu</w>
       <w>softmax</w>
+      <w>tconv</w>
+      <w>upsample</w>
       <w>upscales</w>
     </words>
   </dictionary>
