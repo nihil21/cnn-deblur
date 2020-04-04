@@ -2,10 +2,14 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, Activation, Add,
                                      AveragePooling2D, Flatten, Dense, Reshape)
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.losses import MeanAbsoluteError
+from tensorflow.image import ssim_multiscale
 from tensorflow.keras.utils import plot_model
 import numpy as np
 from typing import List, Tuple, Optional
+
+
+def SSIM_loss(trueY, predY):
+    return ssim_multiscale(trueY, predY, 1)
 
 
 def ResConv(kernels: List[int],
@@ -173,7 +177,7 @@ class ConvNet:
         tconv = Conv2DTranspose(3, kernel_size=3, padding='same', activation='relu')(layer6)
 
         self.model = Model(inputs=visible, outputs=tconv)
-        self.model.compile(Adam(learning_rate=0.1), loss=MeanAbsoluteError(), metrics=['accuracy'])
+        self.model.compile(Adam(learning_rate=0.1), loss=SSIM_loss, metrics=['accuracy'])
 
     def fit(self,
             trainX: np.ndarray,
