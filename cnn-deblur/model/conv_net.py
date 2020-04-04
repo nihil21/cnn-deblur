@@ -8,8 +8,8 @@ import numpy as np
 from typing import List, Tuple, Optional
 
 
-def SSIM_loss(y_true, y_pred):
-    return ssim_multiscale(y_true, y_pred, 1)
+def SSIM_loss(trueY, predY):
+    return ssim_multiscale(trueY, predY, max_val=1, filter_size=3)
 
 
 def ResConv(kernels: List[int],
