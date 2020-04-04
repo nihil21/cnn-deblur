@@ -2,14 +2,22 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, Activation, Add,
                                      AveragePooling2D, Flatten, Dense, Reshape, BatchNormalization)
 from tensorflow.keras.optimizers import Adam
-from tensorflow.image import ssim_multiscale
+import tensorflow.keras.backend as K
+from tensorflow.image import ssim
 from tensorflow.keras.utils import plot_model
 import numpy as np
 from typing import List, Tuple, Optional
 
 
+def mean_absolute_error(trueY, predY):
+    if not K.is_keras_tensor(predY):
+        predY = K.constant(predY)
+    trueY = K.cast(trueY, trueY.dtype)
+    return K.mean(K.abs(predY - trueY))
+
+
 def SSIM_loss(trueY, predY):
-    return ssim_multiscale(trueY, predY, max_val=1, filter_size=3)
+    return mean_absolute_error(trueY, predY) - ssim(trueY, predY, max_val=1, filter_size=3)
 
 
 def ResConv(kernels: List[int],
