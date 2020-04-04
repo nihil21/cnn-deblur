@@ -2,14 +2,14 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, Activation, Add,
                                      AveragePooling2D, Flatten, Dense, Reshape, BatchNormalization)
 from tensorflow.keras.optimizers import Adam
-from tensorflow.image import ssim_multiscale
+from tensorflow.image import ssim
 from tensorflow.math import reduce_mean
 from tensorflow.keras.utils import plot_model
 from typing import List, Tuple, Optional
 
 
 def loss_ms_ssim(trueY, predY):
-    return reduce_mean(1 - ssim_multiscale(trueY, predY, max_val=1, filter_size=3))
+    return reduce_mean(1 - ssim(trueY, predY, max_val=1, filter_size=3))
 
 
 """
