@@ -141,27 +141,27 @@ class ConvNet:
         avg_pool = AveragePooling2D(pool_size=(8, 8))(layer3)
         flat = Flatten()(avg_pool)
         # Dense bottleneck
-        dense = Dense(64, input_shape=(64,), activation='relu')(flat)
+        dense = Dense(64, input_shape=(64,), activation='softmax')(flat)
         # DECODER
         reshape = Reshape((8, 8, 1))(dense)
         # Forth layer: 2x(DeConv + ReLU) with double last stride + Conv Residual (64 filters)
         layer4 = ResConvTranspose(kernels=[3, 3],
-                                  filters_num=[64, 64],
+                                  filters_num=[64, 32],
                                   res_in=reshape,
                                   layer_idx=4,
                                   double_last_stride=True,
                                   use_res_tconv=True,
-                                  res_filter=64,
+                                  res_filter=32,
                                   res_size=3,
                                   res_stride=2)
         # Fifth layer: same as forth layer, but with 32 filters
         layer5 = ResConvTranspose(kernels=[3, 3],
-                                  filters_num=[32, 32],
+                                  filters_num=[32, 16],
                                   res_in=layer4,
                                   layer_idx=5,
                                   double_last_stride=True,
                                   use_res_tconv=True,
-                                  res_filter=32,
+                                  res_filter=16,
                                   res_size=3,
                                   res_stride=2)
         # Sixth layer: 2x(DeConv + ReLU) + Identity Residual (16 filters)
