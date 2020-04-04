@@ -1,6 +1,6 @@
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, Activation, Add,
-                                     AveragePooling2D, Flatten, Dense, Reshape)
+                                     AveragePooling2D, Flatten, Dense, Reshape, BatchNormalization)
 from tensorflow.keras.optimizers import Adam
 from tensorflow.image import ssim_multiscale
 from tensorflow.keras.utils import plot_model
@@ -26,7 +26,8 @@ def ResConv(kernels: List[int],
 
     # If 'use_res_conv' is set, apply a convolution on the residual path instead of an identity
     if use_res_conv:
-        res_in = Conv2D(res_filter, kernel_size=res_size, strides=res_stride, padding='same')(res_in)
+        res_in = Conv2D(res_filter, kernel_size=res_size, strides=res_stride, padding='same',
+                        name='conv{0:d}_shortcut'.format(layer_idx))(res_in)
 
     for n in range(1, blocks_num + 1):
         n_sub = 1
@@ -42,10 +43,7 @@ def ResConv(kernels: List[int],
 
             x = Conv2D(fltr, kernel_size=kernel, strides=stride, padding='same', activation='relu',
                        name='conv{0:s}'.format(layer_suffix))(x)
-            """
-            x = BatchNormalization(axis=3, name='bn{0:s}'.format(layer_suffix))(x)
-            x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
-            """
+            x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
 
             # Update sub-block counter
             n_sub += 1
@@ -69,7 +67,8 @@ def ResConvTranspose(kernels: List[int],
     x = res_in
     # If 'use_res_tconv' is set, apply a convolution on the residual path instead of an identity
     if use_res_tconv:
-        res_in = Conv2DTranspose(res_filter, kernel_size=res_size, strides=res_stride, padding='same')(res_in)
+        res_in = Conv2DTranspose(res_filter, kernel_size=res_size, strides=res_stride, padding='same',
+                                 name='t_conv{0:d}_shortcut'.format(layer_idx))(res_in)
 
     for n in range(1, blocks_num + 1):
         n_sub = 1
@@ -85,10 +84,7 @@ def ResConvTranspose(kernels: List[int],
 
             x = Conv2DTranspose(fltr, kernel_size=kernel, strides=stride, padding='same', activation='relu',
                                 name='t_conv{0:s}'.format(layer_suffix))(x)
-            """
-            x = BatchNormalization(axis=3, name='bn{0:s}'.format(layer_suffix))(x)
-            x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
-            """
+            x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
 
             # Update sub-block counter
             n_sub += 1
@@ -105,17 +101,14 @@ class ConvNet:
     def __init__(self, input_shape: Tuple[int, int, int]):
         # ENCODER
         visible = Input(shape=input_shape)
-        # Convolution layer: Conv + ReLU
+        # Convolution layer: Conv + ReLU + BatchNorm
         conv = Conv2D(16,
                       kernel_size=3,
                       strides=1,
                       padding='same',
-                      name='conv',
-                      activation='relu')(visible)
-        """
+                      activation='relu',
+                      name='conv')(visible)
         conv = BatchNormalization(axis=3, name='bn')(conv)
-        conv = Activation('relu', name='relu')(conv)
-        """
         # First layer: 2x(Conv + ReLU) + Identity Residual (16 filters)
         layer1 = ResConv(kernels=[3, 3],
                          filters_num=[16, 16],
