@@ -1,6 +1,6 @@
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, BatchNormalization,
-                                     Activation, Add, MaxPooling2D)
+from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, BatchNormalization, Activation,
+                                     Add, AveragePooling2D, Flatten, Dense, Reshape, MaxPooling2D)
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.utils import plot_model
@@ -61,6 +61,7 @@ class ConvNet:
     """Class implementing a ResNet architecture"""
 
     def __init__(self, input_shape: Tuple[int, int, int]):
+        # ENCODER
         visible = Input(shape=input_shape)
         # Convolution layer: Conv + BatchNorm + ReLU
         conv = Conv2D(16,
@@ -95,7 +96,14 @@ class ConvNet:
                                res_filter=64,
                                res_size=3,
                                res_stride=2)
-        t_conv1 = Conv2DTranspose(3, kernel_size=3, strides=2, padding='same', name='t_conv1')(layer3)
+        # Average pooling + flatten
+        avg_pool = AveragePooling2D(pool_size=(8, 8))(layer3)
+        flat = Flatten()(avg_pool)
+        # Dense bottleneck
+        dense = Dense(64, input_shape=(64,))(flat)
+        # DECODER
+        reshape = Reshape((8, 8, 1))(dense)
+        t_conv1 = Conv2DTranspose(3, kernel_size=3, strides=2, padding='same', name='t_conv1')(reshape)
         t_conv2 = Conv2DTranspose(3, kernel_size=3, strides=2, padding='same', name='t_conv2')(t_conv1)
         self.model = Model(inputs=visible, outputs=t_conv2)
         self.model.compile(Adam(), loss=MeanSquaredError(), metrics=['accuracy'])
@@ -125,3 +133,7 @@ class ConvNet:
 
     def plot_model(self, path):
         plot_model(self.model, to_file=path, show_shapes=True)
+
+
+model = ConvNet((32, 32, 3))
+print(model.summary())
