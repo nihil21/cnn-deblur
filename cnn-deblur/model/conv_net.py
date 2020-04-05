@@ -10,7 +10,7 @@ from typing import List, Tuple, Optional
 
 
 def custom_loss(trueY, predY):
-    return reduce_mean(mean_absolute_error(trueY, predY)) - ssim(trueY, predY, max_val=1, filter_size=3)
+    return reduce_mean(mean_absolute_error(trueY, predY)) - ssim(trueY, predY, max_val=2, filter_size=3)
 
 
 def ResConv(kernels: List[int],
