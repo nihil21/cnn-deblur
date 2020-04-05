@@ -9,8 +9,12 @@ from tensorflow.keras.utils import plot_model
 from typing import List, Tuple, Optional
 
 
+def ssim_loss(trueY, predY):
+    return 2 - ssim(trueY, predY, max_val=2.)
+
+
 def custom_loss(trueY, predY):
-    return reduce_mean(mean_absolute_error(trueY, predY)) - ssim(trueY, predY, max_val=2, filter_size=3)
+    return reduce_mean(mean_absolute_error(trueY, predY)) - ssim_loss(trueY, predY)
 
 
 def ResConv(kernels: List[int],
