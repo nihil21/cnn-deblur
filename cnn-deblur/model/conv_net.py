@@ -1,6 +1,5 @@
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, Activation, Add,
-                                     AveragePooling2D, Flatten, Dense, Reshape, BatchNormalization)
+from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, Activation, Add, BatchNormalization)
 from tensorflow.keras.optimizers import Adam
 from tensorflow.image import ssim
 from tensorflow.keras.utils import plot_model
@@ -133,17 +132,12 @@ class ConvNet:
                          res_filter=64,
                          res_size=3,
                          res_stride=2)
-        # Average pooling + flatten
-        avg_pool = AveragePooling2D(pool_size=(8, 8))(layer3)
-        flat = Flatten()(avg_pool)
-        # Dense bottleneck
-        dense = Dense(64, input_shape=(64,), activation='softmax')(flat)
+
         # DECODER
-        reshape = Reshape((8, 8, 1))(dense)
         # Forth layer: 2x(DeConv + ReLU) with double last stride + Conv Residual (64 filters)
         layer4 = ResConvTranspose(kernels=[3, 3],
                                   filters_num=[64, 32],
-                                  res_in=reshape,
+                                  res_in=layer3,
                                   layer_idx=4,
                                   double_last_stride=True,
                                   use_res_tconv=True,
