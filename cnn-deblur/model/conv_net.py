@@ -2,12 +2,19 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, Activation, Add, BatchNormalization)
 from tensorflow.keras.optimizers import Adam
 from tensorflow.image import ssim
+from tensorflow.keras.losses import mean_absolute_error
+from tensorflow.math import reduce_mean
 from tensorflow.keras.utils import plot_model
 from typing import List, Tuple, Optional
 
 
 def ssim_loss(trueY, predY):
     return 2 - ssim(trueY, predY, max_val=2.)
+
+
+def loss(trueY, predY):
+    alpha = 0.84
+    return alpha * ssim_loss(trueY, predY) + (1 - alpha) * reduce_mean(mean_absolute_error(trueY, predY))
 
 
 def ResConv(kernels: List[int],
@@ -163,7 +170,7 @@ class ConvNet:
         tconv = Conv2DTranspose(3, kernel_size=3, padding='same', activation='relu')(layer6)
 
         self.model = Model(inputs=visible, outputs=tconv)
-        self.model.compile(Adam(), loss=ssim_loss, metrics=['accuracy'])
+        self.model.compile(Adam(learning_rate=1e-4), loss=loss, metrics=['accuracy'])
 
     def fit(self,
             trainX,
