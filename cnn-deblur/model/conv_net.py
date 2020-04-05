@@ -14,7 +14,7 @@ def ssim_loss(trueY, predY):
 
 
 def custom_loss(trueY, predY):
-    return reduce_mean(mean_absolute_error(trueY, predY)) - ssim_loss(trueY, predY)
+    return ssim_loss(trueY, predY) + reduce_mean(mean_absolute_error(trueY, predY))
 
 
 def ResConv(kernels: List[int],
