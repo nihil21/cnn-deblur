@@ -11,7 +11,7 @@ from typing import List, Tuple, Optional
 
 
 def ssim_loss(trueY, predY):
-    return 2 - ssim(trueY, predY, max_val=2.)
+    return -ssim(trueY, predY, max_val=2.)
 
 
 def mix_loss(trueY, predY):
