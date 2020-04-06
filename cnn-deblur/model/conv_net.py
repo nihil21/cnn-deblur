@@ -1,5 +1,5 @@
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, Activation, Add, BatchNormalization)
+from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, Activation, Add)
 from tensorflow.keras.optimizers import Adam
 from tensorflow.image import ssim
 from tensorflow.keras.losses import mean_absolute_error
@@ -53,7 +53,7 @@ def ResConv(kernels: List[int],
 
             x = Conv2D(fltr, kernel_size=kernel, strides=stride, padding='same', activation='relu',
                        name='conv{0:s}'.format(layer_suffix))(x)
-            x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
+            # x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
 
             # Update sub-block counter
             n_sub += 1
@@ -94,7 +94,7 @@ def ResConvTranspose(kernels: List[int],
 
             x = Conv2DTranspose(fltr, kernel_size=kernel, strides=stride, padding='same', activation='relu',
                                 name='t_conv{0:s}'.format(layer_suffix))(x)
-            x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
+            # x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
 
             # Update sub-block counter
             n_sub += 1
@@ -118,7 +118,7 @@ class ConvNet:
                       padding='same',
                       activation='relu',
                       name='conv')(visible)
-        conv = BatchNormalization(axis=3, name='bn')(conv)
+        # conv = BatchNormalization(axis=3, name='bn')(conv)
         # First layer: 2x(Conv + ReLU) + Identity Residual (16 filters)
         layer1 = ResConv(kernels=[3, 3],
                          filters_num=[16, 16],
