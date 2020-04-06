@@ -144,17 +144,11 @@ class ConvNet:
                          res_filter=64,
                          res_size=3,
                          res_stride=2)
-        # BOTTLENECK
-        bottleneck = Conv2D(64,
-                            kernel_size=3,
-                            padding='same',
-                            activation='relu',
-                            name='bottleneck')(layer3)
         # DECODER
         # Forth layer: 2x(DeConv + ReLU) with double last stride + Conv Residual (64 filters)
         layer4 = ResConvTranspose(kernels=[3, 3],
                                   filters_num=[64, 32],
-                                  res_in=bottleneck,
+                                  res_in=layer3,
                                   layer_idx=4,
                                   double_last_stride=True,
                                   use_res_tconv=True,
@@ -177,7 +171,7 @@ class ConvNet:
                                   res_in=layer5,
                                   layer_idx=6)
         # Convolution layer: Conv + ReLU
-        tconv = Conv2D(3, kernel_size=3, padding='same', activation='relu')(layer6)
+        tconv = Conv2DTranspose(3, kernel_size=3, padding='same', activation='relu')(layer6)
 
         self.model = Model(inputs=visible, outputs=tconv)
         self.model.compile(Adam(learning_rate=1e-4), loss=content_loss, metrics=['accuracy'])
