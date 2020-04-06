@@ -5,6 +5,7 @@ from tensorflow.image import ssim
 from tensorflow.keras.losses import mean_absolute_error
 from tensorflow.math import reduce_mean
 import tensorflow.keras.backend as K
+from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.utils import plot_model
 from typing import List, Tuple, Optional
 
@@ -177,15 +178,21 @@ class ConvNet:
         self.model.compile(Adam(learning_rate=1e-4), loss=content_loss, metrics=['accuracy'])
 
     def fit(self,
-            trainX,
-            trainY,
+            x,
+            y,
             batch_size: int,
             epochs: int,
-            validation_data):
-        return self.model.fit(trainX, trainY,
+            steps_per_epoch: Optional[int] = None,
+            validation_data: Optional = None,
+            initial_epoch: Optional[int] = 0,
+            callbacks: Optional[List[Callback]] = None):
+        return self.model.fit(x, y,
                               batch_size=batch_size,
                               epochs=epochs,
-                              validation_data=validation_data)
+                              steps_per_epoch=steps_per_epoch,
+                              validation_data=validation_data,
+                              initial_epoch=initial_epoch,
+                              callbacks=callbacks)
 
     def evaluate(self,
                  testX,
