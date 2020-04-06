@@ -175,7 +175,7 @@ class ConvNet:
         tconv = Conv2DTranspose(3, kernel_size=3, padding='same', activation='relu')(layer6)
 
         self.model = Model(inputs=visible, outputs=tconv)
-        self.model.compile(Adam(learning_rate=1e-4), loss=content_loss, metrics=['accuracy'])
+        self.model.compile(Adam(learning_rate=1e-4), loss=ssim_loss, metrics=['accuracy'])
 
     def fit(self,
             x,
