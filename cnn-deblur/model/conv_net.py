@@ -1,22 +1,21 @@
+import tensorflow as tf
+import tensorflow.keras.backend as K
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, Activation, Add)
 from tensorflow.keras.optimizers import Adam
-from tensorflow.image import ssim
 from tensorflow.keras.losses import mean_absolute_error
-from tensorflow.math import reduce_mean
-import tensorflow.keras.backend as K
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.utils import plot_model
 from typing import List, Tuple, Optional
 
 
 def ssim_loss(trueY, predY):
-    return -ssim(trueY, predY, max_val=2.)
+    return -tf.image.ssim(trueY, predY, max_val=2.)
 
 
 def mix_loss(trueY, predY):
     alpha = 0.84
-    return alpha * ssim_loss(trueY, predY) + (1 - alpha) * reduce_mean(mean_absolute_error(trueY, predY))
+    return alpha * ssim_loss(trueY, predY) + (1 - alpha) * tf.math.reduce_mean(mean_absolute_error(trueY, predY))
 
 
 def content_loss(trueY, predY):
@@ -145,34 +144,54 @@ class ConvNet:
                          res_filter=64,
                          res_size=3,
                          res_stride=2)
+        # Forth layer: same as third layer, but with 128 filters
+        layer4 = ResConv(kernels=[3, 3],
+                         filters_num=[128, 128],
+                         res_in=layer3,
+                         layer_idx=4,
+                         double_first_stride=True,
+                         use_res_conv=True,
+                         res_filter=128,
+                         res_size=3,
+                         res_stride=2)
         # DECODER
-        # Forth layer: 2x(DeConv + ReLU) with double last stride + Conv Residual (64 filters)
-        layer4 = ResConvTranspose(kernels=[3, 3],
+        # Fifth layer: 2x(DeConv + ReLU) with double last stride + Conv Residual (128 filters)
+        layer5 = ResConvTranspose(kernels=[3, 3],
+                                  filters_num=[128, 64],
+                                  res_in=layer4,
+                                  layer_idx=5,
+                                  double_last_stride=True,
+                                  use_res_tconv=True,
+                                  res_filter=64,
+                                  res_size=3,
+                                  res_stride=2)
+        # Sixth layer: same as fifth layer, but with 64 filters
+        layer6 = ResConvTranspose(kernels=[3, 3],
                                   filters_num=[64, 32],
-                                  res_in=layer3,
-                                  layer_idx=4,
+                                  res_in=layer5,
+                                  layer_idx=6,
                                   double_last_stride=True,
                                   use_res_tconv=True,
                                   res_filter=32,
                                   res_size=3,
                                   res_stride=2)
-        # Fifth layer: same as forth layer, but with 32 filters
-        layer5 = ResConvTranspose(kernels=[3, 3],
+        # Seventh layer: same as sixth layer, but with 32 filters
+        layer7 = ResConvTranspose(kernels=[3, 3],
                                   filters_num=[32, 16],
-                                  res_in=layer4,
-                                  layer_idx=5,
+                                  res_in=layer6,
+                                  layer_idx=7,
                                   double_last_stride=True,
                                   use_res_tconv=True,
                                   res_filter=16,
                                   res_size=3,
                                   res_stride=2)
-        # Sixth layer: 2x(DeConv + ReLU) + Identity Residual (16 filters)
-        layer6 = ResConvTranspose(kernels=[3, 3],
+        # Eighth layer: 2x(DeConv + ReLU) + Identity Residual (16 filters)
+        layer8 = ResConvTranspose(kernels=[3, 3],
                                   filters_num=[16, 16],
-                                  res_in=layer5,
-                                  layer_idx=6)
+                                  res_in=layer7,
+                                  layer_idx=8)
         # Convolution layer: Conv + ReLU
-        tconv = Conv2DTranspose(3, kernel_size=3, padding='same', activation='relu')(layer6)
+        tconv = Conv2DTranspose(3, kernel_size=3, padding='same', activation='relu')(layer8)
 
         self.model = Model(inputs=visible, outputs=tconv)
         self.model.compile(Adam(learning_rate=1e-4), loss=ssim_loss, metrics=['accuracy'])
@@ -208,3 +227,6 @@ class ConvNet:
 
     def plot_model(self, path):
         plot_model(self.model, to_file=path, show_shapes=True)
+
+model = ConvNet((32, 32, 3))
+print(model.summary())
