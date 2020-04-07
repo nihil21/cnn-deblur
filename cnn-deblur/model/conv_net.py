@@ -1,4 +1,4 @@
-from tensorflow.keras.layers import (Layer, Conv2D, Conv2DTranspose, Activation, Add)
+from tensorflow.keras.layers import (Layer, Conv2D, Conv2DTranspose, Activation, Add, MaxPooling2D)
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.utils import plot_model
 from typing import List, Optional
@@ -84,6 +84,48 @@ def ResConvTranspose(kernels: List[int],
     # Add the residual path to the main one
     x = Add()([x, res_in])
     x = Activation('relu', name='relu{0:d}'.format(layer_idx))(x)
+    return x
+
+
+def UConvDown(kernels: List[int],
+              filters_num: List[int],
+              in_layer: Layer,
+              layer_idx: int,
+              middle: Optional[bool] = True):
+    # If the block is not at the input of the network, apply max pooling
+    if middle:
+        x = MaxPooling2D(2, name='pool{0:d}'.format(layer_idx))(in_layer)
+    else:
+        x = in_layer
+    n = 0
+    for kernel, fltr in zip(kernels, filters_num):
+        x = Conv2D(fltr,
+                   kernel_size=kernel,
+                   activation='relu',
+                   padding='same',
+                   name='conv{0:d}_{1:d}'.format(layer_idx, n))(x)
+        n += 1
+    return x
+
+
+def UConvUp(kernels: List[int],
+            filters_num: List[int],
+            in_layer: Layer,
+            concat_layer: Layer,
+            layer_idx: int):
+    x = Conv2DTranspose(filters_num[0],
+                        kernel_size=2,
+                        activation='relu',
+                        padding='same',
+                        name='upsamp{0:d}'.format(layer_idx))(in_layer)
+    n = 0
+    for kernel, fltr in zip(kernels, filters_num):
+        x = Conv2D(fltr,
+                   kernel_size=kernel,
+                   activation='relu',
+                   padding='same',
+                   name='conv{0:d}_{1:d}'.format(layer_idx, n))(x)
+        n += 1
     return x
 
 
