@@ -227,6 +227,3 @@ class ConvNet:
 
     def plot_model(self, path):
         plot_model(self.model, to_file=path, show_shapes=True)
-
-model = ConvNet((32, 32, 3))
-print(model.summary())
