@@ -1,15 +1,18 @@
 from tensorflow.keras.datasets import cifar10
 import numpy as np
 import cv2
+from os import listdir
+from os.path import isfile, join
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Tuple, Optional
 
 
-def preproc_cifar10(res: Tuple[int, int], normalize: Optional[bool] = False):
+# ---------- CIFAR10 ----------
+def preproc_cifar10(res: Optional[Tuple[int, int]] = None, normalize: Optional[bool] = False):
     """Function that loads Cifar10 dataset and produces a training and test set in which the predictors are randomly
     Gaussian blurred images and the targets are the clear version of such images.
-        :param res: tuple representing the desired resolution
+        :param res: tuple representing the desired resolution (optional)
         :param normalize: boolean indicating whether the pixel values should be normalized between 0 and 1 (optional)
 
         :return train: tuple containing predictor and target images of the train set
@@ -103,3 +106,26 @@ def upscale_pad_dataset(trainX: np.ndarray,
                         res: Tuple[int, int]):
     """Function which upscales the dataset to half of the given resolution, and then adds padding """
     return (trainX, trainY), (testX, testY)
+
+
+# ---------- REDS ----------
+def resize_from_folder(input_folder, output_folder, new_dimensions):
+    """Function that reads all the files in the input folder, resize them to match the specified (width, height)
+    and finally store them in the output folder
+        :param input_folder: string indicating the path of the input folder
+        :param output_folder: string indicating the path of the output folder
+        :param new_dimensions: tuple indicating the desired width and height in pixel of the resized images
+    """
+
+    # !Attention! all the files in the folder will be considered
+    only_files = [f for f in listdir(input_folder) if isfile(join(input_folder, f))]
+
+    for filename in only_files:
+        full_path_input = join(input_folder, filename)
+        img = cv2.imread(full_path_input, cv2.IMREAD_UNCHANGED)
+
+        resized = cv2.resize(img, new_dimensions, interpolation = cv2.INTER_AREA)
+
+        full_path_output = join(output_folder, filename)
+        if not cv2.imwrite(full_path_output, resized):
+            print("[ERROR] Impossible to save resized image {}".format(full_path_output))
