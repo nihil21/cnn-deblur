@@ -1,5 +1,10 @@
-from model.conv_net import ConvNet, UConvDown, UConvUp
+from tensorflow.keras.models import Model
+from conv_net import ConvNet, UConvDown, UConvUp
+from tensorflow.keras.layers import Conv2D
 from tensorflow.keras.layers import Input
+from tensorflow.keras.optimizers import Adam
+from utils.loss_functions import *
+from tensorflow.keras.losses import MSE
 from typing import Tuple
 
 
@@ -31,4 +36,25 @@ class UNet(ConvNet):
                         filters_num=[64, 64],
                         in_layer=conv4,
                         concat_layer=conv3,
-                        layer_idx=4)
+                        layer_idx=5)
+
+        conv6 = UConvUp(kernels=[3, 3],
+                        filters_num=[32, 32],
+                        in_layer=conv5,
+                        concat_layer=conv2,
+                        layer_idx=6)
+
+        conv7 = UConvUp(kernels=[3, 3],
+                        filters_num=[16, 16],
+                        in_layer=conv6,
+                        concat_layer=conv1,
+                        layer_idx=7)
+
+        output = Conv2D(kernel_size=1,
+                        filters=3,
+                        activation='relu',
+                        padding='same',
+                        name='output'.format(8))(conv7)
+
+        self.model = Model(inputs=visible, outputs=output)
+        self.model.compile(Adam(learning_rate=1e-4), loss=content_loss, metrics=['accuracy'])

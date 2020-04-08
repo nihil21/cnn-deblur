@@ -1,4 +1,4 @@
-from tensorflow.keras.layers import (Layer, Conv2D, Conv2DTranspose, Activation, Add, MaxPooling2D)
+from tensorflow.keras.layers import (Layer, Conv2D, Conv2DTranspose, Activation, Add, MaxPooling2D, concatenate)
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.utils import plot_model
 from typing import List, Optional
@@ -94,7 +94,7 @@ def UConvDown(kernels: List[int],
               middle: Optional[bool] = True):
     # If the block is not at the input of the network, apply max pooling
     if middle:
-        x = MaxPooling2D(2, name='pool{0:d}'.format(layer_idx))(in_layer)
+        x = MaxPooling2D(pool_size=2, strides=2, name='pool{0:d}'.format(layer_idx))(in_layer)
     else:
         x = in_layer
     n = 0
@@ -115,9 +115,14 @@ def UConvUp(kernels: List[int],
             layer_idx: int):
     x = Conv2DTranspose(filters_num[0],
                         kernel_size=2,
+                        strides=2,
                         activation='relu',
                         padding='same',
                         name='upsamp{0:d}'.format(layer_idx))(in_layer)
+
+    # concatenation
+    x = concatenate([concat_layer, x])
+
     n = 0
     for kernel, fltr in zip(kernels, filters_num):
         x = Conv2D(fltr,
