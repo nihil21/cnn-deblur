@@ -1,10 +1,9 @@
 from tensorflow.keras.models import Model
-from conv_net import ConvNet, UConvDown, UConvUp
+from . conv_net import ConvNet, UConvDown, UConvUp
 from tensorflow.keras.layers import Conv2D
 from tensorflow.keras.layers import Input
 from tensorflow.keras.optimizers import Adam
 from utils.loss_functions import *
-from tensorflow.keras.losses import MSE
 from typing import Tuple
 
 
