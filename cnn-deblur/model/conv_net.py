@@ -1,6 +1,10 @@
 from tensorflow.keras.layers import (Layer, Conv2D, Conv2DTranspose, Activation, Add, MaxPooling2D, concatenate)
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.utils import plot_model
+from tensorflow.keras.optimizers import Adam
+from utils.loss_functions import *
+from tensorflow.keras.losses import MeanSquaredError, MeanAbsoluteError, KLDivergence, BinaryCrossentropy
+from skimage.metrics import structural_similarity as ssim_metric
 from typing import List, Optional
 
 
@@ -139,6 +143,31 @@ class ConvNet:
 
     def __init__(self):
         self.model = None
+
+    def compile(self,
+                lr: Optional[float] = 1e-4,
+                loss: Optional[str] = 'mse',
+                metric: Optional[str] = 'accuracy'):
+
+        loss_dict = dict({
+            'mse': MeanSquaredError(),
+            'mae': MeanAbsoluteError(),
+            'psnr_loss': psnr_loss,
+            'content_loss': content_loss,
+            'ssim_loss': ssim_loss,
+            'mix_loss': mix_loss,
+            'kld': KLDivergence(),
+            'cross_entropy': BinaryCrossentropy(),
+        })
+
+        metric_dict = dict({
+            'accuracy': 'accuracy',
+            'ssim': ssim_metric
+        })
+
+        self.model.compile(Adam(learning_rate=lr),
+                           loss=loss_dict[loss],
+                           metrics=metric_dict[metric])
 
     def fit(self,
             x,
