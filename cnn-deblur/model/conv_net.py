@@ -142,34 +142,31 @@ class ConvNet:
 
     def fit(self,
             x,
-            y,
-            batch_size: int,
-            epochs: int,
+            y: Optional = None,
+            batch_size: Optional[int] = 32,
+            epochs: Optional[int] = 1,
             steps_per_epoch: Optional[int] = None,
-            validation_split: Optional[float] = 0.0,
+            validation_data: Optional = None,
+            validation_steps: Optional[int] = None,
             initial_epoch: Optional[int] = 0,
             callbacks: Optional[List[Callback]] = None):
-        return self.model.fit(x, y,
-                              batch_size=batch_size,
-                              epochs=epochs,
-                              steps_per_epoch=steps_per_epoch,
-                              validation_split=validation_split,
-                              initial_epoch=initial_epoch,
-                              callbacks=callbacks)
-
-    def fit_generator(self,
-                      train_data,
-                      epochs: int,
-                      steps_per_epoch: Optional[int] = None,
-                      validation_split: Optional[float] = 0.0,
-                      initial_epoch: Optional[int] = 0,
-                      callbacks: Optional[List[Callback]] = None):
-        return self.model.fit(train_data,
-                              epochs=epochs,
-                              steps_per_epoch=steps_per_epoch,
-                              validation_split=validation_split,
-                              initial_epoch=initial_epoch,
-                              callbacks=callbacks)
+        if y is not None:
+            return self.model.fit(x, y,
+                                  batch_size=batch_size,
+                                  epochs=epochs,
+                                  steps_per_epoch=steps_per_epoch,
+                                  validation_data=validation_data,
+                                  initial_epoch=initial_epoch,
+                                  callbacks=callbacks)
+        else:
+            gen = x
+            return self.model.fit(gen,
+                                  epochs=epochs,
+                                  steps_per_epoch=steps_per_epoch,
+                                  validation_data=validation_data,
+                                  validation_steps=validation_steps,
+                                  initial_epoch=initial_epoch,
+                                  callbacks=callbacks)
 
     def evaluate(self,
                  testX,
