@@ -1,6 +1,7 @@
 from tensorflow.keras.datasets import cifar10
 import numpy as np
 import cv2
+from sklearn.model_selection import train_test_split
 from os import listdir
 from os.path import isfile, join
 import time
@@ -25,7 +26,10 @@ def preproc_cifar10(res: Optional[Tuple[int, int]] = None, normalize: Optional[b
     rnd = np.random.RandomState(seed=42)
     (trainX, trainY), (testX, testY) = blur_dataset(train_set, test_set, normalize, rnd)
 
-    return (trainX, trainY), (testX, testY)
+    # Reserve some samples for validation
+    trainX, valX, trainY, valY = train_test_split(trainX, trainY, random_state=rnd)
+
+    return (trainX, trainY), (valX, valY), (testX, testY)
 
 
 def blur_dataset(train_set: np.ndarray,

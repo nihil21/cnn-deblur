@@ -5,12 +5,16 @@ from tensorflow.keras.layers import Input
 from tensorflow.keras.optimizers import Adam
 from utils.loss_functions import *
 from tensorflow.keras.losses import BinaryCrossentropy, MeanSquaredError, KLDivergence
+from skimage.metrics import structural_similarity as ssim_metric
 from typing import Tuple, Optional
 
 
 class UNet(ConvNet):
 
-    def __init__(self, input_shape: Tuple[int, int, int], loss: Optional[str] = 'content_loss'):
+    def __init__(self,
+                 input_shape: Tuple[int, int, int],
+                 loss: Optional[str] = 'mse',
+                 metric: Optional[str] = 'accuracy'):
         super().__init__()
         # ENCODER
         visible = Input(shape=input_shape)
@@ -59,12 +63,19 @@ class UNet(ConvNet):
         self.model = Model(inputs=visible, outputs=output)
 
         loss_dict = dict({
-            'ssim_loss': ssim_loss,
-            'content_loss': content_loss,
-            'mix_loss': mix_loss,
-            'psnr_loss': psnr_loss,
-            'cross_entropy': BinaryCrossentropy(),
             'mse': MeanSquaredError(),
-            'kld': KLDivergence()
+            'psnr_loss': psnr_loss,
+            'content_loss': content_loss,
+            'ssim_loss': ssim_loss,
+            'mix_loss': mix_loss,
+            'kld': KLDivergence(),
+            'cross_entropy': BinaryCrossentropy(),
         })
-        self.model.compile(Adam(learning_rate=1e-4), loss=loss_dict[loss], metrics=[ssim_metric])
+
+        metric_dict = dict({
+            'ssim': ssim_metric
+        })
+
+        self.model.compile(Adam(learning_rate=1e-4),
+                           loss=loss_dict[loss],
+                           metrics=metric_dict[metric])
