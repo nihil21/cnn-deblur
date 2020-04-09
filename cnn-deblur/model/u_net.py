@@ -63,7 +63,7 @@ class UNet(ConvNet):
             'content_loss': content_loss,
             'mix_loss': mix_loss,
             'psnr_loss': psnr_loss,
-            'cross_entropy': BinaryCrossentropy,
-            'mse': MeanSquaredError
+            'cross_entropy': BinaryCrossentropy(),
+            'mse': MeanSquaredError()
         })
         self.model.compile(Adam(learning_rate=1e-4), loss=loss_dict[loss], metrics=['accuracy'])
