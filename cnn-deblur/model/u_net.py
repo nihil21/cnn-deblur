@@ -5,7 +5,6 @@ from tensorflow.keras.layers import Input
 from tensorflow.keras.optimizers import Adam
 from utils.loss_functions import *
 from tensorflow.keras.losses import BinaryCrossentropy, MeanSquaredError, KLDivergence
-from tensorflow.keras.metrics import BinaryAccuracy
 from typing import Tuple, Optional
 
 
@@ -68,4 +67,4 @@ class UNet(ConvNet):
             'mse': MeanSquaredError(),
             'kld': KLDivergence()
         })
-        self.model.compile(Adam(learning_rate=1e-4), loss=loss_dict[loss], metrics=[BinaryAccuracy()])
+        self.model.compile(Adam(learning_rate=1e-4), loss=loss_dict[loss], metrics=[ssim_loss])
