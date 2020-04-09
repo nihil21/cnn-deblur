@@ -3,6 +3,10 @@ from tensorflow.keras.losses import mean_absolute_error
 import tensorflow.keras.backend as K
 
 
+def ssim_metric(trueY, predY):
+    return tf.image.ssim(trueY, predY, max_val=1.)
+
+
 def ssim_loss(trueY, predY):
     return -tf.image.ssim(trueY, predY, max_val=2.)
 

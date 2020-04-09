@@ -2,9 +2,8 @@ from tensorflow.keras.layers import (Layer, Conv2D, Conv2DTranspose, Activation,
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import Adam
-from utils.loss_functions import *
+from utils.loss_metric_functions import *
 from tensorflow.keras.losses import MeanSquaredError, MeanAbsoluteError, KLDivergence, BinaryCrossentropy
-from skimage.metrics import structural_similarity as ssim
 from typing import List, Optional
 
 
@@ -162,7 +161,7 @@ class ConvNet:
 
         metric_dict = dict({
             'accuracy': 'accuracy',
-            'ssim': ssim
+            'ssim': ssim_metric
         })
 
         self.model.compile(Adam(learning_rate=lr),

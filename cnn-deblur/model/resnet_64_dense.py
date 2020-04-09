@@ -3,7 +3,7 @@ from tensorflow.keras.layers import (Input, Conv2D, Conv2DTranspose, AveragePool
                                      Flatten, Dense, Dropout, Reshape)
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
-from utils.loss_functions import *
+from utils.loss_metric_functions import *
 from typing import Tuple
 
 

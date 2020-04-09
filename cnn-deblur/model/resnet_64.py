@@ -2,7 +2,7 @@ from model.conv_net import ConvNet, ResConv, ResConvTranspose
 from tensorflow.keras.layers import Input, Conv2D, Conv2DTranspose
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
-from utils.loss_functions import *
+from utils.loss_metric_functions import *
 from typing import Tuple
 
 
