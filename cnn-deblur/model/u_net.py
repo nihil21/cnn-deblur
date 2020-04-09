@@ -67,4 +67,4 @@ class UNet(ConvNet):
             'mse': MeanSquaredError(),
             'kld': KLDivergence()
         })
-        self.model.compile(Adam(learning_rate=1e-4), loss=loss_dict[loss], metrics=[ssim_loss])
+        self.model.compile(Adam(learning_rate=1e-4), loss=loss_dict[loss], metrics=[ssim_metric])
