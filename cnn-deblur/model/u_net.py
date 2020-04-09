@@ -4,7 +4,7 @@ from tensorflow.keras.layers import Conv2D
 from tensorflow.keras.layers import Input
 from tensorflow.keras.optimizers import Adam
 from utils.loss_functions import *
-from tensorflow.keras.losses import BinaryCrossentropy, MeanSquaredError, KLDivergence
+from tensorflow.keras.losses import MeanSquaredError, MeanAbsoluteError, KLDivergence, BinaryCrossentropy
 from skimage.metrics import structural_similarity as ssim_metric
 from typing import Tuple, Optional
 
@@ -64,6 +64,7 @@ class UNet(ConvNet):
 
         loss_dict = dict({
             'mse': MeanSquaredError(),
+            'mae': MeanAbsoluteError(),
             'psnr_loss': psnr_loss,
             'content_loss': content_loss,
             'ssim_loss': ssim_loss,
@@ -73,6 +74,7 @@ class UNet(ConvNet):
         })
 
         metric_dict = dict({
+            'accuracy': 'accuracy',
             'ssim': ssim_metric
         })
 
