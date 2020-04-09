@@ -4,7 +4,8 @@ from tensorflow.keras.layers import Conv2D
 from tensorflow.keras.layers import Input
 from tensorflow.keras.optimizers import Adam
 from utils.loss_functions import *
-from tensorflow.keras.losses import BinaryCrossentropy, MeanSquaredError
+from tensorflow.keras.losses import BinaryCrossentropy, MeanSquaredError, KLDivergence
+from tensorflow.keras.metrics import binary_accuracy
 from typing import Tuple, Optional
 
 
@@ -64,6 +65,7 @@ class UNet(ConvNet):
             'mix_loss': mix_loss,
             'psnr_loss': psnr_loss,
             'cross_entropy': BinaryCrossentropy(),
-            'mse': MeanSquaredError()
+            'mse': MeanSquaredError(),
+            'kld': KLDivergence()
         })
-        self.model.compile(Adam(learning_rate=1e-4), loss=loss_dict[loss], metrics=['accuracy'])
+        self.model.compile(Adam(learning_rate=1e-4), loss=loss_dict[loss], metrics=[binary_accuracy])
