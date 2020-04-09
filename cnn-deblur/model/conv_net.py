@@ -161,7 +161,7 @@ class ConvNet:
 
         metric_dict = dict({
             'accuracy': 'accuracy',
-            'ssim': ssim_metric
+            'ssim_metric': ssim_metric
         })
 
         self.model.compile(Adam(learning_rate=lr),
