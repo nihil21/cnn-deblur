@@ -8,10 +8,12 @@
       <w>fltr</w>
       <w>maxpool</w>
       <w>preproc</w>
+      <w>psnr</w>
       <w>relu</w>
       <w>softmax</w>
       <w>ssim</w>
       <w>tconv</w>
+      <w>upsamp</w>
       <w>upsample</w>
       <w>upscales</w>
     </words>

@@ -14,3 +14,7 @@ def mix_loss(trueY, predY):
 
 def content_loss(trueY, predY):
     return 0.5 * K.sum(K.square(trueY - predY))
+
+
+def psnr_loss(trueY, predY):
+    return -tf.image.psnr(trueY, predY, max_val=1.)

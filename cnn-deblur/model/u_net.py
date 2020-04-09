@@ -4,12 +4,12 @@ from tensorflow.keras.layers import Conv2D
 from tensorflow.keras.layers import Input
 from tensorflow.keras.optimizers import Adam
 from utils.loss_functions import *
-from typing import Tuple
+from typing import Tuple, Optional
 
 
 class UNet(ConvNet):
 
-    def __init__(self, input_shape: Tuple[int, int, int]):
+    def __init__(self, input_shape: Tuple[int, int, int], loss: Optional[str] = 'content_loss'):
         super().__init__()
         # ENCODER
         visible = Input(shape=input_shape)
@@ -56,4 +56,11 @@ class UNet(ConvNet):
                         name='output'.format(8))(conv7)
 
         self.model = Model(inputs=visible, outputs=output)
-        self.model.compile(Adam(learning_rate=1e-4), loss=content_loss, metrics=['accuracy'])
+
+        loss_dict = dict({
+            'ssim_loss': ssim_loss,
+            'content_loss': content_loss,
+            'mix_loss': mix_loss,
+            'psnr_loss': psnr_loss
+        })
+        self.model.compile(Adam(learning_rate=1e-4), loss=loss_dict[loss], metrics=['accuracy'])
