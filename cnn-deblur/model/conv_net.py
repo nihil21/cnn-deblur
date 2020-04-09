@@ -4,7 +4,7 @@ from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import Adam
 from utils.loss_functions import *
 from tensorflow.keras.losses import MeanSquaredError, MeanAbsoluteError, KLDivergence, BinaryCrossentropy
-from skimage.metrics import structural_similarity as ssim_metric
+from skimage.metrics import structural_similarity as ssim
 from typing import List, Optional
 
 
@@ -162,7 +162,7 @@ class ConvNet:
 
         metric_dict = dict({
             'accuracy': 'accuracy',
-            'ssim': ssim_metric
+            'ssim': ssim
         })
 
         self.model.compile(Adam(learning_rate=lr),
