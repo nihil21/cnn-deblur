@@ -162,7 +162,7 @@ class ConvNet:
                        'mse',
                        'mae',
                        'mape',
-                       'cosine']
+                       'cosine_proximity']
 
         self.model.compile(Adam(learning_rate=lr),
                            loss=loss_dict[loss],
