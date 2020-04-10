@@ -145,8 +145,7 @@ class ConvNet:
 
     def compile(self,
                 lr: Optional[float] = 1e-4,
-                loss: Optional[str] = 'mse',
-                metric: Optional[str] = 'accuracy'):
+                loss: Optional[str] = 'mse'):
 
         loss_dict = dict({
             'mse': MeanSquaredError(),
@@ -159,14 +158,15 @@ class ConvNet:
             'cross_entropy': BinaryCrossentropy(),
         })
 
-        metric_dict = dict({
-            'accuracy': 'accuracy',
-            'ssim_metric': ssim_metric
-        })
+        metric_list = [ssim_metric,
+                       'mse',
+                       'mae',
+                       'mape',
+                       'cosine']
 
         self.model.compile(Adam(learning_rate=lr),
                            loss=loss_dict[loss],
-                           metrics=metric_dict[metric])
+                           metrics=metric_list)
 
     def fit(self,
             x,
