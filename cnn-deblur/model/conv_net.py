@@ -115,7 +115,8 @@ def UConvUp(kernels: List[int],
             filters_num: List[int],
             in_layer: Layer,
             concat_layer: Layer,
-            layer_idx: int):
+            layer_idx: int,
+            odd_shape: Optional[bool] = False):
     x = Conv2DTranspose(filters_num[0],
                         kernel_size=2,
                         strides=2,
@@ -123,7 +124,13 @@ def UConvUp(kernels: List[int],
                         padding='same',
                         name='upsamp{0:d}'.format(layer_idx))(in_layer)
 
-    # concatenation
+    # If the shape is odd, add a row of pixels
+    if odd_shape:
+        x = concatenate([x, tf.zeros(shape=[1, x.shape[1], 1, x.shape[3]],
+                                     dtype=tf.float32)],
+                        axis=2)
+
+    # Concatenation
     x = concatenate([concat_layer, x])
 
     n = 0
