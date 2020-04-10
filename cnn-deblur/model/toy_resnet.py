@@ -1,8 +1,6 @@
 from model.conv_net import ConvNet, ResConv
 from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, Activation, Conv2DTranspose
 from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.losses import MeanSquaredError
 from typing import Tuple
 
 
@@ -47,4 +45,3 @@ class ToyResNet(ConvNet):
         t_conv1 = Conv2DTranspose(3, kernel_size=3, strides=2, padding='same', name='t_conv1')(layer3)
         t_conv2 = Conv2DTranspose(3, kernel_size=3, strides=2, padding='same', name='t_conv2')(t_conv1)
         self.model = Model(inputs=visible, outputs=t_conv2)
-        self.model.compile(Adam(), loss=MeanSquaredError(), metrics=['accuracy'])

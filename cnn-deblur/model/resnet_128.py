@@ -1,8 +1,6 @@
 from model.conv_net import ConvNet, ResConv, ResConvTranspose
 from tensorflow.keras.layers import Input, Conv2D, Conv2DTranspose
 from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Adam
-from utils.loss_metric_functions import *
 from typing import Tuple
 
 
@@ -95,4 +93,3 @@ class ResNet128(ConvNet):
         tconv = Conv2DTranspose(3, kernel_size=3, padding='same', activation='relu')(layer8)
 
         self.model = Model(inputs=visible, outputs=tconv)
-        self.model.compile(Adam(learning_rate=1e-4), loss=ssim_loss, metrics=['accuracy'])
