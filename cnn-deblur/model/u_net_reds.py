@@ -1,6 +1,6 @@
 from tensorflow.keras.models import Model
 from model.conv_net import ConvNet, UConvDown, UConvUp
-from tensorflow.keras.layers import Input
+from tensorflow.keras.layers import Input, ZeroPadding2D, Cropping2D
 from typing import Tuple
 
 
@@ -10,11 +10,14 @@ class UNetREDS(ConvNet):
         super().__init__()
 
         # ENCODER
-        visible = Input(shape=input_shape)  # 1280x736x3
+        visible = Input(shape=input_shape)   # 1280x720x3
+
+        # adding 8 rows of pixels (on top and bottom)
+        padded = ZeroPadding2D(padding=((0, 0), (8, 8)))(visible)   # 1280x736x3
 
         conv1 = UConvDown(kernels=[3, 3],
                           filters_num=[16, 16],
-                          in_layer=visible,
+                          in_layer=padded,
                           layer_idx=1,
                           middle=False)  # 1280x736x16
 
@@ -75,9 +78,7 @@ class UNetREDS(ConvNet):
                          concat_layer=conv1,
                          layer_idx=11)  # 1280x736x3
 
-        self.model = Model(inputs=visible, outputs=conv11)
+        cropped = Cropping2D(cropping=((0, 0), (8, 8)))(conv11)
 
+        self.model = Model(inputs=visible, outputs=cropped)
 
-unet = UNetREDS((1280, 736, 3))
-unet.compile()
-print(unet.summary())
