@@ -2,6 +2,20 @@ from tensorflow.keras.models import Model
 from model.conv_net import ConvNet, UConvDown, UConvUp
 from tensorflow.keras.layers import Input
 from typing import Tuple
+import cv2
+import numpy as np
+
+
+def preprocess_input(setX, setY):
+    res = (512, 288)
+    # The first index of setX, setY is the number of images in the set
+    res_setX = []
+    res_setY = []
+    for i in range(setX.shape[0]):
+        res_setX.append(cv2.resize(setX[i], res, cv2.INTER_AREA))
+        res_setY.append(cv2.resize(setY[i], res, cv2.INTER_AREA))
+
+    return np.array(res_setX), np.array(res_setY)
 
 
 class UNet20(ConvNet):
