@@ -30,7 +30,7 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from utils.image_preprocessing import *
 from model.conv_net import ConvNet
 from model.u_net import UNet
-#from model.u_net import UNetREDS
+# from model.u_net import UNetREDS
 from model.toy_resnet import ToyResNet
 from model.resnet_64_dense import ResNet64Dense
 from model.resnet_64 import ResNet64
@@ -42,14 +42,15 @@ arch_choices = ['toy', '64dense', '64', '128', 'unet']
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-d", "--dataset", required=True, choices=dataset_choices, help="dataset type [cifar|reds]")
-ap.add_argument("-a", "--architecture", required=True, choices=arch_choices, help="architecture type [toy|64dense|64|128|unet]")
+ap.add_argument("-a", "--architecture", required=True, choices=arch_choices,
+                help="architecture type [toy|64dense|64|128|unet]")
 ap.add_argument("-ie", "--initial-epoch", required=True, help="initial epoch for the training process")
 ap.add_argument("-fe", "--final-epoch", required=True, help="final epoch for the training process")
 ap.add_argument("-bs", "--batch-size", required=True, help="batch-size dimension")
 ap.add_argument("-l", "--loss", required=True, help="the loss function to use [mse|mae|...]")
 args = vars(ap.parse_args())
 
-filepath='/home/uni/weights/cifar/ep:{epoch:03d}-val_loss:{val_loss:.3f}.hdf5'
+filepath = '/home/uni/weights/cifar/ep:{epoch:03d}-val_loss:{val_loss:.3f}.hdf5'
 checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
 callbacks_list = [checkpoint]
 
@@ -98,12 +99,12 @@ conv_net.plot_model(os.path.join(path_to_graphs, 'model.png'))
 
 """Load weights from previous run."""
 
-#folder = input('Folder: ')
+# folder = input('Folder: ')
 init_ep = int(args['initial_epoch'])
 
 if init_ep != 0:
-    #weights = glob.glob('/home/uni/weights/cifar/{0:s}/ep:{1:03d}-val_loss:*.hdf5'.format(folder, init_ep))
-    weights = glob.glob('/home/uni/weights/cifar/ep:{1:03d}-val_loss:*.hdf5'.format(init_ep))
+    # weights = glob.glob('/home/uni/weights/cifar/{0:s}/ep:{1:03d}-val_loss:*.hdf5'.format(folder, init_ep))
+    weights = glob.glob('/home/uni/weights/cifar/ep:{0:03d}-val_loss:*.hdf5'.format(init_ep))
     conv_net.model.load_weights(weights[0])
     print('Initial epoch: {0:d}'.format(init_ep))
 
@@ -128,7 +129,7 @@ hist = conv_net.fit(train_data,
                     validation_data=(valX, valY),
                     validation_steps=steps_val,
                     initial_epoch=init_ep,
-                    callbacks=callbacks_list);
+                    callbacks=callbacks_list)
 
 """Evaluate the model on the test set."""
 
@@ -151,37 +152,37 @@ axes[0, 0].plot(n, hist.history['loss'], label='train_loss')
 axes[0, 0].plot(n, hist.history['val_loss'], label='val_loss')
 axes[0, 0].set_title('Loss')
 axes[0, 0].set(xlabel='Epochs #', ylabel='Loss')
-axes[0, 0].legend();
+axes[0, 0].legend()
 # SSIM
 axes[0, 1].plot(n, hist.history['ssim_metric'], label='train_ssim_metric')
 axes[0, 1].plot(n, hist.history['val_ssim_metric'], label='val_ssim_metric')
 axes[0, 1].set_title('SSIM')
 axes[0, 1].set(xlabel='Epochs #', ylabel='SSIM')
-axes[0, 1].legend();
+axes[0, 1].legend()
 # MSE
 axes[1, 0].plot(n, hist.history['mse'], label='train_mse')
 axes[1, 0].plot(n, hist.history['val_mse'], label='val_mse')
 axes[1, 0].set_title('MSE')
 axes[1, 0].set(xlabel='Epochs #', ylabel='MSE')
-axes[1, 0].legend();
+axes[1, 0].legend()
 # MAE
 axes[1, 1].plot(n, hist.history['mae'], label='train_mae')
 axes[1, 1].plot(n, hist.history['val_mae'], label='val_mae')
 axes[1, 1].set_title('MAE')
 axes[1, 1].set(xlabel='Epochs #', ylabel='MAE')
-axes[1, 1].legend();
+axes[1, 1].legend()
 # MAPE
 axes[2, 0].plot(n, hist.history['mape'], label='train_mape')
 axes[2, 0].plot(n, hist.history['val_mape'], label='val_mape')
 axes[2, 0].set_title('MAPE')
 axes[2, 0].set(xlabel='Epochs #', ylabel='MAPE')
-axes[2, 0].legend();
+axes[2, 0].legend()
 # Cosine Proximity
 axes[2, 1].plot(n, hist.history['cosine_proximity'], label='train_cosine_proximity')
 axes[2, 1].plot(n, hist.history['val_cosine_proximity'], label='val_cosine_proximity')
 axes[2, 1].set_title('Cosine Proximity')
 axes[2, 1].set(xlabel='Epochs #', ylabel='Cosine Proximity')
-axes[2, 1].legend();
+axes[2, 1].legend()
 
 fig.savefig(os.path.join(path_to_graphs, 'metrics.png'))
 
@@ -195,14 +196,13 @@ predicted = conv_net.predict(testX[idx])
 
 fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(15, 15))
 for i in range(3):
-  axes[i, 0].set_title('Original image')
-  axes[i, 0].imshow(original[i]);
-  axes[i, 1].set_title('Blurred image')
-  axes[i, 1].imshow(blurred[i]);
-  axes[i, 2].set_title('Predicted image')
-  axes[i, 2].imshow(predicted[i]);
+    axes[i, 0].set_title('Original image')
+    axes[i, 0].imshow(original[i])
+    axes[i, 1].set_title('Blurred image')
+    axes[i, 1].imshow(blurred[i])
+    axes[i, 2].set_title('Predicted image')
+    axes[i, 2].imshow(predicted[i])
 
 fig.savefig(os.path.join(path_to_graphs, 'predictions.png'))
 
 """## 2. REDS"""
-

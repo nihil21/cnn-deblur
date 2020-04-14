@@ -4,8 +4,10 @@
       <w>cifar</w>
       <w>conv</w>
       <w>convolutional</w>
+      <w>datagen</w>
       <w>datasets</w>
       <w>fltr</w>
+      <w>ggplot</w>
       <w>mape</w>
       <w>maxpool</w>
       <w>preproc</w>
