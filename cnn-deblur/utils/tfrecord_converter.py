@@ -52,3 +52,7 @@ def main():
     start_time = time.time()
     reds_to_tfrecords(args['out_dir'], args['blur_path'], args['sharp_path'])
     print('Time elapsed: {0:.2f} s'.format(time.time() - start_time))
+
+
+if __name__ == '__main__':
+    main()
