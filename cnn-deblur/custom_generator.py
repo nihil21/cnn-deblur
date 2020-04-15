@@ -1,6 +1,7 @@
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
+
 def load_image(filename):
     image = tf.io.read_file(filename)
     image = tf.image.decode_png(image)
@@ -8,8 +9,10 @@ def load_image(filename):
 
     return image
 
+
 def resize_image(image, new_height, new_width):
     return tf.image.resize(image, [new_height, new_width])
+
 
 def random_flip(image_blur, image_sharp, seed):
     do_flip = tf.random.uniform([], seed=seed) > 0.5
@@ -18,11 +21,13 @@ def random_flip(image_blur, image_sharp, seed):
 
     return image_blur, image_sharp
 
+
 # DEBUG
 def show(image):
-  plt.figure()
-  plt.imshow(image)
-  plt.axis('off')
+    plt.figure()
+    plt.imshow(image)
+    plt.axis('off')
+
 
 # DEBUG
 def show_batch(batch):
@@ -35,8 +40,8 @@ def show_batch(batch):
         plt.imshow(img)
     plt.show()
 
-seed = 42
 
+seed = 42
 epochs = 10
 batch_size = 4
 new_dimension = [720, 1280]
@@ -69,7 +74,6 @@ validation = validation.batch(batch_size).repeat(epochs)
 
 train_augmented.prefetch(10)
 validation.prefetch(10)
-
 
 """
 # DEBUG

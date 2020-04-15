@@ -6,8 +6,11 @@ import matplotlib.pyplot as plt
 BASE_DIR = '/run/media/nihil/Backup/REDS/val'
 EPOCHS = 10
 BATCH_SIZE = 4
-OLD_DIM = [720, 1280]
 NEW_DIM = (288, 512)
+REDS_SIZE = 24000
+VAL_SPLIT = 0.3
+BUF_SIZE = 1000
+RND = 42
 
 
 def show_batch(batch):
@@ -23,10 +26,7 @@ def show_batch(batch):
 
 def main():
     tfrecords = glob(os.path.join(BASE_DIR, '*.tfrecords'))
-    print('Number of records to load: {0:d}'.format(len(tfrecords)))
-
     reds_dataset = tf.data.TFRecordDataset(filenames=tfrecords)
-    print('TFRecords loaded from disk')
 
     image_features_dict = {
         'blur': tf.io.FixedLenFeature([], tf.string),
@@ -47,18 +47,35 @@ def main():
 
     reds_dataset = reds_dataset.map(_parse_image_fn)
 
-    print('Parsing done')
+    # Shuffle once
+    reds_dataset = reds_dataset.shuffle(buffer_size=BUF_SIZE, seed=RND, reshuffle_each_iteration=False)
 
-    reds_dataset = reds_dataset.shuffle(buffer_size=1000, seed=42)
+    # Training and validation split
+    train = reds_dataset.skip(int(VAL_SPLIT * REDS_SIZE))
+    val = reds_dataset.take(int(VAL_SPLIT * REDS_SIZE))
 
-    # repeat: once for each epoch
-    batched_dataset = reds_dataset.batch(BATCH_SIZE).repeat(EPOCHS)
+    def random_flip(image_pair):
+        image_blur, image_sharp = image_pair
+        do_flip = tf.random.uniform([], seed=RND) > 0.5
+        image_blur = tf.cond(do_flip, lambda: tf.image.flip_left_right(image_blur), lambda: image_blur)
+        image_sharp = tf.cond(do_flip, lambda: tf.image.flip_left_right(image_sharp), lambda: image_sharp)
 
-    for batch in batched_dataset.take(1):
-        print(batch[0].shape)
+        return image_blur, image_sharp
 
-        show_batch(batch[0])
-        show_batch(batch[1])
+    # Perform augmentation and reshuffle
+    train = train.map(random_flip).shuffle(buffer_size=BUF_SIZE, seed=RND, reshuffle_each_iteration=True)
+
+    # Repeat once for each epoch
+    train = train.batch(BATCH_SIZE).repeat(EPOCHS)
+    val = val.batch(BATCH_SIZE).repeat(EPOCHS)
+
+    for batch_train, batch_val in train.take(1), val.take(1):
+        print(batch_train[0].shape, batch_val[0].shape)
+
+        show_batch(batch_train[0])
+        show_batch(batch_train[1])
+        show_batch(batch_val[0])
+        show_batch(batch_val[1])
 
 
 if __name__ == '__main__':
