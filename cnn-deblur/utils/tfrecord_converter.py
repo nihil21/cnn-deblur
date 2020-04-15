@@ -1,6 +1,8 @@
 import tensorflow as tf
 from glob import glob
 import os
+import argparse
+import time
 from tqdm import tqdm
 
 
@@ -35,3 +37,18 @@ def reds_to_tfrecords(out_dir, blur_base, sharp_base):
             for blur_img, sharp_img in tqdm(zip(blur_batch, sharp_batch), total=len(blur_batch)):
                 example = _convert_to_example(blur_img, sharp_img)
                 writer.write(example.SerializeToString())
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('-o', '--out_dir', required=True,
+                    help='path to the directory where the .tfrecords will be saved')
+    ap.add_argument('-b', '--blur_path', required=True,
+                    help='path to the directory where the blurred images are stored')
+    ap.add_argument('-s', '--sharp_path', required=True,
+                    help='path to the directory where the sharp images are stored')
+    args = vars(ap.parse_args())
+
+    start_time = time.time()
+    reds_to_tfrecords(args['out_dir'], args['blur_path'], args['sharp_path'])
+    print('Time elapsed: {0:.2f} s'.format(time.time() - start_time))
