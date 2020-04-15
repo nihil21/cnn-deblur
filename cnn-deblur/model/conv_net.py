@@ -2,7 +2,7 @@ from tensorflow.keras.layers import (Layer, Conv2D, Conv2DTranspose, Activation,
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import Adam
-from utils.loss_metric_functions import *
+from utils.custom_losses_metrics import *
 from tensorflow.keras.losses import MeanSquaredError, MeanAbsoluteError, KLDivergence, BinaryCrossentropy
 from typing import List, Optional
 
