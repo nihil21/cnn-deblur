@@ -54,8 +54,7 @@ def main():
     train = reds_dataset.skip(int(VAL_SPLIT * REDS_SIZE))
     val = reds_dataset.take(int(VAL_SPLIT * REDS_SIZE))
 
-    def random_flip(image_pair):
-        image_blur, image_sharp = image_pair
+    def _random_flip(image_blur, image_sharp):
         do_flip = tf.random.uniform([], seed=RND) > 0.5
         image_blur = tf.cond(do_flip, lambda: tf.image.flip_left_right(image_blur), lambda: image_blur)
         image_sharp = tf.cond(do_flip, lambda: tf.image.flip_left_right(image_sharp), lambda: image_sharp)
@@ -63,13 +62,17 @@ def main():
         return image_blur, image_sharp
 
     # Perform augmentation and reshuffle
-    train = train.map(random_flip).shuffle(buffer_size=BUF_SIZE, seed=RND, reshuffle_each_iteration=True)
+    train = train.map(_random_flip).shuffle(buffer_size=BUF_SIZE, seed=RND, reshuffle_each_iteration=True)
 
     # Repeat once for each epoch
     train = train.batch(BATCH_SIZE).repeat(EPOCHS)
     val = val.batch(BATCH_SIZE).repeat(EPOCHS)
 
-    for batch_train, batch_val in train.take(1), val.take(1):
+    # Prefetch
+    train.prefetch(10)
+    val.prefetch(10)
+
+    for batch_train, batch_val in zip(train.take(1), val.take(1)):
         print(batch_train[0].shape, batch_val[0].shape)
 
         show_batch(batch_train[0])
