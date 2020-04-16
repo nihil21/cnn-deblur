@@ -2,13 +2,14 @@ import tensorflow as tf
 from glob import glob
 import os
 import matplotlib.pyplot as plt
+import time
 
-BASE_DIR = '/run/media/nihil/Backup/REDS/val'
+BASE_DIR = '/mnt/REDS/train'
 EPOCHS = 10
 BATCH_SIZE = 4
 NEW_DIM = (288, 512)
 REDS_SIZE = 24000
-VAL_SPLIT = 0.3
+VAL_SPLIT = 0.125
 BUF_SIZE = 1000
 RND = 42
 
@@ -26,7 +27,7 @@ def show_batch(batch):
 
 def main():
     tfrecords = glob(os.path.join(BASE_DIR, '*.tfrecords'))
-    reds_dataset = tf.data.TFRecordDataset(filenames=tfrecords)
+    reds_dataset = tf.data.TFRecordDataset(filenames=tfrecords, num_parallel_reads=5)
 
     image_features_dict = {
         'blur': tf.io.FixedLenFeature([], tf.string),
@@ -82,4 +83,6 @@ def main():
 
 
 if __name__ == '__main__':
+    start_time = time.time()
     main()
+    print('Time elapsed: {0:.2f} s'.format(time.time() - start_time))

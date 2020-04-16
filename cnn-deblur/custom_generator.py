@@ -1,5 +1,6 @@
 import tensorflow as tf
 import matplotlib.pyplot as plt
+import time
 
 
 def load_image(filename):
@@ -41,6 +42,7 @@ def show_batch(batch):
     plt.show()
 
 
+start_time = time.time()
 seed = 42
 epochs = 10
 batch_size = 4
@@ -74,6 +76,7 @@ validation = validation.batch(batch_size).repeat(epochs)
 
 train_augmented.prefetch(10)
 validation.prefetch(10)
+print('Time elapsed: {0:.2f} s'.format(time.time() - start_time))
 
 """
 # DEBUG
