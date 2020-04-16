@@ -73,6 +73,7 @@ def main():
     train.prefetch(10)
     val.prefetch(10)
 
+    """DEBUG
     for batch_train, batch_val in zip(train.take(1), val.take(1)):
         print(batch_train[0].shape, batch_val[0].shape)
 
@@ -80,6 +81,7 @@ def main():
         show_batch(batch_train[1])
         show_batch(batch_val[0])
         show_batch(batch_val[1])
+    """
 
 
 if __name__ == '__main__':
