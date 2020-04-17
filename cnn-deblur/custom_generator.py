@@ -78,23 +78,24 @@ train_augmented.prefetch(10)
 validation.prefetch(10)
 print('Time elapsed: {0:.2f} s'.format(time.time() - start_time))
 
-"""
+
 # DEBUG
-def flip (x, y, seed):
+def flip (x, seed):
     do_flip = tf.random.uniform([], seed=seed) > 0.5
     x = tf.cond(do_flip, lambda: -x, lambda: x)
-    return x, y
+    return x
 
 seed = 42
-total_elements = 100
+total_elements = 10
+validation_split = 0.2
 
 dataset = tf.data.Dataset.from_tensor_slices(list(range(total_elements)))
-dataset = dataset.shuffle(buffer_size=1000, seed=42, reshuffle_each_iteration=False)
+dataset = dataset.shuffle(buffer_size=10, seed=seed, reshuffle_each_iteration=False)
 
 train_dataset = dataset.skip(int(total_elements*validation_split))
 val_dataset = dataset.take(int(total_elements*validation_split))
 
-train_dataset = train_dataset.shuffle(buffer_size=1000, seed=42, reshuffle_each_iteration=True)
+train_dataset = train_dataset.shuffle(buffer_size=10, seed=seed, reshuffle_each_iteration=True)
 
 batched_train_dataset = train_dataset.batch(batch_size).repeat(epochs)
 batched_val_dataset = val_dataset.batch(batch_size).repeat(epochs)
@@ -106,4 +107,4 @@ print("\n\n")
 
 for b in batched_val_dataset:
     print(b)
-"""
+

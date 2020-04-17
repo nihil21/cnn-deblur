@@ -102,7 +102,7 @@ EPOCHS = total_ep - init_ep
 BATCH_SIZE = int(args['batch_size'])
 
 seed = 42
-new_dimension = [720, 1280]
+new_dimension = [288, 512]
 train_val_elements = 24000
 validation_split = 0.125
 
@@ -110,11 +110,11 @@ validation_split = 0.125
 blur = tf.data.Dataset.list_files('/home/uni/dataset/train/train_blur/*/*', shuffle=True, seed=seed)
 sharp = tf.data.Dataset.list_files('/home/uni/dataset/train/train_sharp/*/*', shuffle=True, seed=seed)
 
-blur = blur.map(lambda filename: load_image(filename))
-sharp = sharp.map(lambda filename: load_image(filename))
+blur = blur.map(lambda filename: load_image(filename), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+sharp = sharp.map(lambda filename: load_image(filename), num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-blur = blur.map(lambda image: resize_image(image, new_dimension[0], new_dimension[1]))
-sharp = sharp.map(lambda image: resize_image(image, new_dimension[0], new_dimension[1]))
+blur = blur.map(lambda image: resize_image(image, new_dimension[0], new_dimension[1]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+sharp = sharp.map(lambda image: resize_image(image, new_dimension[0], new_dimension[1]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
 dataset = tf.data.Dataset.zip((blur, sharp))
 # reshuffle_each_iteration=False ensures that train and validation set are disjoint
@@ -125,15 +125,19 @@ train = dataset.skip(int(train_val_elements*validation_split))
 validation = dataset.take(int(train_val_elements*validation_split))
 
 # data augmentation
-train_augmented = train.map(lambda image_blur, image_sharp: random_flip(image_blur, image_sharp, seed))
+train_augmented = train.map(lambda image_blur, image_sharp: random_flip(image_blur, image_sharp, seed), num_parallel_calls=tf.data.experimental.AUTOTUNE)
 train_augmented = train_augmented.shuffle(buffer_size=50, seed=seed, reshuffle_each_iteration=True)
+
+# Cache datasets
+train_augmented = train_augmented.cache()
+validation = validation.cache()
 
 # repeat: once for each epoch
 train_augmented = train_augmented.batch(BATCH_SIZE).repeat(EPOCHS)
 validation = validation.batch(BATCH_SIZE).repeat(EPOCHS)
 
-train_augmented.prefetch(10)
-validation.prefetch(10)
+train_augmented.prefetch(tf.data.experimental.AUTOTUNE)
+validation.prefetch(tf.data.experimental.AUTOTUNE)
 
 # Test set
 test_elements = 3000
