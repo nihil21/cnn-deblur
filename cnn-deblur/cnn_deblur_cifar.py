@@ -36,12 +36,10 @@ from model.resnet_64_dense import ResNet64Dense
 from model.resnet_64 import ResNet64
 from model.resnet_128 import ResNet128
 
-dataset_choices = ['cifar', 'reds']
 arch_choices = ['toy', '64dense', '64', '128', 'unet']
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-d", "--dataset", required=True, choices=dataset_choices, help="dataset type [cifar|reds]")
 ap.add_argument("-a", "--architecture", required=True, choices=arch_choices,
                 help="architecture type [toy|64dense|64|128|unet]")
 ap.add_argument("-ie", "--initial-epoch", required=True, help="initial epoch for the training process")
@@ -64,7 +62,7 @@ print('Found GPU at: {}'.format(device_name))
 # Change working directory
 os.chdir('/home/uni/cnn-deblur/cnn-deblur')
 
-"""## 1. Cifar10
+"""
 Preprocess the Cifar10 dataset by blurring images with a random standard deviation and reserve samples for validation.
 """
 
@@ -205,4 +203,3 @@ for i in range(3):
 
 fig.savefig(os.path.join(path_to_graphs, 'predictions.png'))
 
-"""## 2. REDS"""
