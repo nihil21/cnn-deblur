@@ -93,6 +93,7 @@ def random_flip(image_blur, image_sharp, seed):
 
     return image_blur, image_sharp
 
+
 # Create Dataset objects in order to lazily fetch the images
 init_ep = int(args['initial_epoch'])
 total_ep = int(args['final_epoch'])
@@ -149,7 +150,7 @@ sharp_test = sharp_test.map(lambda image: resize_image(image, new_dimension[0], 
 test = tf.data.Dataset.zip((blur_test, sharp_test))
 
 # Create ConvNet and plot model
-conv_net = arch_dict[arch_type](input_shape=(512, 288, 3))
+conv_net = arch_dict[arch_type](input_shape=(288, 512, 3))
 loss_fun = args['loss']
 conv_net.compile(loss=loss_fun)
 
