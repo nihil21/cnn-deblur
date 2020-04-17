@@ -106,8 +106,8 @@ train_val_elements = 24000
 validation_split = 0.125
 
 # Training and validation sets
-blur = tf.data.Dataset.list_files('/media/tree/Dati/GIACOMO/Unibo/Magistrale/Ianno/Deep Learning/Project/Tests/dataset/blur/train/*/*', shuffle=True, seed=seed)
-sharp = tf.data.Dataset.list_files('/media/tree/Dati/GIACOMO/Unibo/Magistrale/Ianno/Deep Learning/Project/Tests/dataset/sharp/train/*/*', shuffle=True, seed=seed)
+blur = tf.data.Dataset.list_files('/home/uni/dataset/blur/train/*/*', shuffle=True, seed=seed)
+sharp = tf.data.Dataset.list_files('/home/uni/dataset/sharp/train/*/*', shuffle=True, seed=seed)
 
 blur = blur.map(lambda filename: load_image(filename))
 sharp = sharp.map(lambda filename: load_image(filename))
@@ -137,8 +137,8 @@ validation.prefetch(10)
 # Test set
 test_elements = 3000
 
-blur_test = tf.data.Dataset.list_files('/media/tree/Dati/GIACOMO/Unibo/Magistrale/Ianno/Deep Learning/Project/Tests/dataset/blur/val/*/*', shuffle=False)
-sharp_test = tf.data.Dataset.list_files('/media/tree/Dati/GIACOMO/Unibo/Magistrale/Ianno/Deep Learning/Project/Tests/dataset/sharp/val/*/*', shuffle=False)
+blur_test = tf.data.Dataset.list_files('/home/uni/dataset/blur/val/*/*', shuffle=False)
+sharp_test = tf.data.Dataset.list_files('/home/uni/dataset/sharp/val/*/*', shuffle=False)
 
 blur_test = blur_test.map(lambda filename: load_image(filename))
 sharp_test = sharp_test.map(lambda filename: load_image(filename))
