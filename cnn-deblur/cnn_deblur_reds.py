@@ -39,7 +39,7 @@ def main():
     ap.add_argument("-fe", "--final-epoch", required=True, help="final epoch for the training process")
     ap.add_argument("-bs", "--batch-size", required=True, help="batch-size dimension")
     ap.add_argument("-l", "--loss", required=True, help="the loss function to use [mse|mae|...]")
-    ap.add_argument("-tf", "--tfrecords", required=False, help="usage of tfrecords")
+    ap.add_argument("-tf", "--tfrecords", action="store_true", help="usage of tfrecords")
     args = vars(ap.parse_args())
 
     if args['tfrecords']:
