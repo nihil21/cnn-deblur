@@ -19,18 +19,13 @@ import argparse
 import tensorflow as tf
 import os
 import glob
-import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
 
-from tensorflow.keras.callbacks import Callback, ModelCheckpoint
-from tensorflow.keras.utils import model_to_dot
+from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 from utils.image_preprocessing import *
-from model.conv_net import ConvNet
 from model.u_net import UNet
-# from model.u_net import UNetREDS
 from model.toy_resnet import ToyResNet
 from model.resnet_64_dense import ResNet64Dense
 from model.resnet_64 import ResNet64
