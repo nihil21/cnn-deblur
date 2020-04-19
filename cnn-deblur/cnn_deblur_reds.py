@@ -131,7 +131,7 @@ def main():
                         callbacks=callbacks_list)
 
     """Evaluate the model on the test set."""
-    results = conv_net.model.evaluate(test_data, batch_size=BATCH_SIZE)
+    results = conv_net.model.evaluate(test_data)
     print('Test loss:', results[0])
     print('Test ssim_metric:', results[1])
     print('Test mse:', results[2])
