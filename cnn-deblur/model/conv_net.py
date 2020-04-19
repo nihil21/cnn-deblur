@@ -169,7 +169,7 @@ class ConvNet:
                            metrics=metric_list)
 
     def fit(self,
-            x,
+            x: Optional = None,
             y: Optional = None,
             batch_size: Optional[int] = 32,
             epochs: Optional[int] = 1,
@@ -187,8 +187,7 @@ class ConvNet:
                                   initial_epoch=initial_epoch,
                                   callbacks=callbacks)
         else:
-            gen = x
-            return self.model.fit(gen,
+            return self.model.fit(x,
                                   epochs=epochs,
                                   steps_per_epoch=steps_per_epoch,
                                   validation_data=validation_data,
@@ -197,10 +196,14 @@ class ConvNet:
                                   callbacks=callbacks)
 
     def evaluate(self,
-                 testX,
-                 testY,
-                 batch_size: int):
-        self.model.evaluate(testX, testY, batch_size=batch_size)
+                 x: Optional = None,
+                 y: Optional = None,
+                 batch_size: Optional[int] = None,
+                 steps: Optional[int] = None):
+        if y is not None:
+            self.model.evaluate(x, y, batch_size=batch_size, steps=steps)
+        else:
+            self.model.evaluate(x, batch_size=batch_size, steps=steps)
 
     def predict(self, X):
         return self.model.predict(X)

@@ -131,7 +131,8 @@ def main():
                         callbacks=callbacks_list)
 
     """Evaluate the model on the test set."""
-    results = conv_net.model.evaluate(test_data)
+    steps_test = TEST_SIZE // BATCH_SIZE
+    results = conv_net.evaluate(test_data, steps=steps_test)
     print('Test loss:', results[0])
     print('Test ssim_metric:', results[1])
     print('Test mse:', results[2])
@@ -184,13 +185,16 @@ def main():
     fig.savefig(os.path.join(path_to_graphs, 'metrics.png'))
 
     """Generate predictions on new data."""
-    blurred = test_data.take(3)
-    original = test_data.take(3)
-
-    predicted = conv_net.predict(blurred)
+    blurred = None
+    original = None
+    predicted = None
+    for batch in test_data.take(1):
+        blurred = batch[0]
+        original = batch[1]
+        predicted = conv_net.predict(batch[0])
 
     fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(15, 15))
-    for i in range(3):
+    for i in range(4):
         axes[i, 0].set_title('Original image')
         axes[i, 0].imshow(original[i])
         axes[i, 1].set_title('Blurred image')

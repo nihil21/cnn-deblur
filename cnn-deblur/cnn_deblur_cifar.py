@@ -103,21 +103,22 @@ if init_ep != 0:
 
 """Train model following *train-validation-test* paradigm."""
 
-ep = int(args['final_epoch'])
-bs = int(args['batch_size'])
-seed = 42
-steps_train = len(trainX) // bs
-steps_val = len(valX) // bs
+EPOCHS = int(args['final_epoch'])
+BATCH_SIZE = int(args['batch_size'])
+RND = 42
+
+steps_train = len(trainX) // BATCH_SIZE
+steps_val = len(valX) // BATCH_SIZE
 
 # Data augmentation
 trainX_datagen = ImageDataGenerator(horizontal_flip=True, vertical_flip=True)
 trainY_datagen = ImageDataGenerator(horizontal_flip=True, vertical_flip=True)
-trainX_data = trainX_datagen.flow(trainX, batch_size=bs, seed=seed)
-trainY_data = trainY_datagen.flow(trainY, batch_size=bs, seed=seed)
+trainX_data = trainX_datagen.flow(trainX, batch_size=BATCH_SIZE, seed=RND)
+trainY_data = trainY_datagen.flow(trainY, batch_size=BATCH_SIZE, seed=RND)
 train_data = (pair for pair in zip(trainX_data, trainY_data))
 
 hist = conv_net.fit(train_data,
-                    epochs=ep,
+                    epochs=EPOCHS,
                     steps_per_epoch=steps_train,
                     validation_data=(valX, valY),
                     validation_steps=steps_val,
@@ -126,7 +127,7 @@ hist = conv_net.fit(train_data,
 
 """Evaluate the model on the test set."""
 
-results = conv_net.model.evaluate(testX, testY, batch_size=bs)
+results = conv_net.evaluate(testX, testY, batch_size=BATCH_SIZE)
 print('Test loss:', results[0])
 print('Test ssim_metric:', results[1])
 print('Test mse:', results[2])
@@ -136,7 +137,7 @@ print('Test cosine_proximity:', results[5])
 
 """Plot graph representing the loss and accuracy trends over epochs."""
 
-n = np.arange(0, ep - init_ep)
+n = np.arange(0, EPOCHS - init_ep)
 plt.style.use('ggplot')
 fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(16, 16))
 fig.suptitle('Loss and metrics trends over epochs')

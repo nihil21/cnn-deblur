@@ -153,7 +153,7 @@ def load_tfrecord_dataset(dataset_root,
     # Repeat once for each epoch
     train_data = train_data.repeat(epochs)
     val_data = val_data.repeat(epochs)
-    test_data = test_data.repeat(epochs)
+    test_data = test_data.repeat()
 
     # Prefetch
     train_data.prefetch(tf.data.experimental.AUTOTUNE)
