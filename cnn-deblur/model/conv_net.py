@@ -158,6 +158,7 @@ class ConvNet:
         })
 
         metric_list = [ssim_metric,
+                       ms_ssim_metric,
                        'mse',
                        'mae',
                        'mape',
