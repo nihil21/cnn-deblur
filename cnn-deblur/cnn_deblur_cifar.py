@@ -24,6 +24,7 @@ from model.toy_resnet import ToyResNet
 from model.resnet_64_dense import ResNet64Dense
 from model.resnet_64 import ResNet64
 from model.resnet_128 import ResNet128
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 ARCH_CHOICES = ['toy', '64dense', '64', '128', 'unet']
 
