@@ -152,14 +152,12 @@ class ConvNet:
             'psnr_loss': psnr_loss,
             'content_loss': content_loss,
             'ssim_loss': ssim_loss,
-            'ms_ssim_loss': ms_ssim_loss,
             'mix_loss': mix_loss,
             'kld': KLDivergence(),
             'cross_entropy': BinaryCrossentropy(),
         })
 
         metric_list = [ssim_metric,
-                       ms_ssim_metric,
                        'mse',
                        'mae',
                        'mape',
