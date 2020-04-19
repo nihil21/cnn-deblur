@@ -24,6 +24,7 @@ from model.toy_resnet import ToyResNet
 from model.resnet_64_dense import ResNet64Dense
 from model.resnet_64 import ResNet64
 from model.resnet_128 import ResNet128
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 ARCH_CHOICES = ['toy', '64dense', '64', '128', 'unet']
 
@@ -119,8 +120,7 @@ def main():
     print('Test ssim_metric:', results[1])
     print('Test mse:', results[2])
     print('Test mae:', results[3])
-    print('Test mape:', results[4])
-    print('Test cosine_proximity:', results[5])
+    print('Test accuracy:', results[4])
 
     # Plot graph representing the loss and accuracy trends over epochs.
     n = np.arange(0, EPOCHS - init_ep)

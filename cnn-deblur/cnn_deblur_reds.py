@@ -25,16 +25,16 @@ from model.resnet_64_dense import ResNet64Dense
 from model.resnet_64 import ResNet64
 from model.resnet_128 import ResNet128
 from datasets.reds_dataset import load_image_dataset, load_tfrecord_dataset
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+ARCH_CHOICES = ['unetreds', 'unet20']
 
 
 def main():
-
-    arch_choices = ['toy', '64dense', '64', '128', 'unetreds', 'unet20']
-
     # Construct the argument parser and parse the arguments
     ap = argparse.ArgumentParser()
-    ap.add_argument("-a", "--architecture", required=True, choices=arch_choices,
-                    help="architecture type [toy|64dense|64|128|unetreds|unet20]")
+    ap.add_argument("-a", "--architecture", required=True, choices=ARCH_CHOICES,
+                    help="architecture type [unetreds|unet20]")
     ap.add_argument("-ie", "--initial-epoch", required=True, help="initial epoch for the training process")
     ap.add_argument("-fe", "--final-epoch", required=True, help="final epoch for the training process")
     ap.add_argument("-bs", "--batch-size", required=True, help="batch-size dimension")
@@ -53,6 +53,7 @@ def main():
     checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
     callbacks_list = [checkpoint]
 
+    print('=' * 50)
     device_name = tf.test.gpu_device_name()
     print('Found GPU at: {}'.format(device_name))
 
@@ -71,6 +72,8 @@ def main():
     arch_type = args['architecture']
 
     # Create Dataset objects in order to lazily fetch the images
+    print('=' * 50)
+    print('Preprocessing Cifar10 dataset...')
     init_ep = int(args['initial_epoch'])
     total_ep = int(args['final_epoch'])
 
@@ -108,6 +111,8 @@ def main():
     loss_fun = args['loss']
     conv_net.compile(loss=loss_fun)
 
+    print('=' * 50)
+    print('Model architecture:')
     print(conv_net.summary())
     path_to_graphs = os.path.join('..', 'res')
     conv_net.plot_model(os.path.join(path_to_graphs, 'model.png'))
@@ -118,7 +123,9 @@ def main():
         conv_net.model.load_weights(weights[0])
         print('Initial epoch: {0:d}'.format(init_ep))
 
-    """Train model following train-validation-test paradigm."""
+    # Train model following train-validation-test paradigm.
+    print('=' * 50)
+    print('Training model...')
     steps_train = train_size // BATCH_SIZE
     steps_val = val_size // BATCH_SIZE
 
@@ -130,15 +137,16 @@ def main():
                         initial_epoch=init_ep,
                         callbacks=callbacks_list)
 
-    """Evaluate the model on the test set."""
+    print('=' * 50)
+    print('Evaluating model...')
+    # Evaluate the model on the test set.
     steps_test = TEST_SIZE // BATCH_SIZE
     results = conv_net.evaluate(test_data, steps=steps_test)
     print('Test loss:', results[0])
     print('Test ssim_metric:', results[1])
     print('Test mse:', results[2])
     print('Test mae:', results[3])
-    print('Test mape:', results[4])
-    print('Test cosine_proximity:', results[5])
+    print('Test accuracy:', results[4])
 
     """Plot graph representing the loss and accuracy trends over epochs."""
     n = np.arange(0, total_ep - init_ep)
