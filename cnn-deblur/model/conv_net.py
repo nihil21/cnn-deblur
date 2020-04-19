@@ -198,9 +198,9 @@ class ConvNet:
                  batch_size: Optional[int] = None,
                  steps: Optional[int] = None):
         if y is not None:
-            self.model.evaluate(x, y, batch_size=batch_size, steps=steps)
+            return self.model.evaluate(x, y, batch_size=batch_size, steps=steps)
         else:
-            self.model.evaluate(x, batch_size=batch_size, steps=steps)
+            return self.model.evaluate(x, batch_size=batch_size, steps=steps)
 
     def predict(self, X):
         return self.model.predict(X)
