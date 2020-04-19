@@ -13,11 +13,11 @@ Authors:
 
 import argparse
 import tensorflow as tf
+import numpy as np
 import os
 import glob
 import matplotlib.pyplot as plt
 from tensorflow.keras.callbacks import ModelCheckpoint
-from utils.image_preprocessing import *
 from model.u_net_reds import UNetREDS
 from model.unet20 import UNet20
 from model.toy_resnet import ToyResNet

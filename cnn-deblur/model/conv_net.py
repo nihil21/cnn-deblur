@@ -2,7 +2,7 @@ from tensorflow.keras.layers import (Layer, Conv2D, Conv2DTranspose, Activation,
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import Adam
-from utils.custom_losses_metrics import *
+from model.custom_losses_metrics import *
 from tensorflow.keras.losses import MeanSquaredError, MeanAbsoluteError, KLDivergence, BinaryCrossentropy
 from typing import List, Optional
 
@@ -152,16 +152,14 @@ class ConvNet:
             'psnr_loss': psnr_loss,
             'content_loss': content_loss,
             'ssim_loss': ssim_loss,
-            'mix_loss': mix_loss,
             'kld': KLDivergence(),
-            'cross_entropy': BinaryCrossentropy(),
+            'cross_entropy': BinaryCrossentropy()
         })
 
         metric_list = [ssim_metric,
                        'mse',
                        'mae',
-                       'mape',
-                       'cosine_proximity']
+                       'accuracy']
 
         self.model.compile(Adam(learning_rate=lr),
                            loss=loss_dict[loss],
