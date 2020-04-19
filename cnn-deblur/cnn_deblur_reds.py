@@ -137,8 +137,7 @@ def main():
     print('Test ssim_metric:', results[1])
     print('Test mse:', results[2])
     print('Test mae:', results[3])
-    print('Test mape:', results[4])
-    print('Test cosine_proximity:', results[5])
+    print('Test accuracy:', results[4])
 
     """Plot graph representing the loss and accuracy trends over epochs."""
     n = np.arange(0, total_ep - init_ep)
