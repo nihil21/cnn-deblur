@@ -148,7 +148,7 @@ def main():
     print('Test mae:', results[3])
     print('Test accuracy:', results[4])
 
-    """Plot graph representing the loss and accuracy trends over epochs."""
+    # Plot graph representing the loss and accuracy trends over epochs.
     n = np.arange(0, total_ep - init_ep)
     plt.style.use('ggplot')
     fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(16, 16))
@@ -177,22 +177,16 @@ def main():
     axes[1, 1].set_title('MAE')
     axes[1, 1].set(xlabel='Epochs #', ylabel='MAE')
     axes[1, 1].legend()
-    # MAPE
-    axes[2, 0].plot(n, hist.history['mape'], label='train_mape')
-    axes[2, 0].plot(n, hist.history['val_mape'], label='val_mape')
-    axes[2, 0].set_title('MAPE')
-    axes[2, 0].set(xlabel='Epochs #', ylabel='MAPE')
+    # Accuracy
+    axes[2, 0].plot(n, hist.history['accuracy'], label='train_accuracy')
+    axes[2, 0].plot(n, hist.history['val_accuracy'], label='val_accuracy')
+    axes[2, 0].set_title('Accuracy')
+    axes[2, 0].set(xlabel='Epochs #', ylabel='Accuracy')
     axes[2, 0].legend()
-    # Cosine Proximity
-    axes[2, 1].plot(n, hist.history['cosine_proximity'], label='train_cosine_proximity')
-    axes[2, 1].plot(n, hist.history['val_cosine_proximity'], label='val_cosine_proximity')
-    axes[2, 1].set_title('Cosine Proximity')
-    axes[2, 1].set(xlabel='Epochs #', ylabel='Cosine Proximity')
-    axes[2, 1].legend()
 
     fig.savefig(os.path.join(path_to_graphs, 'metrics.png'))
 
-    """Generate predictions on new data."""
+    # Generate predictions on new data.
     blurred = None
     original = None
     predicted = None
