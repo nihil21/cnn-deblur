@@ -20,21 +20,18 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.callbacks import ModelCheckpoint
 from model.u_net_reds import UNetREDS
 from model.unet20 import UNet20
-from model.toy_resnet import ToyResNet
-from model.resnet_64_dense import ResNet64Dense
-from model.resnet_64 import ResNet64
-from model.resnet_128 import ResNet128
+from model.res_unet20 import ResUNet20
 from datasets.reds_dataset import load_image_dataset, load_tfrecord_dataset
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-ARCH_CHOICES = ['unetreds', 'unet20']
+ARCH_CHOICES = ['unetreds', 'unet20', 'res_unet20']
 
 
 def main():
     # Construct the argument parser and parse the arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("-a", "--architecture", required=True, choices=ARCH_CHOICES,
-                    help="architecture type [unetreds|unet20]")
+                    help="architecture type [unetreds|unet20|res_unet20]")
     ap.add_argument("-ie", "--initial-epoch", required=True, help="initial epoch for the training process")
     ap.add_argument("-fe", "--final-epoch", required=True, help="final epoch for the training process")
     ap.add_argument("-bs", "--batch-size", required=True, help="batch-size dimension")
@@ -62,12 +59,9 @@ def main():
 
     # Create dictionary of possible architectures
     arch_dict = dict({
-        'toy': ToyResNet,
-        '64dense': ResNet64Dense,
-        '64': ResNet64,
-        '128': ResNet128,
         'unetreds': UNetREDS,
-        'unet20': UNet20
+        'unet20': UNet20,
+        'res_unet20': ResUNet20
     })
     arch_type = args['architecture']
 

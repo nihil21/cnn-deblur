@@ -1,4 +1,5 @@
-from tensorflow.keras.layers import (Layer, Conv2D, Conv2DTranspose, Activation, Add, MaxPooling2D, concatenate)
+from tensorflow.keras.layers import (Layer, Conv2D, Conv2DTranspose, Activation, Add, MaxPooling2D,
+                                     concatenate, BatchNormalization, UpSampling2D)
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import Adam
@@ -7,6 +8,7 @@ from tensorflow.keras.losses import MeanSquaredError, MeanAbsoluteError, KLDiver
 from typing import List, Optional
 
 
+# ---------- ResNet ----------
 def ResConv(kernels: List[int],
             filters_num: List[int],
             res_in: Layer,
@@ -90,6 +92,7 @@ def ResConvTranspose(kernels: List[int],
     return x
 
 
+# --------- UNet ----------
 def UConvDown(kernels: List[int],
               filters_num: List[int],
               in_layer: Layer,
@@ -134,6 +137,84 @@ def UConvUp(kernels: List[int],
                    name='conv{0:d}_{1:d}'.format(layer_idx, n))(x)
         n += 1
     return x
+
+
+# ---------- ResUNet ----------
+def ResUDown(kernels: List[int],
+             filters_num: List[int],
+             strides: List[int],
+             in_layer: Layer,
+             layer_idx: int,
+             is_initial: Optional[bool] = False):
+
+    x = in_layer
+
+    n = 0
+    for krnl, fltr, strd in zip(kernels, filters_num, strides):
+        # Update the suffix of layer's name
+        layer_suffix = '{0:d}_{1:d}'.format(layer_idx, n)
+
+        # If the block is the initial one, skip batch normalization and ReLU
+        if not is_initial:
+            x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
+            x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
+        x = Conv2D(fltr,
+                   kernel_size=krnl,
+                   padding='same',
+                   strides=strd,
+                   name='conv{0:d}_{1:d}'.format(layer_idx, n))(x)
+        n += 1
+
+    # Residual connection
+    res_layer = Conv2D(filters_num[0],
+                       kernel_size=1,
+                       padding='same',
+                       strides=strides[0],
+                       name='res_conv{0:d}'.format(layer_idx))(in_layer)
+    x = Add()([x, res_layer])
+
+    return x
+
+
+def ResUUp(kernels: List[int],
+           filters_num: List[int],
+           strides: List[int],
+           in_layer: Layer,
+           concat_layer: Layer,
+           layer_idx: int):
+    # Upsampling
+    x = UpSampling2D(name='upsamp{0:d}'.format(layer_idx))(in_layer)
+    # Concatenation
+    x = concatenate([concat_layer, x])
+
+    n = 0
+    for krnl, fltr, strd in zip(kernels, filters_num, strides):
+        # Update the suffix of layer's name
+        layer_suffix = '{0:d}_{1:d}'.format(layer_idx, n)
+
+        x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
+        x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
+        x = Conv2D(fltr,
+                   kernel_size=krnl,
+                   padding='same',
+                   strides=strd,
+                   name='conv{0:d}_{1:d}'.format(layer_idx, n))(x)
+        n += 1
+
+    # Residual connection
+    res_layer = Conv2DTranspose(filters_num[0],
+                                kernel_size=1,
+                                strides=2,
+                                padding='same',
+                                name='res_upsamp{0:d}'.format(layer_idx))(in_layer)
+    x = Add()([x, res_layer])
+
+    return x
+
+
+def ResUOut(in_layer: Layer):
+    x = Conv2D(3, kernel_size=1, strides=1, padding='same', name='conv_out')(in_layer)
+    return Activation('sigmoid', name='sigmoid')(x)
 
 
 class ConvNet:

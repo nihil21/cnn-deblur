@@ -9,6 +9,7 @@
       <w>deblur</w>
       <w>fltr</w>
       <w>ggplot</w>
+      <w>krnl</w>
       <w>mape</w>
       <w>mattia</w>
       <w>maxpool</w>
@@ -18,8 +19,10 @@
       <w>preprocessing</w>
       <w>psnr</w>
       <w>relu</w>
+      <w>resunet</w>
       <w>softmax</w>
       <w>ssim</w>
+      <w>strd</w>
       <w>studiorum</w>
       <w>subdirs</w>
       <w>tconv</w>
@@ -31,6 +34,7 @@
       <w>unetreds</w>
       <w>upsamp</w>
       <w>upsample</w>
+      <w>upsampling</w>
       <w>upscales</w>
     </words>
   </dictionary>
