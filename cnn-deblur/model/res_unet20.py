@@ -76,7 +76,3 @@ class ResUNet20(ConvNet):
         output = ResUOut(conv9)
 
         self.model = Model(inputs=visible, outputs=output)
-
-
-m = ResUNet20(input_shape=(288, 512, 3))
-print(m.summary())
