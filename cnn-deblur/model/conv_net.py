@@ -1,5 +1,5 @@
 from tensorflow.keras.layers import (Layer, Conv2D, Conv2DTranspose, Activation, Add, MaxPooling2D,
-                                     concatenate, BatchNormalization, UpSampling2D)
+                                     concatenate, BatchNormalization)
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import Adam
@@ -119,6 +119,7 @@ def UConvUp(kernels: List[int],
             in_layer: Layer,
             concat_layer: Layer,
             layer_idx: int):
+    # Upsampling by transposed convolution
     x = Conv2DTranspose(filters_num[0],
                         kernel_size=2,
                         strides=2,
@@ -182,10 +183,22 @@ def ResUUp(kernels: List[int],
            in_layer: Layer,
            concat_layer: Layer,
            layer_idx: int):
-    # Upsampling
-    x = UpSampling2D(name='upsamp{0:d}'.format(layer_idx))(in_layer)
+    # Upsampling by transposed convolution
+    x = Conv2DTranspose(filters_num[0],
+                        kernel_size=3,
+                        strides=2,
+                        activation='relu',
+                        padding='same',
+                        name='upsamp{0:d}'.format(layer_idx))(in_layer)
     # Concatenation
     x = concatenate([concat_layer, x])
+    # Residual layer
+    res_layer = Conv2DTranspose(filters_num[0],
+                                kernel_size=1,
+                                strides=1,
+                                activation='relu',
+                                padding='same',
+                                name='res_upsamp{0:d}'.format(layer_idx))(x)
 
     n = 0
     for krnl, fltr, strd in zip(kernels, filters_num, strides):
@@ -202,11 +215,6 @@ def ResUUp(kernels: List[int],
         n += 1
 
     # Residual connection
-    res_layer = Conv2DTranspose(filters_num[0],
-                                kernel_size=1,
-                                strides=2,
-                                padding='same',
-                                name='res_upsamp{0:d}'.format(layer_idx))(in_layer)
     x = Add()([x, res_layer])
 
     return x
