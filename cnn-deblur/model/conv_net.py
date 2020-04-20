@@ -155,7 +155,7 @@ def ResUDown(kernels: List[int],
         layer_suffix = '{0:d}_{1:d}'.format(layer_idx, n)
 
         # If the block is the initial one, skip batch normalization and ReLU
-        if not is_initial:
+        if not (is_initial and n == 0):
             x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
             x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
         x = Conv2D(fltr,
