@@ -67,7 +67,7 @@ def main():
 
     # Create Dataset objects in order to lazily fetch the images
     print('=' * 50)
-    print('Preprocessing Cifar10 dataset...')
+    print('Preprocessing REDS dataset...')
     init_ep = int(args['initial_epoch'])
     total_ep = int(args['final_epoch'])
 
