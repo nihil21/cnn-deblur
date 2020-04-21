@@ -4,7 +4,6 @@ from glob import glob
 
 
 def load_image_dataset(dataset_root,
-                       train_size,
                        val_size,
                        new_res,
                        batch_size,
@@ -44,7 +43,7 @@ def load_image_dataset(dataset_root,
     dataset = dataset.shuffle(buffer_size=50, seed=seed, reshuffle_each_iteration=False)
 
     # train and validation split
-    train = dataset.skip(train_size)
+    train = dataset.skip(val_size)
     validation = dataset.take(val_size)
 
     # data augmentation
@@ -88,7 +87,6 @@ def load_image_dataset(dataset_root,
 
 
 def load_tfrecord_dataset(dataset_root,
-                          train_size,
                           val_size,
                           new_res,
                           batch_size,
@@ -131,7 +129,7 @@ def load_tfrecord_dataset(dataset_root,
     # Shuffle once and perform train-validation split
     trainval_data = trainval_data.shuffle(buffer_size=50, seed=seed, reshuffle_each_iteration=False)
     train_data = trainval_data.skip(val_size)
-    val_data = trainval_data.take(train_size)
+    val_data = trainval_data.take(val_size)
 
     train_data = train_data.batch(batch_size)
     val_data = val_data.batch(batch_size)

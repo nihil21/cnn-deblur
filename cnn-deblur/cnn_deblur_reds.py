@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.callbacks import ModelCheckpoint
 from model.u_net_reds import UNetREDS
 from model.unet20 import UNet20
-from model.res_unet20 import ResUNet20
+from model.res_unet16 import ResUNet16
 from datasets.reds_dataset import load_image_dataset, load_tfrecord_dataset
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -61,7 +61,7 @@ def main():
     arch_dict = dict({
         'unetreds': UNetREDS,
         'unet20': UNet20,
-        'res_unet20': ResUNet20
+        'res_unet20': ResUNet16
     })
     arch_type = args['architecture']
 
@@ -85,7 +85,6 @@ def main():
 
     if use_tfrecords:
         train_data, val_data, test_data = load_tfrecord_dataset(dataset_root,
-                                                                train_size,
                                                                 val_size,
                                                                 NEW_RES,
                                                                 BATCH_SIZE,
@@ -93,12 +92,15 @@ def main():
                                                                 RND)
     else:
         train_data, val_data, test_data = load_image_dataset(dataset_root,
-                                                             train_size,
                                                              val_size,
                                                              NEW_RES,
                                                              BATCH_SIZE,
                                                              EPOCHS,
                                                              RND)
+
+    print('Training set size: {0:d}'.format(train_size))
+    print('Validation set size: {0:d}'.format(val_size))
+    print('Test set size: {0:d}'.format(TEST_SIZE))
 
     # Create ConvNet and plot model
     conv_net = arch_dict[arch_type](input_shape=(288, 512, 3))
