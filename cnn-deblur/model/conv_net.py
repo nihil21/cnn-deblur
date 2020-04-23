@@ -147,7 +147,6 @@ def ResUDown(kernels: List[int],
              in_layer: Layer,
              layer_idx: int,
              is_initial: Optional[bool] = False):
-
     x = in_layer
 
     n = 0
@@ -223,6 +222,63 @@ def ResUUp(kernels: List[int],
 def ResUOut(in_layer: Layer):
     x = Conv2D(3, kernel_size=1, strides=1, padding='same', name='conv_out')(in_layer)
     return Activation('sigmoid', name='sigmoid')(x)
+
+
+# ---------- ResSkipUNet ----------
+def ResSkipUDown(kernels: List[int],
+                 filters_num: List[int],
+                 strides: List[int],
+                 in_layer: Layer,
+                 layer_idx: int,
+                 is_initial: Optional[bool] = False):
+    x = in_layer
+
+    n = 0
+    for krnl, fltr, strd in zip(kernels, filters_num, strides):
+        # Update the suffix of layer's name
+        layer_suffix = '{0:d}_{1:d}'.format(layer_idx, n)
+
+        # If the block is the initial one, skip batch normalization and ReLU
+        if not (is_initial and n == 0):
+            x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
+            x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
+        x = Conv2D(fltr,
+                   kernel_size=krnl,
+                   padding='same',
+                   strides=strd,
+                   name='conv{0:d}_{1:d}'.format(layer_idx, n))(x)
+        n += 1
+
+    return x
+
+
+def ResSkipUUp(kernels: List[int],
+               filters_num: List[int],
+               strides: List[int],
+               in_layer: Layer,
+               layer_idx: int,
+               res_layer: Optional[bool] = None):
+    if res_layer is not None:
+        # Residual connection
+        x = Add()([in_layer, res_layer])
+    else:
+        x = in_layer
+
+    n = 0
+    for krnl, fltr, strd in zip(kernels, filters_num, strides):
+        # Update the suffix of layer's name
+        layer_suffix = '{0:d}_{1:d}'.format(layer_idx, n)
+
+        x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
+        x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
+        x = Conv2DTranspose(fltr,
+                            kernel_size=krnl,
+                            padding='same',
+                            strides=strd,
+                            name='conv{0:d}_{1:d}'.format(layer_idx, n))(x)
+        n += 1
+
+    return x
 
 
 class ConvNet:
