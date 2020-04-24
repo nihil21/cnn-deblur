@@ -25,16 +25,17 @@ from model.resnet_64_dense import ResNet64Dense
 from model.resnet_64 import ResNet64
 from model.resnet_128 import ResNet128
 from model.res_unet import ResUNet
+from model.res_skip_unet import ResSkipUNet
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-ARCH_CHOICES = ['toy', '64dense', '64', '128', 'unet']
+ARCH_CHOICES = ['toy', '64dense', '64', '128', 'unet', 'resunet', 'resskipunet']
 
 
 def main():
     # Construct the argument parser and parse the arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("-a", "--architecture", required=True, choices=ARCH_CHOICES,
-                    help="architecture type [toy|64dense|64|128|unet]")
+                    help="architecture type [toy|64dense|64|128|unet|resunet|resskipunet]")
     ap.add_argument("-ie", "--initial-epoch", required=True, help="initial epoch for the training process")
     ap.add_argument("-fe", "--final-epoch", required=True, help="final epoch for the training process")
     ap.add_argument("-bs", "--batch-size", required=True, help="batch-size dimension")
@@ -68,7 +69,8 @@ def main():
         '64': ResNet64,
         '128': ResNet128,
         'unet': UNet,
-        'resunet': ResUNet
+        'resunet': ResUNet,
+        'resskipunet': ResSkipUNet
     })
     arch_type = args['architecture']
 

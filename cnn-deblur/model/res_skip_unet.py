@@ -71,6 +71,3 @@ class ResSkipUNet(ConvNet):
 
         self.model = Model(inputs=visible, outputs=output)
 
-
-conv_net = ResSkipUNet(input_shape=(32, 32, 3))
-conv_net.plot_model("/tmp/model.png")
