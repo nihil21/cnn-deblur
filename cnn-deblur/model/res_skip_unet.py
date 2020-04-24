@@ -61,7 +61,7 @@ class ResSkipUNet(ConvNet):
                            layer_idx=7)  # 32x32x64
 
         conv8 = ResSkipUUp(kernels=[3, 3],
-                           filters_num=[64, 64],
+                           filters_num=[3, 3],
                            strides=[1, 1],
                            in_layer=conv7,
                            res_layer=conv1,
