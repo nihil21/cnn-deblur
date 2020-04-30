@@ -130,10 +130,6 @@ def load_tfrecord_dataset(dataset_root,
     train_data = trainval_data.skip(val_size)
     val_data = trainval_data.take(val_size)
 
-    train_data = train_data.batch(batch_size)
-    val_data = val_data.batch(batch_size)
-    test_data = test_data.batch(batch_size)
-
     def _random_flip(image_blur, image_sharp):
         do_flip = tf.random.uniform([], seed=seed) > 0.5
         image_blur = tf.cond(do_flip, lambda: tf.image.flip_left_right(image_blur), lambda: image_blur)
