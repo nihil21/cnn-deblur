@@ -7,9 +7,10 @@ import time
 from typing import Optional
 
 
-def load_image_dataset(normalize: Optional[bool] = False):
+def load_image_dataset(do_val_split: Optional[bool] = True, normalize: Optional[bool] = False):
     """Function that loads Cifar10 dataset and produces a training and test set in which the predictors are randomly
     Gaussian blurred images and the targets are the clear version of such images.
+        :param do_val_split: boolean indicating whether the validation split must be performed or not (default is True)
         :param normalize: boolean indicating whether the pixel values should be normalized between 0 and 1 (optional)
 
         :return train: tuple containing predictor and target images of the train set
@@ -22,10 +23,12 @@ def load_image_dataset(normalize: Optional[bool] = False):
     rnd = np.random.RandomState(seed=42)
     (trainX, trainY), (testX, testY) = blur_dataset(train_set, test_set, normalize, rnd)
 
-    # Reserve some samples for validation
-    trainX, valX, trainY, valY = train_test_split(trainX, trainY, random_state=rnd)
-
-    return (trainX, trainY), (valX, valY), (testX, testY)
+    # Reserve some samples for validation, if specified
+    if do_val_split:
+        trainX, valX, trainY, valY = train_test_split(trainX, trainY, random_state=rnd)
+        return (trainX, trainY), (testX, testY), (valX, valY)
+    else:
+        return (trainX, trainY), (testX, testY)
 
 
 def blur_dataset(train_set: np.ndarray,

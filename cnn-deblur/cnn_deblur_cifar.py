@@ -56,7 +56,7 @@ def main():
     print('=' * 50)
     print('Preprocessing Cifar10 dataset...')
     # Preprocess Cifar10 dataset
-    (trainX, trainY), (valX, valY), (testX, testY) = cifar_dataset.load_image_dataset(normalize=True)
+    (trainX, trainY), (testX, testY), (valX, valY) = cifar_dataset.load_image_dataset(normalize=True)
 
     print('Training set size: {0:d}'.format(trainX.shape[0]))
     print('Validation set size: {0:d}'.format(valX.shape[0]))

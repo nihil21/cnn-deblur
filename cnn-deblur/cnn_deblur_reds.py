@@ -84,14 +84,14 @@ def main():
     train_size = TRAINVAL_SIZE - val_size
 
     if use_tfrecords:
-        train_data, val_data, test_data = load_tfrecord_dataset(dataset_root,
+        train_data, test_data, val_data = load_tfrecord_dataset(dataset_root,
                                                                 val_size,
                                                                 NEW_RES,
                                                                 BATCH_SIZE,
                                                                 EPOCHS,
                                                                 RND)
     else:
-        train_data, val_data, test_data = load_image_dataset(dataset_root,
+        train_data, test_data, val_data = load_image_dataset(dataset_root,
                                                              val_size,
                                                              NEW_RES,
                                                              BATCH_SIZE,

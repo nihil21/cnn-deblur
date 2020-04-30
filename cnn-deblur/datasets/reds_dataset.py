@@ -82,8 +82,9 @@ def load_image_dataset(dataset_root,
     blur_test = blur_test.map(lambda image: _resize_image(image, new_res[0], new_res[1]))
     sharp_test = sharp_test.map(lambda image: _resize_image(image, new_res[0], new_res[1]))
     test = tf.data.Dataset.zip((blur_test, sharp_test))
+    test = test.batch(batch_size)
 
-    return train_augmented, validation, test
+    return train_augmented, test, validation
 
 
 def load_tfrecord_dataset(dataset_root,
@@ -121,10 +122,8 @@ def load_tfrecord_dataset(dataset_root,
         return blur_img, sharp_img
 
     # Map parsing function
-    trainval_data = trainval_data.map(_parse_image_fn,
-                                      num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    test_data = test_data.map(_parse_image_fn,
-                              num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    trainval_data = trainval_data.map(_parse_image_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    test_data = test_data.map(_parse_image_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     # Shuffle once and perform train-validation split
     trainval_data = trainval_data.shuffle(buffer_size=50, seed=seed, reshuffle_each_iteration=False)
@@ -142,20 +141,22 @@ def load_tfrecord_dataset(dataset_root,
 
         return image_blur, image_sharp
 
-    # Perform augmentation on train set only and reshuffle
-    train_data = train_data.map(_random_flip,
-                                num_parallel_calls=tf.data.experimental.AUTOTUNE).shuffle(buffer_size=BUF,
-                                                                                          seed=seed,
-                                                                                          reshuffle_each_iteration=True)
+    # Perform augmentation on train set only
+    train_data = train_data.map(_random_flip, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-    # Repeat once for each epoch
-    train_data = train_data.repeat(epochs)
-    val_data = val_data.repeat(epochs)
-    test_data = test_data.repeat()
+    # Reshuffle train and validation sets each epoch
+    train_data = train_data.shuffle(buffer_size=BUF, seed=seed, reshuffle_each_iteration=True)
+    val_data = val_data.shuffle(buffer_size=BUF, seed=seed, reshuffle_each_iteration=True)
+
+    # Cache, batch and repeat train and validation sets
+    train_data = train_data.cache().batch(batch_size).repeat(epochs)
+    val_data = val_data.cache().batch(batch_size).repeat(epochs)
+
+    # Batch test set
+    test_data = test_data.batch(batch_size)
 
     # Prefetch
     train_data.prefetch(tf.data.experimental.AUTOTUNE)
     val_data.prefetch(tf.data.experimental.AUTOTUNE)
-    test_data = test_data.prefetch(tf.data.experimental.AUTOTUNE)
 
-    return train_data, val_data, test_data
+    return train_data, test_data, val_data
