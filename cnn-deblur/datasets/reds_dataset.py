@@ -37,6 +37,28 @@ def load_image_dataset(dataset_root,
     sharp = sharp.map(lambda image: _resize_image(image, new_res[0], new_res[1]),
                       num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
+    def _break_image(img):
+        # from the single image extract the 4 patches corresponding to the 4 corners
+        # with input shape 720x1280 each patch has shape 360x640
+        patches = tf.image.extract_patches(images=[img],
+                                           sizes=[1, 360, 640, 1],
+                                           strides=[1, 360, 640, 1],
+                                           rates=[1, 1, 1, 1],
+                                           padding='VALID')
+
+        patches = tf.reshape(patches, (4, 360, 640, 3))
+
+        return patches
+
+    # extract patches
+    blur = blur.map(_break_image)
+    # now each element of the dataset has shape (4, 360, 640, 3)
+    # un-batch in order to have each element of shape (1, 360, 640, 3)
+    blur = blur.flat_map(lambda x: tf.data.Dataset.from_tensor_slices(x))
+
+    sharp = sharp.map(_break_image)
+    sharp = sharp.flat_map(lambda x: tf.data.Dataset.from_tensor_slices(x))
+
     dataset = tf.data.Dataset.zip((blur, sharp))
 
     # reshuffle_each_iteration=False ensures that train and validation set are disjoint
@@ -81,6 +103,10 @@ def load_image_dataset(dataset_root,
     sharp_test = sharp_test.map(lambda filename: _load_image(filename))
     blur_test = blur_test.map(lambda image: _resize_image(image, new_res[0], new_res[1]))
     sharp_test = sharp_test.map(lambda image: _resize_image(image, new_res[0], new_res[1]))
+    blur_test = blur_test.map(_break_image)
+    blur_test = blur_test.flat_map(lambda x: tf.data.Dataset.from_tensor_slices(x))
+    sharp_test = sharp_test.map(_break_image)
+    sharp_test = sharp_test.flat_map(lambda x: tf.data.Dataset.from_tensor_slices(x))
     test = tf.data.Dataset.zip((blur_test, sharp_test))
     test = test.batch(batch_size)
 
