@@ -37,10 +37,11 @@ def load_image_dataset(dataset_root,
     sharp = sharp.map(lambda image: _resize_image(image, new_res[0], new_res[1]),
                       num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-    def _break_image(img):
+    def _extract_patches(img):
+        img = tf.reshape(img, (1, 720, 1280, 3))
         # from the single image extract the 4 patches corresponding to the 4 corners
         # with input shape 720x1280 each patch has shape 360x640
-        patches = tf.image.extract_patches(images=[img],
+        patches = tf.image.extract_patches(images=img,
                                            sizes=[1, 360, 640, 1],
                                            strides=[1, 360, 640, 1],
                                            rates=[1, 1, 1, 1],
@@ -51,12 +52,12 @@ def load_image_dataset(dataset_root,
         return patches
 
     # extract patches
-    blur = blur.map(_break_image)
+    blur = blur.map(_extract_patches, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     # now each element of the dataset has shape (4, 360, 640, 3)
     # un-batch in order to have each element of shape (1, 360, 640, 3)
     blur = blur.flat_map(lambda x: tf.data.Dataset.from_tensor_slices(x))
 
-    sharp = sharp.map(_break_image)
+    sharp = sharp.map(_extract_patches, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     sharp = sharp.flat_map(lambda x: tf.data.Dataset.from_tensor_slices(x))
 
     dataset = tf.data.Dataset.zip((blur, sharp))
@@ -150,6 +151,36 @@ def load_tfrecord_dataset(dataset_root,
     # Map parsing function
     trainval_data = trainval_data.map(_parse_image_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     test_data = test_data.map(_parse_image_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+    def _extract_patches(image_blur, image_sharp):
+        image_blur = tf.reshape(image_blur, (1, 720, 1280, 3))
+        image_sharp = tf.reshape(image_sharp, (1, 720, 1280, 3))
+        # from the single image extract the 4 patches corresponding to the 4 corners
+        # with input shape 720x1280 each patch has shape 360x640
+        patches_blur = tf.image.extract_patches(images=image_blur,
+                                                sizes=[1, 360, 640, 1],
+                                                strides=[1, 360, 640, 1],
+                                                rates=[1, 1, 1, 1],
+                                                padding='VALID')
+
+        patches_sharp = tf.image.extract_patches(images=image_sharp,
+                                                 sizes=[1, 360, 640, 1],
+                                                 strides=[1, 360, 640, 1],
+                                                 rates=[1, 1, 1, 1],
+                                                 padding='VALID')
+
+        patches_blur = tf.reshape(patches_blur, (4, 360, 640, 3))
+        patches_sharp = tf.reshape(patches_sharp, (4, 360, 640, 3))
+
+        return patches_blur, patches_sharp
+
+    # extract patches
+    trainval_data = trainval_data.map(_extract_patches, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    test_data = test_data.map(_extract_patches, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    # now each element of the dataset has shape (4, 360, 640, 3)
+    # un-batch in order to have each element of shape (1, 360, 640, 3)
+    trainval_data = trainval_data.flat_map(lambda x, y: (tf.data.Dataset.from_tensor_slices(x), tf.data.Dataset.from_tensor_slices(y)))
+    test_data = test_data.flat_map(lambda x, y: (tf.data.Dataset.from_tensor_slices(x), tf.data.Dataset.from_tensor_slices(y)))
 
     # Shuffle once and perform train-validation split
     trainval_data = trainval_data.shuffle(buffer_size=50, seed=seed, reshuffle_each_iteration=False)
