@@ -66,9 +66,6 @@ def ResConvTranspose(kernels: List[int],
                                 strides=strides[-1],
                                 padding='same',
                                 name='res_conv{0:d}'.format(layer_idx))(in_layer)
-    print('in_layer shape: {}'.format(in_layer.shape))
-    print('{} shape: {}'.format(x.name, x.shape))
-    print('{} shape: {}'.format(res_layer.name, res_layer.shape))
     x = Add()([x, res_layer])
 
     return x
