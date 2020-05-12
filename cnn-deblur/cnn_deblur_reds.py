@@ -18,20 +18,24 @@ import os
 import glob
 import matplotlib.pyplot as plt
 from tensorflow.keras.callbacks import ModelCheckpoint
-from model.u_net_reds import UNetREDS
+from model.resnet16 import ResNet16
+from model.resnet16_dense import ResNet16Dense
+from model.resnet20 import ResNet20
+from model.unet16 import UNet16
 from model.unet20 import UNet20
 from model.res_unet16 import ResUNet16
+from model.res_skip_unet import ResSkipUNet
 from datasets.reds_dataset import load_image_dataset, load_tfrecord_dataset
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-ARCH_CHOICES = ['unetreds', 'unet20', 'res_unet20']
+ARCH_CHOICES = ['resnet16', 'resnet16dense', 'resnet20', 'unet16', 'unet20', 'resunet16', 'resskipunet']
 
 
 def main():
     # Construct the argument parser and parse the arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("-a", "--architecture", required=True, choices=ARCH_CHOICES,
-                    help="architecture type [unetreds|unet20|res_unet20]")
+                    help="architecture type [resnet16|resnet16dense|resnet20|unet16|unet20|resunet16|resskipunet]")
     ap.add_argument("-ie", "--initial-epoch", required=True, help="initial epoch for the training process")
     ap.add_argument("-fe", "--final-epoch", required=True, help="final epoch for the training process")
     ap.add_argument("-bs", "--batch-size", required=True, help="batch-size dimension")
@@ -59,9 +63,13 @@ def main():
 
     # Create dictionary of possible architectures
     arch_dict = dict({
-        'unetreds': UNetREDS,
+        'resnet16': ResNet16,
+        'resnet16dense': ResNet16Dense,
+        'resnet20': ResNet20,
+        'unet16': UNet16,
         'unet20': UNet20,
-        'res_unet20': ResUNet16
+        'resunet': ResUNet16,
+        'resskipunet': ResSkipUNet
     })
     arch_type = args['architecture']
 

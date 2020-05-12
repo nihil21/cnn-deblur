@@ -4,7 +4,7 @@ from tensorflow.keras.layers import Input
 from typing import Tuple
 
 
-class UNet(ConvNet):
+class UNet16(ConvNet):
 
     def __init__(self, input_shape: Tuple[int, int, int]):
         super().__init__()

@@ -19,6 +19,7 @@
       <w>preprocessing</w>
       <w>psnr</w>
       <w>relu</w>
+      <w>resnet</w>
       <w>resunet</w>
       <w>softmax</w>
       <w>ssim</w>

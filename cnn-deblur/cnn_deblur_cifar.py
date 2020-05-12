@@ -19,23 +19,24 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from datasets import cifar_dataset
-from model.u_net import UNet
-from model.toy_resnet import ToyResNet
-from model.resnet_64_dense import ResNet64Dense
-from model.resnet_64 import ResNet64
-from model.resnet_128 import ResNet128
-from model.res_unet import ResUNet
+from model.resnet16 import ResNet16
+from model.resnet16_dense import ResNet16Dense
+from model.resnet20 import ResNet20
+from model.unet16 import UNet16
+from model.unet20 import UNet20
+from model.res_unet16 import ResUNet16
 from model.res_skip_unet import ResSkipUNet
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-ARCH_CHOICES = ['toy', '64dense', '64', '128', 'unet', 'resunet', 'resskipunet']
+ARCH_CHOICES = ['resnet16', 'resnet16dense', 'resnet20', 'unet16', 'unet20', 'resunet16', 'resskipunet']
 
 
 def main():
     # Construct the argument parser and parse the arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("-a", "--architecture", required=True, choices=ARCH_CHOICES,
-                    help="architecture type [toy|64dense|64|128|unet|resunet|resskipunet]")
+                    help="architecture type [resnet16|resnet16dense|resnet20|unet16|unet20|resunet16|resskipunet]")
     ap.add_argument("-ie", "--initial-epoch", required=True, help="initial epoch for the training process")
     ap.add_argument("-fe", "--final-epoch", required=True, help="final epoch for the training process")
     ap.add_argument("-bs", "--batch-size", required=True, help="batch-size dimension")
@@ -64,12 +65,12 @@ def main():
 
     # Create dictionary of possible architectures
     arch_dict = dict({
-        'toy': ToyResNet,
-        '64dense': ResNet64Dense,
-        '64': ResNet64,
-        '128': ResNet128,
-        'unet': UNet,
-        'resunet': ResUNet,
+        'resnet16': ResNet16,
+        'resnet16dense': ResNet16Dense,
+        'resnet20': ResNet20,
+        'unet16': UNet16,
+        'unet20': UNet20,
+        'resunet': ResUNet16,
         'resskipunet': ResSkipUNet
     })
     arch_type = args['architecture']

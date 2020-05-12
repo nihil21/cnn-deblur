@@ -10,85 +10,67 @@ from typing import List, Optional
 
 # ---------- ResNet ----------
 def ResConv(kernels: List[int],
-            filters_num: List[int],
-            res_in: Layer,
-            layer_idx: int,
-            blocks_num: Optional[int] = 1,
-            double_first_stride: Optional[bool] = False,
-            use_res_conv: Optional[bool] = False,
-            res_filter: Optional[int] = None,
-            res_size: Optional[int] = None,
-            res_stride: Optional[int] = None):
-    x = res_in
+            depths: List[int],
+            strides: List[int],
+            in_layer: Layer,
+            layer_idx: int):
+    x = in_layer
+    n = 0
+    for k, d, s in zip(kernels, depths, strides):
+        # Update the suffix of layer's name
+        layer_suffix = '{0:d}_{1:d}'.format(layer_idx, n)
 
-    # If 'use_res_conv' is set, apply a convolution on the residual path instead of an identity
-    if use_res_conv:
-        res_in = Conv2D(res_filter, kernel_size=res_size, strides=res_stride, padding='same',
-                        name='conv{0:d}_shortcut'.format(layer_idx))(res_in)
+        x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
+        x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
+        x = Conv2D(d,
+                   kernel_size=k,
+                   strides=s,
+                   padding='same',
+                   name='conv{0:d}_{1:d}'.format(layer_idx, n))(x)
+        n += 1
 
-    for n in range(1, blocks_num + 1):
-        n_sub = 1
-        for kernel, fltr in zip(kernels, filters_num):
-            # Update the suffix of layer's name
-            layer_suffix = '{0:d}_{1:d}.{2:d}'.format(layer_idx, n, n_sub)
+    # Residual connection
+    res_layer = Conv2D(depths[0],
+                       kernel_size=1,
+                       strides=strides[0],
+                       padding='same',
+                       name='res_conv{0:d}'.format(layer_idx))(in_layer)
+    x = Add()([x, res_layer])
 
-            # Check if the first stride must be doubled
-            if double_first_stride and n == 1 and n_sub == 1:
-                stride = 2
-            else:
-                stride = 1
-
-            x = Conv2D(fltr, kernel_size=kernel, strides=stride, padding='same', activation='relu',
-                       name='conv{0:s}'.format(layer_suffix))(x)
-            # x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
-
-            # Update sub-block counter
-            n_sub += 1
-
-    # Add the residual path to the main one
-    x = Add()([x, res_in])
-    x = Activation('relu', name='relu{0:d}'.format(layer_idx))(x)
     return x
 
 
 def ResConvTranspose(kernels: List[int],
-                     filters_num: List[int],
-                     res_in: Layer,
-                     layer_idx: int,
-                     blocks_num: Optional[int] = 1,
-                     double_last_stride: Optional[bool] = False,
-                     use_res_tconv: Optional[bool] = False,
-                     res_filter: Optional[int] = None,
-                     res_size: Optional[int] = None,
-                     res_stride: Optional[int] = None):
-    x = res_in
-    # If 'use_res_tconv' is set, apply a convolution on the residual path instead of an identity
-    if use_res_tconv:
-        res_in = Conv2DTranspose(res_filter, kernel_size=res_size, strides=res_stride, padding='same',
-                                 name='t_conv{0:d}_shortcut'.format(layer_idx))(res_in)
+                     depths: List[int],
+                     strides: List[int],
+                     in_layer: Layer,
+                     layer_idx: int):
+    x = in_layer
+    n = 0
+    for k, d, s in zip(kernels, depths, strides):
+        # Update the suffix of layer's name
+        layer_suffix = '{0:d}_{1:d}'.format(layer_idx, n)
 
-    for n in range(1, blocks_num + 1):
-        n_sub = 1
-        for kernel, fltr in zip(kernels, filters_num):
-            # Update the suffix of layer's name
-            layer_suffix = '{0:d}_{1:d}.{2:d}'.format(layer_idx, n, n_sub)
+        x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
+        x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
+        x = Conv2DTranspose(d,
+                            kernel_size=k,
+                            strides=s,
+                            padding='same',
+                            name='conv{0:d}_{1:d}'.format(layer_idx, n))(x)
+        n += 1
 
-            # Check if the last stride must be doubled
-            if double_last_stride and n == blocks_num and n_sub == len(kernels):
-                stride = 2
-            else:
-                stride = 1
+    # Residual connection
+    res_layer = Conv2DTranspose(depths[-1],
+                                kernel_size=1,
+                                strides=strides[-1],
+                                padding='same',
+                                name='res_conv{0:d}'.format(layer_idx))(in_layer)
+    print('in_layer shape: {}'.format(in_layer.shape))
+    print('{} shape: {}'.format(x.name, x.shape))
+    print('{} shape: {}'.format(res_layer.name, res_layer.shape))
+    x = Add()([x, res_layer])
 
-            x = Conv2DTranspose(fltr, kernel_size=kernel, strides=stride, padding='same', activation='relu',
-                                name='t_conv{0:s}'.format(layer_suffix))(x)
-            # x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
-
-            # Update sub-block counter
-            n_sub += 1
-
-    # Add the residual path to the main one
-    x = Add()([x, res_in])
-    x = Activation('relu', name='relu{0:d}'.format(layer_idx))(x)
     return x
 
 
