@@ -20,13 +20,14 @@ def ResConv(kernels: List[int],
         # Update the suffix of layer's name
         layer_suffix = '{0:d}_{1:d}'.format(layer_idx, n)
 
-        x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
-        x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
         x = Conv2D(d,
                    kernel_size=k,
                    strides=s,
                    padding='same',
                    name='conv{0:d}_{1:d}'.format(layer_idx, n))(x)
+        x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
+        x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
+
         n += 1
 
     # Residual connection
@@ -51,13 +52,14 @@ def ResConvTranspose(kernels: List[int],
         # Update the suffix of layer's name
         layer_suffix = '{0:d}_{1:d}'.format(layer_idx, n)
 
-        x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
-        x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
         x = Conv2DTranspose(d,
                             kernel_size=k,
                             strides=s,
                             padding='same',
                             name='conv{0:d}_{1:d}'.format(layer_idx, n))(x)
+        x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
+        x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
+
         n += 1
 
     # Residual connection
