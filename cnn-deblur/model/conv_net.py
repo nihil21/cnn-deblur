@@ -311,6 +311,7 @@ class ConvNet:
         })
 
         metric_list = [ssim_metric,
+                       psnr_metric,
                        'mse',
                        'mae',
                        'accuracy']
