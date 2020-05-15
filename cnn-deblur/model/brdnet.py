@@ -1,11 +1,7 @@
-from tensorflow.keras.losses import mse
-from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import Model
-from model.conv_net import ConvNet, ConvBRNRelu, Add
-from tensorflow.keras.layers import Input, Conv2D, concatenate
-from typing import Tuple, Optional
-
-from model.custom_losses_metrics import ssim_metric, psnr_metric
+from model.conv_net import ConvNet, ConvBRNRelu
+from tensorflow.keras.layers import Input, Conv2D, Subtract, concatenate
+from typing import Tuple
 
 
 class BRDNet(ConvNet):
@@ -30,7 +26,7 @@ class BRDNet(ConvNet):
                         strides=1,
                         name='up_2')(upper1)
 
-        upper3 = Add(name="up_3")([self.visible, upper2])
+        upper3 = Subtract(name="up_3")([self.visible, upper2])
 
         # LOWER
 
@@ -70,10 +66,9 @@ class BRDNet(ConvNet):
                         strides=1,
                         name='low_5')(lower4)
 
-        lower6 = Add(name="low_6")([self.visible, lower5])
+        lower6 = Subtract(name="low_6")([self.visible, lower5])
 
         # UNION
-
         union1 = concatenate([upper3, lower6], name="union_1")
 
         union2 = Conv2D(kernel_size=3,
@@ -82,11 +77,11 @@ class BRDNet(ConvNet):
                         strides=1,
                         name='union_2')(union1)
 
-        output = Add(name="output")([self.visible, union2])
+        output = Subtract(name="output")([self.visible, union2])
 
         self.model = Model(inputs=self.visible, outputs=output)
 
-    def my_compile(self, lr: Optional[float] = 1e-4):
+    """def my_compile(self, lr: Optional[float] = 1e-4):
 
         metric_list = [ssim_metric,
                        psnr_metric,
@@ -101,4 +96,4 @@ class BRDNet(ConvNet):
 
         self.model.compile(Adam(learning_rate=lr),
                            loss=custom_loss_wrapper(self.visible),
-                           metrics=metric_list)
+                           metrics=metric_list)"""
