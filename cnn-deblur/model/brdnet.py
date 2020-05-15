@@ -1,5 +1,5 @@
-from keras.losses import mse
-from keras.optimizers import Adam
+from tensorflow.keras.losses import mse
+from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import Model
 from model.conv_net import ConvNet, ConvBRNRelu, Add
 from tensorflow.keras.layers import Input, Conv2D, concatenate
@@ -86,7 +86,7 @@ class BRDNet(ConvNet):
 
         self.model = Model(inputs=self.visible, outputs=output)
 
-    def compile(self, lr: Optional[float] = 1e-4):
+    def my_compile(self, lr: Optional[float] = 1e-4):
 
         metric_list = [ssim_metric,
                        psnr_metric,
@@ -94,9 +94,11 @@ class BRDNet(ConvNet):
                        'mae',
                        'accuracy']
 
-        def custom_loss(trueY, predY):
-            mse(predY - self.visible, self.visible - trueY)
+        def custom_loss_wrapper(visible):
+            def custom_loss(trueY, predY):
+                return mse(predY - visible, visible - trueY)
+            return custom_loss
 
         self.model.compile(Adam(learning_rate=lr),
-                           loss=custom_loss,
+                           loss=custom_loss_wrapper(self.visible),
                            metrics=metric_list)
