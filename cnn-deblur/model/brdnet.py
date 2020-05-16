@@ -1,7 +1,34 @@
 from tensorflow.keras.models import Model
-from model.conv_net import ConvNet, ConvBRNRelu
-from tensorflow.keras.layers import Input, Conv2D, Subtract, concatenate
+from model.conv_net import ConvNet
+from tensorflow.keras.layers import Input, Layer, Conv2D, BatchNormalization, Activation, Subtract, concatenate
 from typing import Tuple
+
+
+def ConvBRNRelu(kernel: int,
+                filter_num: int,
+                stride: int,
+                in_layer: Layer,
+                layer_idx: str,
+                blocks_number: int,
+                dilation_rate: int = 1):
+
+    x = in_layer
+
+    for i in range(1, blocks_number + 1):
+        # Update the suffix of layer's name
+        layer_suffix = '{0:s}_{1:d}'.format(layer_idx, i)
+
+        x = Conv2D(filter_num,
+                   kernel_size=kernel,
+                   padding='same',
+                   strides=stride,
+                   dilation_rate=dilation_rate,
+                   name='conv{0:s}_{1:d}'.format(layer_idx, i))(x)
+        # TODO BRN
+        x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
+        x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
+
+    return x
 
 
 class BRDNet(ConvNet):

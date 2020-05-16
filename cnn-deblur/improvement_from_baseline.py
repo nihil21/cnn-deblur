@@ -1,11 +1,7 @@
 import tensorflow as tf
-import numpy as np
-import glob
 from datasets import cifar_dataset
 import math
 
-from model.unet20 import UNet20
-from model.res_skip_unet import ResSkipUNet
 from datasets.reds_dataset import load_image_dataset
 
 
@@ -33,7 +29,12 @@ def setup(dataset):
         return test
 
     elif dataset == "reds":
-        _, _, test = load_image_dataset("/home/uni/dataset/", 21000, 3000, [288, 512], 4, 10, 42)
+        _, _, test = load_image_dataset(dataset_root="/home/uni/dataset/",
+                                        val_size=3000,
+                                        new_res=[288, 512],
+                                        batch_size=4,
+                                        epochs=10,
+                                        seed=42)
         test = test.batch(4)
 
         return test

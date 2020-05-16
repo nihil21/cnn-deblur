@@ -19,12 +19,9 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from datasets import cifar_dataset
-from model.resnet16 import ResNet16
-from model.resnet16_dense import ResNet16Dense
-from model.resnet20 import ResNet20
-from model.unet16 import UNet16
-from model.unet20 import UNet20
-from model.res_unet16 import ResUNet16
+from model.resnet import ResNet16, ResNet16Dense, ResNet20
+from model.unet import UNet16, UNet20
+from model.res_unet import ResUNet16
 from model.res_skip_unet import ResSkipUNet
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
