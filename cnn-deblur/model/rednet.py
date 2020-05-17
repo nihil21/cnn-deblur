@@ -30,7 +30,7 @@ def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, num_filters:
                             strides=1,
                             padding='same',
                             name='decode{0:d}'.format(i))(x)
-        if i % 2 == 0:
+        if i % 2 != 0:
             x = Add()([x, res_layers[i]])
     x = Conv2DTranspose(filters=3, kernel_size=3, strides=2, padding='same', name='output')(x)
     x = Add()([x, res_layers[-1]])
