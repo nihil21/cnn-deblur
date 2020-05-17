@@ -16,6 +16,7 @@ def encode(in_layer: Layer, num_layers: Optional[int] = 15, num_filters: Optiona
                    kernel_size=3,
                    strides=stride,
                    padding='same',
+                   activation='relu',
                    name='encode{0:d}'.format(i))(x)
         layers.append(x)
     return layers
@@ -29,6 +30,7 @@ def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, num_filters:
                             kernel_size=3,
                             strides=1,
                             padding='same',
+                            activation='relu',
                             name='decode{0:d}'.format(i))(x)
         if i % 2 != 0:
             x = Add()([x, res_layers[i]])
