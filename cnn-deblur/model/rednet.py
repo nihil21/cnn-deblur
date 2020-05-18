@@ -44,7 +44,7 @@ def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, num_filters:
                         kernel_constraint=min_max_norm(min_value=0., max_value=1.),
                         name='output')(x)
     x = Add()([x, res_layers[-1]])
-    x = Activation('sigmoid')(x)
+    x = ReLU()(x)
 
     return x
 
