@@ -6,7 +6,7 @@ from typing import Tuple, List, Optional
 
 
 def encode(in_layer: Layer, num_layers: Optional[int] = 15, num_filters: Optional[int] = 64) -> List[Layer]:
-    layers: List[Layer] = []
+    layers: List[Layer] = [in_layer]
     x = in_layer
     for i in range(num_layers):
         """if i == 0:
@@ -37,14 +37,14 @@ def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, num_filters:
         if i % 2 != 0:
             x = Add()([x, res_layers[i]])
         x = ReLU()(x)
-    """x = Conv2DTranspose(filters=3,
+    x = Conv2DTranspose(filters=3,
                         kernel_size=3,
-                        strides=2,
+                        strides=1,
                         padding='same',
                         kernel_constraint=min_max_norm(min_value=0., max_value=1.),
                         name='output')(x)
     x = Add()([x, res_layers[-1]])
-    x = ReLU()(x)"""
+    x = ReLU()(x)
 
     return x
 
@@ -59,3 +59,6 @@ class REDNet30(ConvNet):
         output = decode(encode_layers)
 
         self.model = Model(inputs=visible, outputs=output)
+
+mod = REDNet30((32, 32, 3))
+mod.summary()
