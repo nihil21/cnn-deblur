@@ -38,7 +38,7 @@ def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, num_filters:
             x = Add()([x, res_layers[i]])
         x = ReLU()(x)
     x = Conv2DTranspose(filters=3,
-                        kernel_size=3,
+                        kernel_size=1,
                         strides=1,
                         padding='same',
                         kernel_constraint=min_max_norm(min_value=0., max_value=1.),
