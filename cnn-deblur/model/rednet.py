@@ -59,6 +59,3 @@ class REDNet30(ConvNet):
         output = decode(encode_layers)
 
         self.model = Model(inputs=visible, outputs=output)
-
-mod = REDNet30((32, 32, 3))
-mod.summary()
