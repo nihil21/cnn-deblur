@@ -28,7 +28,7 @@ def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, num_filters:
     res_layers.reverse()
     x = res_layers[0]
     for i in range(num_layers):
-        x = Conv2DTranspose(filters=3 if i == num_layers - 1 else num_filters,
+        x = Conv2DTranspose(filters=num_filters,
                             kernel_size=3,
                             strides=1,
                             padding='same',
