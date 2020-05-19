@@ -2,7 +2,7 @@ from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import Adam
 from model.custom_losses_metrics import *
-from tensorflow.keras.losses import MeanSquaredError, MeanAbsoluteError, KLDivergence, BinaryCrossentropy
+from tensorflow.keras.losses import MeanSquaredError, MeanAbsoluteError, LogCosh
 from typing import List, Optional
 
 
@@ -19,11 +19,8 @@ class ConvNet:
         loss_dict = dict({
             'mse': MeanSquaredError(),
             'mae': MeanAbsoluteError(),
-            'psnr_loss': psnr_loss,
-            'content_loss': content_loss,
-            'ssim_loss': ssim_loss,
-            'kld': KLDivergence(),
-            'cross_entropy': BinaryCrossentropy()
+            'logcosh': LogCosh(),
+            'psnr_loss': psnr_loss
         })
 
         metric_list = [ssim_metric,
