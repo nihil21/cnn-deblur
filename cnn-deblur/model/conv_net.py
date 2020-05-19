@@ -23,8 +23,8 @@ class ConvNet:
             'psnr_loss': psnr_loss
         })
 
-        metric_list = [ssim_metric,
-                       psnr_metric,
+        metric_list = [ssim,
+                       psnr,
                        'mse',
                        'mae',
                        'accuracy']
