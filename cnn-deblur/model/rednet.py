@@ -1,12 +1,12 @@
 from model.conv_net import ConvNet
-from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ReLU, Activation
+from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU
 from tensorflow.keras.models import Model
-from tensorflow.keras.constraints import min_max_norm
+# from tensorflow.keras.constraints import min_max_norm
 from typing import Tuple, List, Optional
 
 
 def encode(in_layer: Layer, num_layers: Optional[int] = 15, num_filters: Optional[int] = 64) -> List[Layer]:
-    layers: List[Layer] = [in_layer]
+    layers: List[Layer] = []
     x = in_layer
     for i in range(num_layers):
         """if i == 0:
@@ -17,14 +17,15 @@ def encode(in_layer: Layer, num_layers: Optional[int] = 15, num_filters: Optiona
                    kernel_size=3,
                    strides=1,
                    padding='same',
-                   activation='relu',
-                   kernel_constraint=min_max_norm(min_value=0., max_value=1.),
+                   activation='elu',
+                   # kernel_constraint=min_max_norm(min_value=0., max_value=1.),
                    name='encode{0:d}'.format(i))(x)
         layers.append(x)
     return layers
 
 
-def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, num_filters: Optional[int] = 64):
+def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, num_filters: Optional[int] = 64) -> List[Layer]:
+    layers: List[Layer] = []
     res_layers.reverse()
     x = res_layers[0]
     for i in range(num_layers):
@@ -32,21 +33,14 @@ def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, num_filters:
                             kernel_size=3,
                             strides=1,
                             padding='same',
-                            kernel_constraint=min_max_norm(min_value=0., max_value=1.),
+                            # kernel_constraint=min_max_norm(min_value=0., max_value=1.),
                             name='decode{0:d}'.format(i))(x)
-        if i % 2 != 0:
+        if i % 2 == 0:
             x = Add()([x, res_layers[i]])
-        x = ReLU()(x)
-    x = Conv2DTranspose(filters=3,
-                        kernel_size=1,
-                        strides=1,
-                        padding='same',
-                        kernel_constraint=min_max_norm(min_value=0., max_value=1.),
-                        name='output')(x)
-    x = Add()([x, res_layers[-1]])
-    x = ReLU()(x)
+        x = ELU()(x)
+        layers.append(x)
 
-    return x
+    return layers
 
 
 class REDNet30(ConvNet):
@@ -56,6 +50,14 @@ class REDNet30(ConvNet):
         visible = Input(input_shape)
         encode_layers = encode(visible)
         # DECODER
-        output = decode(encode_layers)
+        decode_layers = decode(encode_layers)
+        output = Conv2DTranspose(filters=3,
+                                 kernel_size=1,
+                                 strides=1,
+                                 padding='same',
+                                 # kernel_constraint=min_max_norm(min_value=0., max_value=1.),
+                                 name='output')(decode_layers[-1])
+        output = Add()([output, visible])
+        # output = ELU()(output)
 
         self.model = Model(inputs=visible, outputs=output)
