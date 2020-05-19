@@ -1,5 +1,5 @@
 from model.conv_net import ConvNet
-from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU
+from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, BatchNormalization
 from tensorflow.keras.models import Model
 # from tensorflow.keras.constraints import min_max_norm
 from typing import Tuple, List, Optional
@@ -17,9 +17,10 @@ def encode(in_layer: Layer, num_layers: Optional[int] = 15, num_filters: Optiona
                    kernel_size=3,
                    strides=1,
                    padding='same',
-                   activation='elu',
                    # kernel_constraint=min_max_norm(min_value=0., max_value=1.),
-                   name='encode{0:d}'.format(i))(x)
+                   name=f'encode_conv{i}')(x)
+        x = ELU(name=f'encode_elu{i}')(x)
+        x = BatchNormalization(name=f'encode_bn{i}')(x)
         layers.append(x)
     return layers
 
@@ -34,10 +35,11 @@ def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, num_filters:
                             strides=1,
                             padding='same',
                             # kernel_constraint=min_max_norm(min_value=0., max_value=1.),
-                            name='decode{0:d}'.format(i))(x)
-        if i % 2 == 0:
-            x = Add()([x, res_layers[i]])
-        x = ELU()(x)
+                            name=f'decode_conv{i}')(x)
+        if i % 2 != 0:
+            x = Add(f'decode_skip{i}')([x, res_layers[i]])
+        x = ELU(f'decode_elu{i}')(x)
+        x = BatchNormalization(f'decode_bn{i}')(x)
         layers.append(x)
 
     return layers
