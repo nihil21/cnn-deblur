@@ -45,6 +45,46 @@ def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, num_filters:
     return layers
 
 
+class REDNet10(ConvNet):
+    def __init__(self, input_shape: Tuple[int, int, int]):
+        super().__init__()
+        # ENCODER
+        visible = Input(input_shape)
+        encode_layers = encode(visible, num_layers=5)
+        # DECODER
+        decode_layers = decode(encode_layers, num_layers=5)
+        output = Conv2DTranspose(filters=3,
+                                 kernel_size=1,
+                                 strides=1,
+                                 padding='same',
+                                 # kernel_constraint=min_max_norm(min_value=0., max_value=1.),
+                                 name='output_conv')(decode_layers[-1])
+        output = Add(name='output_skip')([output, visible])
+        output = ELU(name='output_elu')(output)
+
+        self.model = Model(inputs=visible, outputs=output)
+
+
+class REDNet20(ConvNet):
+    def __init__(self, input_shape: Tuple[int, int, int]):
+        super().__init__()
+        # ENCODER
+        visible = Input(input_shape)
+        encode_layers = encode(visible, num_layers=10)
+        # DECODER
+        decode_layers = decode(encode_layers, num_layers=10)
+        output = Conv2DTranspose(filters=3,
+                                 kernel_size=1,
+                                 strides=1,
+                                 padding='same',
+                                 # kernel_constraint=min_max_norm(min_value=0., max_value=1.),
+                                 name='output_conv')(decode_layers[-1])
+        output = Add(name='output_skip')([output, visible])
+        output = ELU(name='output_elu')(output)
+
+        self.model = Model(inputs=visible, outputs=output)
+
+
 class REDNet30(ConvNet):
     def __init__(self, input_shape: Tuple[int, int, int]):
         super().__init__()
