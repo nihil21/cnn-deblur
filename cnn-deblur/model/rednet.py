@@ -37,9 +37,9 @@ def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, num_filters:
                             # kernel_constraint=min_max_norm(min_value=0., max_value=1.),
                             name=f'decode_conv{i}')(x)
         if i % 2 != 0:
-            x = Add(f'decode_skip{i}')([x, res_layers[i]])
-        x = ELU(f'decode_elu{i}')(x)
-        x = BatchNormalization(f'decode_bn{i}')(x)
+            x = Add(name=f'decode_skip{i}')([x, res_layers[i]])
+        x = ELU(name=f'decode_elu{i}')(x)
+        x = BatchNormalization(name=f'decode_bn{i}')(x)
         layers.append(x)
 
     return layers
