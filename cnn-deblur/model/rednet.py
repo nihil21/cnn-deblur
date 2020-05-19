@@ -58,8 +58,8 @@ class REDNet30(ConvNet):
                                  strides=1,
                                  padding='same',
                                  # kernel_constraint=min_max_norm(min_value=0., max_value=1.),
-                                 name='output')(decode_layers[-1])
-        output = Add()([output, visible])
-        # output = ELU()(output)
+                                 name='output_conv')(decode_layers[-1])
+        output = Add(name='output_skip')([output, visible])
+        output = ELU(name='output_elu')(output)
 
         self.model = Model(inputs=visible, outputs=output)
