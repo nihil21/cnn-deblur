@@ -1,10 +1,34 @@
 from tensorflow.keras.datasets import cifar10
 import cv2
 import numpy as np
+from datasets.dataset_utils import load_dataset_from_gcs
 from sklearn.model_selection import train_test_split
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 from typing import Optional
+
+
+def load_data(batch_size: int,
+              epochs: int,
+              seed: Optional[int] = 42):
+    TRAINVAL_SIZE = 50000
+    VAL_SPLIT = 0.125
+    VAL_SIZE = int(VAL_SPLIT * TRAINVAL_SIZE)
+    TRAIN_SIZE = TRAINVAL_SIZE - VAL_SIZE
+    TEST_SIZE = 10000
+
+    print(f'Training set size: {TRAIN_SIZE}')
+    print(f'Validation set size: {VAL_SIZE}')
+    print(f'Test set size: {TEST_SIZE}')
+
+    return load_dataset_from_gcs(project_id='cnn-deblur',
+                                 bucket_name='cnn-d3blur-buck3t',
+                                 prefix='cifar10',
+                                 res=(32, 32),
+                                 val_size=VAL_SIZE,
+                                 batch_size=batch_size,
+                                 epochs=epochs,
+                                 seed=seed)
 
 
 def load_image_dataset(do_val_split: Optional[bool] = True, normalize: Optional[bool] = False):

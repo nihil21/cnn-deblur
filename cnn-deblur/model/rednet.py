@@ -1,48 +1,64 @@
 from model.conv_net import ConvNet
-from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, BatchNormalization
+from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU, BatchNormalization
 from tensorflow.keras.models import Model
-# from tensorflow.keras.constraints import min_max_norm
 from typing import Tuple, List, Optional
 
 
-def encode(in_layer: Layer, num_layers: Optional[int] = 15, num_filters: Optional[int] = 64) -> List[Layer]:
+def encode(in_layer: Layer, num_layers: Optional[int] = 15, filters: Optional[int] = 64) -> List[Layer]:
     layers: List[Layer] = []
     x = in_layer
     for i in range(num_layers):
-        """if i == 0:
-            stride = 2
-        else:
-            stride = 1"""
-        x = Conv2D(filters=num_filters,
-                   kernel_size=3,
-                   strides=1,
-                   padding='same',
-                   # kernel_constraint=min_max_norm(min_value=0., max_value=1.),
-                   name=f'encode_conv{i}')(x)
-        x = ELU(name=f'encode_elu{i}')(x)
-        x = BatchNormalization(name=f'encode_bn{i}')(x)
+        x = ConvBlock(name=f'encode{i}',
+                      filters=filters)(x)
         layers.append(x)
     return layers
 
 
-def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, num_filters: Optional[int] = 64) -> List[Layer]:
+def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, filters: Optional[int] = 64) -> List[Layer]:
     layers: List[Layer] = []
     res_layers.reverse()
     x = res_layers[0]
     for i in range(num_layers):
-        x = Conv2DTranspose(filters=num_filters,
-                            kernel_size=3,
-                            strides=1,
-                            padding='same',
-                            # kernel_constraint=min_max_norm(min_value=0., max_value=1.),
-                            name=f'decode_conv{i}')(x)
-        if i % 2 != 0:
-            x = Add(name=f'decode_skip{i}')([x, res_layers[i]])
-        x = ELU(name=f'decode_elu{i}')(x)
-        x = BatchNormalization(name=f'decode_bn{i}')(x)
+        x = ConvBlock(name=f'decode{i}',
+                      filters=filters,
+                      use_transpose=True,
+                      res_layer=res_layers[i])(x) if i % 2 != 0 else ConvBlock(name=f'decode{i}',
+                                                                            filters=filters,
+                                                                            use_transpose=True)(x)
         layers.append(x)
 
     return layers
+
+
+class ConvBlock(Layer):
+    def __init__(self,
+                 name: str,
+                 filters: int,
+                 kernel_size: int = 3,
+                 strides: int = 1,
+                 padding: str = 'same',
+                 activation: str = 'elu',
+                 use_transpose: bool = False,
+                 res_layer: Layer = None,
+                 **kwargs):
+        super().__init__(name, **kwargs)
+        self.__conv_layer = Conv2D(filters=filters,
+                                   kernel_size=kernel_size,
+                                   strides=strides,
+                                   padding=padding) if not use_transpose else Conv2DTranspose(filters=filters,
+                                                                                              kernel_size=kernel_size,
+                                                                                              strides=strides,
+                                                                                              padding=padding)
+        self.__res_layer = res_layer
+        self.__activation = ELU() if activation == 'elu' else ReLU()
+        self.__bn = BatchNormalization()
+
+    def call(self, inputs, **kwargs):
+        x = self.__conv_layer(inputs)
+        if self.__res_layer is not None:
+            x = Add()([x, self.__res_layer])
+        x = self.__activation(x)
+        return self.__bn(x)
 
 
 class REDNet10(ConvNet):
@@ -57,7 +73,6 @@ class REDNet10(ConvNet):
                                  kernel_size=1,
                                  strides=1,
                                  padding='same',
-                                 # kernel_constraint=min_max_norm(min_value=0., max_value=1.),
                                  name='output_conv')(decode_layers[-1])
         output = Add(name='output_skip')([output, visible])
         output = ELU(name='output_elu')(output)
@@ -77,7 +92,6 @@ class REDNet20(ConvNet):
                                  kernel_size=1,
                                  strides=1,
                                  padding='same',
-                                 # kernel_constraint=min_max_norm(min_value=0., max_value=1.),
                                  name='output_conv')(decode_layers[-1])
         output = Add(name='output_skip')([output, visible])
         output = ELU(name='output_elu')(output)
@@ -97,7 +111,6 @@ class REDNet30(ConvNet):
                                  kernel_size=1,
                                  strides=1,
                                  padding='same',
-                                 # kernel_constraint=min_max_norm(min_value=0., max_value=1.),
                                  name='output_conv')(decode_layers[-1])
         output = Add(name='output_skip')([output, visible])
         output = ELU(name='output_elu')(output)
