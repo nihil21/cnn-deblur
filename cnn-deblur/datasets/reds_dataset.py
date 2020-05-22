@@ -7,25 +7,17 @@ from typing import Optional
 
 def load_data(batch_size: int,
               epochs: int,
+              val_size: int,
               seed: Optional[int] = 42):
-    TRAINVAL_SIZE = 24000
-    VAL_SPLIT = 0.125
-    VAL_SIZE = int(VAL_SPLIT * TRAINVAL_SIZE)
-    TRAIN_SIZE = TRAINVAL_SIZE - VAL_SIZE
-    TEST_SIZE = 3000
-
-    print(f'Training set size: {TRAIN_SIZE}')
-    print(f'Validation set size: {VAL_SIZE}')
-    print(f'Test set size: {TEST_SIZE}')
-
     return load_dataset_from_gcs(project_id='cnn-deblur',
                                  bucket_name='cnn-d3blur-buck3t',
                                  prefix='REDS',
                                  res=(288, 512),
-                                 val_size=VAL_SIZE,
+                                 val_size=val_size,
                                  batch_size=batch_size,
                                  epochs=epochs,
-                                 seed=seed)
+                                 seed=seed,
+                                 use_patches=True)
 
 
 def load_image_dataset(dataset_root,
