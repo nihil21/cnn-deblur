@@ -25,7 +25,7 @@ def load_dataset_from_gcs(project_id: str,
                    in bucket.list_blobs(prefix='{0:s}/train'.format(prefix))]
     trainval_data = tf.data.TFRecordDataset(filenames=tf_trainval,
                                             num_parallel_reads=tf.data.experimental.AUTOTUNE)
-    tf_test = [os.path.join('gs://{0:s}'.format(bucket_name), f.name) for f
+    tf_test = [os.path.join('gs://{0:s}'.format(bucket_name), f.nxame) for f
                in bucket.list_blobs(prefix='{0:s}/test'.format(prefix))]
     test_data = tf.data.TFRecordDataset(filenames=tf_test,
                                         num_parallel_reads=tf.data.experimental.AUTOTUNE)
@@ -124,7 +124,7 @@ def extract_patches_from_dataset(dataset):
 
 
 def extract_patches(image):
-    res = image.shape[0:1]
+    res = image.shape[0:2]
     # From the single image extract 12 patches (3x4)
     # e.g. with input shape 288x512 each patch has shape 96x128
     patches = tf.image.extract_patches(images=tf.expand_dims(image, 0),
