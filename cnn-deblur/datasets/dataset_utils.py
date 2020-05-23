@@ -25,7 +25,7 @@ def load_dataset_from_gcs(project_id: str,
                    in bucket.list_blobs(prefix='{0:s}/train'.format(prefix))]
     trainval_data = tf.data.TFRecordDataset(filenames=tf_trainval,
                                             num_parallel_reads=tf.data.experimental.AUTOTUNE)
-    tf_test = [os.path.join('gs://{0:s}'.format(bucket_name), f.nxame) for f
+    tf_test = [os.path.join('gs://{0:s}'.format(bucket_name), f.name) for f
                in bucket.list_blobs(prefix='{0:s}/test'.format(prefix))]
     test_data = tf.data.TFRecordDataset(filenames=tf_test,
                                         num_parallel_reads=tf.data.experimental.AUTOTUNE)
