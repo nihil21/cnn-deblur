@@ -1,7 +1,6 @@
 import tensorflow as tf
 from google.cloud import storage
 import os
-from functools import partial
 from typing import Tuple, Optional
 
 
@@ -58,7 +57,7 @@ def load_dataset_from_gcs(project_id: str,
                               num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     if use_patches:
-        trainval_data = extract_patches_from_dataset(res, trainval_data)
+        trainval_data = extract_patches_from_dataset(trainval_data)
 
     # Shuffle once and perform train-validation split
     trainval_data = trainval_data.shuffle(buffer_size=50, seed=seed, reshuffle_each_iteration=False)
@@ -106,15 +105,14 @@ def load_dataset_from_gcs(project_id: str,
     return train_data, test_data, val_data
 
 
-def extract_patches_from_dataset(res, dataset):
+def extract_patches_from_dataset(dataset):
     # Unzip dataset
     datasetX = dataset.map(lambda x, y: x)
     datasetY = dataset.map(lambda x, y: y)
 
     # Extract patches
-    ep_fn = partial(extract_patches, res)
-    datasetX = datasetX.map(ep_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    datasetY = datasetY.map(ep_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    datasetX = datasetX.map(extract_patches, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    datasetY = datasetY.map(extract_patches, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     # Now each element of the dataset has shape (12, 96, 128, 3);
     # un-batch in order to have each element of shape (1, 96, 128, 3)
@@ -125,7 +123,8 @@ def extract_patches_from_dataset(res, dataset):
     return tf.data.Dataset.zip((datasetX, datasetY))
 
 
-def extract_patches(res, image):
+def extract_patches(image):
+    res = image.shape[0:1]
     # From the single image extract 12 patches (3x4)
     # e.g. with input shape 288x512 each patch has shape 96x128
     patches = tf.image.extract_patches(images=tf.expand_dims(image, 0),
