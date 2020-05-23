@@ -5,24 +5,24 @@ from typing import Tuple, List, Optional
 
 
 def encode(in_layer: Layer, num_layers: Optional[int] = 15, filters: Optional[int] = 64) -> List[Layer]:
-    layers: List[Layer] = []
+    layers = []
     x = in_layer
     for i in range(num_layers):
-        x = ConvBlock(name=f'encode{i}',
+        x = ConvBlock(name='encode{}'.format(i),
                       filters=filters)(x)
         layers.append(x)
     return layers
 
 
 def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, filters: Optional[int] = 64) -> List[Layer]:
-    layers: List[Layer] = []
+    layers = []
     res_layers.reverse()
     x = res_layers[0]
     for i in range(num_layers):
-        x = ConvBlock(name=f'decode{i}',
+        x = ConvBlock(name='decode{}'.format(i),
                       filters=filters,
                       use_transpose=True,
-                      res_layer=res_layers[i])(x) if i % 2 != 0 else ConvBlock(name=f'decode{i}',
+                      res_layer=res_layers[i])(x) if i % 2 != 0 else ConvBlock(name='decode{}'.format(i),
                                                                             filters=filters,
                                                                             use_transpose=True)(x)
         layers.append(x)
