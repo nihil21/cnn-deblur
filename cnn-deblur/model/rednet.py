@@ -1,36 +1,54 @@
 from model.conv_net import ConvNet
-from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU, BatchNormalization
+from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, BatchNormalization
 from tensorflow.keras.models import Model
 from typing import Tuple, List, Optional
 
 
-def encode(in_layer: Layer, num_layers: Optional[int] = 15, filters: Optional[int] = 64) -> List[Layer]:
+def encode(in_layer: Layer,
+           num_layers: Optional[int] = 15,
+           filters: Optional[int] = 64,
+           kernel_size: Optional[int] = 3,
+           strides: Optional[int] = 1,
+           padding: Optional[str] = 'same') -> List[Layer]:
     layers = []
     x = in_layer
     for i in range(num_layers):
-        x = ConvBlock(name='encode{}'.format(i),
-                      filters=filters)(x)
+        x = Conv2D(filters=filters,
+                   kernel_size=kernel_size,
+                   strides=strides,
+                   padding=padding,
+                   name='encode_conv{:d}'.format(i))(x)
+        x = ELU(name='encode_act{:d}'.format(i))(x)
+        x = BatchNormalization(name='encode_bn{:d}'.format(i))(x)
         layers.append(x)
     return layers
 
 
-def decode(res_layers: List[Layer], num_layers: Optional[int] = 15, filters: Optional[int] = 64) -> List[Layer]:
+def decode(res_layers: List[Layer],
+           num_layers: Optional[int] = 15,
+           filters: Optional[int] = 64,
+           kernel_size: Optional[int] = 3,
+           strides: Optional[int] = 1,
+           padding: Optional[str] = 'same') -> List[Layer]:
     layers = []
     res_layers.reverse()
     x = res_layers[0]
     for i in range(num_layers):
-        x = ConvBlock(name='decode{}'.format(i),
-                      filters=filters,
-                      use_transpose=True,
-                      res_layer=res_layers[i])(x) if i % 2 != 0 else ConvBlock(name='decode{}'.format(i),
-                                                                            filters=filters,
-                                                                            use_transpose=True)(x)
+        x = Conv2D(filters=filters,
+                   kernel_size=kernel_size,
+                   strides=strides,
+                   padding=padding,
+                   name='decode_conv{:d}'.format(i))(x)
+        if i % 2 != 0:
+            x = Add(name='decode_skip{:d}'.format(i))([x, res_layers[i]])
+        x = ELU(name='decode_act{:d}'.format(i))(x)
+        x = BatchNormalization(name='decode_bn{:d}'.format(i))(x)
         layers.append(x)
 
     return layers
 
 
-class ConvBlock(Layer):
+"""class ConvBlock(Layer):
     def __init__(self,
                  name: str,
                  filters: int,
@@ -58,7 +76,7 @@ class ConvBlock(Layer):
         if self.__res_layer is not None:
             x = Add()([x, self.__res_layer])
         x = self.__activation(x)
-        return self.__bn(x)
+        return self.__bn(x)"""
 
 
 class REDNet10(ConvNet):
