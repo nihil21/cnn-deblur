@@ -131,11 +131,11 @@ class DeblurGan:
                 self.discriminator.trainable = False
                 c_loss = self.combined.train_on_batch(blur_batch, [sharp_batch, output_true_batch])
                 c_losses.append(c_loss)
-                psnr_metric = psnr(tf.convert_to_tensor(sharp_batch, dtype='float32'),
-                                   tf.convert_to_tensor(generated_batch, dtype='float32'))
+                psnr_metric = psnr(tf.convert_to_tensor(sharp_batch, dtype='bfloat16'),
+                                   tf.convert_to_tensor(generated_batch, dtype='bfloat16'))
                 psnr_metrics.append(psnr_metric)
-                ssim_metric = ssim(tf.convert_to_tensor(sharp_batch, dtype='float32'),
-                                   tf.convert_to_tensor(generated_batch, dtype='float32'))
+                ssim_metric = ssim(tf.convert_to_tensor(sharp_batch, dtype='bfloat16'),
+                                   tf.convert_to_tensor(generated_batch, dtype='bfloat16'))
                 ssim_metrics.append(ssim_metric)
                 self.discriminator.trainable = True
 
