@@ -9,6 +9,8 @@ from tensorflow.keras.optimizers import Adam
 # from tensorflow.keras.callbacks import Callback
 import tqdm
 from typing import Tuple, List, Optional
+# import imageio
+# from IPython import display
 
 
 def create_generator(input_shape):
@@ -46,9 +48,9 @@ def create_discriminator(input_shape,
     return Model(inputs=visible, outputs=output, name='Discriminator')
 
 
-def gan(visible: Input,
-        generator: Model,
-        discriminator: Model):
+def create_combined(visible: Input,
+                    generator: Model,
+                    discriminator: Model):
     generated_images = generator(visible)
     outputs = discriminator(generated_images)
     return Model(inputs=visible, outputs=[generated_images, outputs])
@@ -56,37 +58,32 @@ def gan(visible: Input,
 
 class DeblurGan:
     def __init__(self, input_shape: Tuple[int, int, int]):
-        # Build GAN model
-        self.generator = create_generator(input_shape)
-        self.discriminator = create_discriminator(input_shape,
-                                                  filters=[64, 128, 256, 512],
-                                                  kernels=[7, 3, 3, 3])
-        visible = Input(input_shape)
-        self.model = gan(visible, self.generator, self.discriminator)
-
         # Define loss functions
+        def wasserstein_loss(trueY, predY):
+            return K.mean(trueY * predY)
+
         def perceptual_loss(trueY, predY):
             vgg = VGG16(include_top=False, weights='imagenet', input_shape=input_shape)
             loss_model = Model(inputs=vgg.input, outputs=vgg.get_layer('block3_conv3').output)
             loss_model.trainable = False
             return K.mean(K.square(loss_model(trueY) - loss_model(predY)))
 
-        def wasserstein_loss(trueY, predY):
-            return K.mean(trueY * predY)
+        # Build generator
+        self.generator = create_generator(input_shape)
+        # Build and compile discriminator using Wasserstein loss
+        self.discriminator = create_discriminator(input_shape,
+                                                  filters=[64, 128, 256, 512],
+                                                  kernels=[7, 3, 3, 3])
+        self.discriminator.compile(Adam(lr=1e-4), loss=wasserstein_loss)
+        # Build combined model
+        visible = Input(input_shape)
+        self.combined = create_combined(visible, self.generator, self.discriminator)
 
-        self.perceptual_loss = perceptual_loss
-        self.wasserstein_loss = wasserstein_loss
-
-    def compile(self):
-        self.discriminator.trainable = True
-        self.discriminator.compile(Adam(lr=1e-4),
-                                   loss=self.wasserstein_loss)
+        # Compile combined model while freezing discriminator
         self.discriminator.trainable = False
-        loss = [self.perceptual_loss, self.wasserstein_loss]
-        loss_weights = [100, 1]
-        self.model.compile(Adam(lr=1e-4),
-                           loss=loss,
-                           loss_weights=loss_weights)
+        self.combined.compile(Adam(lr=1e-4),
+                              loss=[perceptual_loss, wasserstein_loss],
+                              loss_weights=[100, 1])
         self.discriminator.trainable = True
 
     def train(self,
@@ -107,11 +104,11 @@ class DeblurGan:
                 blur_batch = train_data[0][batch_indexes]
                 sharp_batch = train_data[1][batch_indexes]
 
-                """blur_batch = None
-                sharp_batch = None
-                for batch in train_data.take(1):
-                    blur_batch = batch[0]
-                    sharp_batch = batch[1]"""
+                # blur_batch = None
+                # sharp_batch = None
+                # for batch in train_data.take(1):
+                    # blur_batch = batch[0]
+                    # sharp_batch = batch[1]
 
                 # Generate fake inputs
                 generated_images = self.generator.predict(x=blur_batch, batch_size=batch_size)
@@ -125,7 +122,7 @@ class DeblurGan:
 
                 self.discriminator.trainable = False
                 # Train generator only on discriminator's decisions
-                gan_loss = self.model.train_on_batch(blur_batch, [sharp_batch, output_true_batch])
+                gan_loss = self.combined.train_on_batch(blur_batch, [sharp_batch, output_true_batch])
                 gan_losses.append(gan_loss)
 
                 self.discriminator.trainable = True
