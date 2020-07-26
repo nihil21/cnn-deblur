@@ -100,7 +100,8 @@ class DeblurGan:
               batch_size: int,
               steps_per_epoch: int,
               epochs: int,
-              critic_updates: Optional[int] = 5):
+              critic_updates: Optional[int] = 5,
+              show_gif: Optional[bool] = False):
         output_true_batch = np.ones((batch_size, 1))
         output_false_batch = np.zeros((batch_size, 1))
 
@@ -189,12 +190,13 @@ class DeblurGan:
                     self.discriminator.trainable = True
 
                     # Generate GIF
-                    display.clear_output(wait=True)
-                    predictions = self.generator.predict(tf.expand_dims(img, axis=0))
-                    fig = plt.figure(figsize=(4, 4))
-                    plt.imshow(predictions[0])
-                    plt.axis('off')
-                    plt.show()
+                    if show_gif:
+                        display.clear_output(wait=True)
+                        predictions = self.generator.predict(tf.expand_dims(img, axis=0))
+                        fig = plt.figure(figsize=(4, 4))
+                        plt.imshow(predictions[0])
+                        plt.axis('off')
+                        plt.show()
 
                 # Display information for current epoch
                 print('Ep: {:d} - DLoss: {:f} - CLoss: {:f} - PSNR: {:f} - SSIM: {:f}\n'.format(ep,
