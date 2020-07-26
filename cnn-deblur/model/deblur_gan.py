@@ -6,8 +6,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.applications import VGG16
 from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, ELU, Flatten, Dense
 from tensorflow.keras.optimizers import Adam
-# from tensorflow.keras.losses import LogCosh
-# from tensorflow.keras.callbacks import Callback
+from tensorflow.keras.losses import LogCosh
 from tqdm import tqdm_notebook
 from typing import Tuple, List, Optional
 
@@ -73,8 +72,8 @@ class DeblurGan:
         self.generator = create_generator(input_shape)
         # Build and compile discriminator using Wasserstein loss
         self.discriminator = create_discriminator(input_shape,
-                                                  filters=[64, 128],  # 256, 512],
-                                                  kernels=[7, 3])  # 3, 3])
+                                                  filters=[64, 128, 256, 512],
+                                                  kernels=[7, 3, 3, 3])
         self.discriminator.compile(Adam(lr=1e-4), loss=wasserstein_loss)
         # Build combined model
         visible = Input(input_shape)
@@ -83,7 +82,7 @@ class DeblurGan:
         # Compile combined model while freezing discriminator
         self.discriminator.trainable = False
         self.combined.compile(Adam(lr=1e-4),
-                              loss=[perceptual_loss, wasserstein_loss],
+                              loss=[LogCosh(), wasserstein_loss],
                               loss_weights=[100, 1])
         self.discriminator.trainable = True
 
