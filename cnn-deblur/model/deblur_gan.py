@@ -6,7 +6,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.applications import VGG16
 from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, ELU, Flatten, Dense
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.losses import LogCosh
+# from tensorflow.keras.losses import LogCosh
 # from tensorflow.keras.callbacks import Callback
 from tqdm import tqdm_notebook
 from typing import Tuple, List, Optional
@@ -60,9 +60,11 @@ def create_combined(visible: Input,
 class DeblurGan:
     def __init__(self, input_shape: Tuple[int, int, int]):
         # Define loss functions
+        @tf.function
         def wasserstein_loss(trueY, predY):
             return K.mean(trueY * predY)
 
+        @tf.function
         def perceptual_loss(trueY, predY):
             vgg = VGG16(include_top=False, weights='imagenet', input_shape=input_shape)
             loss_model = Model(inputs=vgg.input, outputs=vgg.get_layer('block3_conv3').output)
@@ -83,7 +85,7 @@ class DeblurGan:
         # Compile combined model while freezing discriminator
         self.discriminator.trainable = False
         self.combined.compile(Adam(lr=1e-4),
-                              loss=[LogCosh(), wasserstein_loss],
+                              loss=[perceptual_loss, wasserstein_loss],
                               loss_weights=[100, 1])
         self.discriminator.trainable = True
 
