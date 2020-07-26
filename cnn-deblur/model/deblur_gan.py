@@ -115,7 +115,7 @@ class DeblurGan:
                 generated_images = self.generator.predict(x=blur_batch, batch_size=batch_size)
 
                 # Train discriminator
-                for _ in tqdm_notebook(range(critic_updates)):
+                for _ in range(critic_updates):
                     d_loss_real = self.discriminator.train_on_batch(sharp_batch, output_true_batch)
                     d_loss_fake = self.discriminator.train_on_batch(generated_images, output_false_batch)
                     d_loss = 0.5 * np.add(d_loss_fake, d_loss_real)
