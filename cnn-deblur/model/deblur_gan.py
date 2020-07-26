@@ -95,7 +95,7 @@ class DeblurGan:
               critic_updates: Optional[int] = 5):
         output_true_batch = np.ones((batch_size, 1))
         output_false_batch = np.zeros((batch_size, 1))
-        if type(train_data) is tf.data.Dataset:
+        if isinstance(train_data, tf.data.Dataset):
             print('Training using Tensorflow Dataset')
             for ep in tqdm_notebook(range(epochs)):
                 d_losses = []
