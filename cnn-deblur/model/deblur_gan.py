@@ -58,23 +58,23 @@ def create_combined(visible: Input,
 class DeblurGan:
     def __init__(self, input_shape: Tuple[int, int, int]):
         # Define loss functions
-        @tf.function
         def wasserstein_loss(trueY, predY):
             return K.mean(trueY * predY)
 
-        @tf.function
         def perceptual_loss(trueY, predY):
             vgg = VGG16(include_top=False, weights='imagenet', input_shape=input_shape)
             loss_model = Model(inputs=vgg.input, outputs=vgg.get_layer('block3_conv3').output)
             loss_model.trainable = False
+            for layer in loss_model.layers:
+                layer.trainable = False
             return K.mean(K.square(loss_model(trueY) - loss_model(predY)))
 
         # Build generator
         self.generator = create_generator(input_shape)
         # Build and compile discriminator using Wasserstein loss
         self.discriminator = create_discriminator(input_shape,
-                                                  filters=[64, 128, 256, 512],
-                                                  kernels=[7, 3, 3, 3])
+                                                  filters=[64, 128],  # 256, 512],
+                                                  kernels=[7, 3])  # 3, 3])
         self.discriminator.compile(Adam(lr=1e-4), loss=wasserstein_loss)
         # Build combined model
         visible = Input(input_shape)
