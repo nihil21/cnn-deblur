@@ -11,6 +11,9 @@ from tensorflow.keras.losses import LogCosh
 from tqdm import tqdm_notebook
 from typing import Tuple, List, Optional, Union
 
+from matplotlib import pyplot as plt
+from IPython import display
+
 
 def create_generator(input_shape):
     generator = REDNet10(input_shape=input_shape).model
@@ -69,20 +72,25 @@ class DeblurGan:
                 layer.trainable = False
             return K.mean(K.square(loss_model(trueY) - loss_model(predY)))
 
+        self.wasserstein_loss = wasserstein_loss
+        self.perceptual_loss = perceptual_loss
+
         # Build generator
         self.generator = create_generator(input_shape)
         # Build and compile discriminator using Wasserstein loss
         self.discriminator = create_discriminator(input_shape,
                                                   filters=[64, 128, 256, 512],
                                                   kernels=[7, 3, 3, 3])
-        self.discriminator.compile(Adam(lr=1e-4), loss=wasserstein_loss)
+        self.disc_opt = Adam(lr=1e-4)
+        self.discriminator.compile(self.disc_opt, loss=wasserstein_loss)
         # Build combined model
         visible = Input(input_shape)
         self.combined = create_combined(visible, self.generator, self.discriminator)
 
         # Compile combined model while freezing discriminator
         self.discriminator.trainable = False
-        self.combined.compile(Adam(lr=1e-4),
+        self.comb_opt = Adam(lr=1e-4)
+        self.combined.compile(self.comb_opt,
                               loss=[LogCosh(), wasserstein_loss],
                               loss_weights=[100, 1])
         self.discriminator.trainable = True
@@ -95,6 +103,7 @@ class DeblurGan:
               critic_updates: Optional[int] = 5):
         output_true_batch = np.ones((batch_size, 1))
         output_false_batch = np.zeros((batch_size, 1))
+
         if isinstance(train_data, tf.data.Dataset):
             print('Training using Tensorflow Dataset')
             for ep in tqdm_notebook(range(epochs)):
@@ -124,6 +133,8 @@ class DeblurGan:
                     self.discriminator.trainable = False
                     c_loss = self.combined.train_on_batch(blur_batch, [sharp_batch, output_true_batch])
                     c_losses.append(c_loss)
+
+                    # Update metrics
                     psnr_metric = psnr(tf.convert_to_tensor(sharp_batch, dtype='bfloat16'),
                                        tf.convert_to_tensor(generated_batch, dtype='bfloat16'))
                     psnr_metrics.append(psnr_metric)
@@ -140,6 +151,7 @@ class DeblurGan:
                                                                                                 np.mean(ssim_metrics)))
         else:
             print('Training using NumPy arrays')
+            img = train_data[0][0]
             for ep in tqdm_notebook(range(epochs)):
                 permuted_indexes = np.random.permutation(len(train_data[0]))
                 d_losses = []
@@ -166,6 +178,8 @@ class DeblurGan:
                     self.discriminator.trainable = False
                     c_loss = self.combined.train_on_batch(blur_batch, [sharp_batch, output_true_batch])
                     c_losses.append(c_loss)
+
+                    # Update metrics
                     psnr_metric = psnr(tf.convert_to_tensor(sharp_batch, dtype='bfloat16'),
                                        tf.convert_to_tensor(generated_batch, dtype='bfloat16'))
                     psnr_metrics.append(psnr_metric)
@@ -174,9 +188,83 @@ class DeblurGan:
                     ssim_metrics.append(ssim_metric)
                     self.discriminator.trainable = True
 
+                    # Generate GIF
+                    display.clear_output(wait=True)
+                    predictions = self.generator.predict(img, batch_size=1)
+                    fig = plt.figure(figsize=(4, 4))
+                    plt.imshow(predictions[0])
+                    plt.axis('off')
+                    plt.show()
+
                 # Display information for current epoch
                 print('Ep: {:d} - DLoss: {:f} - CLoss: {:f} - PSNR: {:f} - SSIM: {:f}\n'.format(ep,
                                                                                                 np.mean(d_losses),
                                                                                                 np.mean(c_losses),
                                                                                                 np.mean(psnr_metrics),
                                                                                                 np.mean(ssim_metrics)))
+
+    def train_grad(self,
+                   train_data: Union[tf.data.Dataset, Tuple[np.ndarray, np.ndarray]],
+                   batch_size: int,
+                   steps_per_epoch: int,
+                   epochs: int,
+                   critic_updates: Optional[int] = 5):
+        output_true_batch = np.ones((batch_size, 1))
+        output_false_batch = np.zeros((batch_size, 1))
+
+        @tf.function
+        def train_step(blur_batch: tf.data.Dataset,
+                       sharp_batch: tf.data.Dataset):
+            with tf.GradientTape() as comb_tape:
+                # Generate fake inputs
+                generated_batch = self.generator(blur_batch, training=True)
+                # Train discriminator
+                for _ in range(critic_updates):
+                    with tf.GradientTape() as disc_tape:
+                        # Compute output of discriminator on both sharp and generated images
+                        real_output = self.discriminator(sharp_batch, training=True)
+                        fake_output = self.discriminator(generated_batch, training=True)
+                        # Compute loss of discriminator
+                        d_loss_real = self.wasserstein_loss(real_output, output_true_batch)
+                        d_loss_fake = self.wasserstein_loss(fake_output, output_false_batch)
+                        d_loss = 0.5 * tf.math.add(d_loss_real, d_loss_fake)
+                    # Append discriminator loss to list for logging
+                    d_losses.append(d_loss)
+                    # Compute gradient of discriminator
+                    disc_grad = disc_tape.gradient(d_loss, self.discriminator.trainable_variables)
+                    self.disc_opt.apply_gradients(zip(disc_grad, self.discriminator.trainable_variables))
+                # Train generator only on discriminator's decisions
+                self.discriminator.trainable = False
+                # Compute loss of generator
+                c_loss = self.perceptual_loss(sharp_batch, generated_batch)
+            # Append combined loss to list for logging
+            c_losses.append(c_loss)
+            # Compute gradient of combined model (with discriminator frozen)
+            comb_grad = comb_tape.gradient(c_loss, self.combined.trainable_variables)
+            self.comb_opt.apply_gradients(zip(comb_grad, self.combined.trainable_variables))
+
+            # Compute metrics and append them to list for logging
+            psnr_metric = psnr(tf.convert_to_tensor(sharp_batch, dtype='bfloat16'),
+                               tf.convert_to_tensor(generated_batch, dtype='bfloat16'))
+            psnr_metrics.append(psnr_metric)
+            ssim_metric = ssim(tf.convert_to_tensor(sharp_batch, dtype='bfloat16'),
+                               tf.convert_to_tensor(generated_batch, dtype='bfloat16'))
+            ssim_metrics.append(ssim_metric)
+            self.discriminator.trainable = True
+
+        # if isinstance(train_data, tf.data.Dataset):
+        print('Training using Tensorflow Dataset')
+        for ep in tqdm_notebook(range(epochs)):
+            d_losses = []
+            c_losses = []
+            psnr_metrics = []
+            ssim_metrics = []
+            for _ in tqdm_notebook(range(steps_per_epoch)):
+                for (blur_batch, sharp_batch) in train_data.take(1):
+                    train_step(blur_batch, sharp_batch)
+            # Display information for current epoch
+            print('Ep: {:d} - DLoss: {:f} - CLoss: {:f} - PSNR: {:f} - SSIM: {:f}\n'.format(ep,
+                                                                                            np.mean(d_losses),
+                                                                                            np.mean(c_losses),
+                                                                                            np.mean(psnr_metrics),
+                                                                                            np.mean(ssim_metrics)))
