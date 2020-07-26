@@ -98,15 +98,20 @@ class DeblurGan:
         output_true_batch = np.ones((batch_size, 1))
         output_false_batch = -np.ones((batch_size, 1))
         for ep in tqdm.tqdm(range(epochs)):
+            permuted_indexes = np.random.permutation(len(train_data[0]))
             d_losses = []
             gan_losses = []
             for bat in range(steps_per_epoch):
                 # Prepare batch
-                blur_batch = None
+                batch_indexes = permuted_indexes[bat * batch_size:(bat + 1) * batch_size]
+                blur_batch = train_data[0][batch_indexes]
+                sharp_batch = train_data[1][batch_indexes]
+
+                """blur_batch = None
                 sharp_batch = None
                 for batch in train_data.take(1):
                     blur_batch = batch[0]
-                    sharp_batch = batch[1]
+                    sharp_batch = batch[1]"""
 
                 # Generate fake inputs
                 generated_images = self.generator.predict(x=blur_batch, batch_size=batch_size)
