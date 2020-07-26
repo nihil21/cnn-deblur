@@ -10,7 +10,9 @@
       <w>deconv</w>
       <w>fltr</w>
       <w>ggplot</w>
+      <w>imagenet</w>
       <w>krnl</w>
+      <w>logcosh</w>
       <w>mape</w>
       <w>mattia</w>
       <w>maxpool</w>
@@ -38,6 +40,8 @@
       <w>upsample</w>
       <w>upsampling</w>
       <w>upscales</w>
+      <w>wasserstein</w>
+      <w>wassertein</w>
     </words>
   </dictionary>
 </component>

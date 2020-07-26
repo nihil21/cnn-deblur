@@ -19,8 +19,7 @@ class ConvNet:
         loss_dict = dict({
             'mse': MeanSquaredError(),
             'mae': MeanAbsoluteError(),
-            'logcosh': LogCosh(),
-            'psnr_loss': psnr_loss
+            'logcosh': LogCosh()
         })
 
         metric_list = [ssim,
