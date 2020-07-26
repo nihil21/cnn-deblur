@@ -94,54 +94,89 @@ class DeblurGan:
               epochs: int,
               critic_updates: Optional[int] = 5):
         output_true_batch = np.ones((batch_size, 1))
-        output_false_batch = -np.ones((batch_size, 1))
-        for ep in tqdm_notebook(range(epochs)):
-            if type(train_data) is tf.data.Dataset:
-                permuted_indexes = np.random.permutation(len(train_data[0]))
-            else:
-                permuted_indexes = None
-            d_losses = []
-            c_losses = []
-            psnr_metrics = []
-            ssim_metrics = []
-            for bat in tqdm_notebook(range(steps_per_epoch)):
-                # Prepare batch
-                if type(train_data) is tf.data.Dataset:
-                    batch_indexes = permuted_indexes[bat * batch_size:(bat + 1) * batch_size]
-                    blur_batch = train_data[0][batch_indexes]
-                    sharp_batch = train_data[1][batch_indexes]
-                else:
+        output_false_batch = np.zeros((batch_size, 1))
+        if type(train_data) is tf.data.Dataset:
+            print('Training using Tensorflow Dataset')
+            for ep in tqdm_notebook(range(epochs)):
+                d_losses = []
+                c_losses = []
+                psnr_metrics = []
+                ssim_metrics = []
+                for _ in tqdm_notebook(range(steps_per_epoch)):
+                    # Prepare batch
                     blur_batch = None
                     sharp_batch = None
                     for batch in train_data.take(1):
                         blur_batch = batch[0]
                         sharp_batch = batch[1]
 
-                # Generate fake inputs
-                generated_batch = self.generator.predict(x=blur_batch, batch_size=batch_size)
+                    # Generate fake inputs
+                    generated_batch = self.generator.predict(x=blur_batch, batch_size=batch_size)
 
-                # Train discriminator
-                for _ in range(critic_updates):
-                    d_loss_real = self.discriminator.train_on_batch(sharp_batch, output_true_batch)
-                    d_loss_fake = self.discriminator.train_on_batch(generated_batch, output_false_batch)
-                    d_loss = 0.5 * np.add(d_loss_fake, d_loss_real)
-                    d_losses.append(d_loss)
+                    # Train discriminator
+                    for _ in range(critic_updates):
+                        d_loss_real = self.discriminator.train_on_batch(sharp_batch, output_true_batch)
+                        d_loss_fake = self.discriminator.train_on_batch(generated_batch, output_false_batch)
+                        d_loss = 0.5 * np.add(d_loss_fake, d_loss_real)
+                        d_losses.append(d_loss)
 
-                # Train generator only on discriminator's decisions
-                self.discriminator.trainable = False
-                c_loss = self.combined.train_on_batch(blur_batch, [sharp_batch, output_true_batch])
-                c_losses.append(c_loss)
-                psnr_metric = psnr(tf.convert_to_tensor(sharp_batch, dtype='bfloat16'),
-                                   tf.convert_to_tensor(generated_batch, dtype='bfloat16'))
-                psnr_metrics.append(psnr_metric)
-                ssim_metric = ssim(tf.convert_to_tensor(sharp_batch, dtype='bfloat16'),
-                                   tf.convert_to_tensor(generated_batch, dtype='bfloat16'))
-                ssim_metrics.append(ssim_metric)
-                self.discriminator.trainable = True
+                    # Train generator only on discriminator's decisions
+                    self.discriminator.trainable = False
+                    c_loss = self.combined.train_on_batch(blur_batch, [sharp_batch, output_true_batch])
+                    c_losses.append(c_loss)
+                    psnr_metric = psnr(tf.convert_to_tensor(sharp_batch, dtype='bfloat16'),
+                                       tf.convert_to_tensor(generated_batch, dtype='bfloat16'))
+                    psnr_metrics.append(psnr_metric)
+                    ssim_metric = ssim(tf.convert_to_tensor(sharp_batch, dtype='bfloat16'),
+                                       tf.convert_to_tensor(generated_batch, dtype='bfloat16'))
+                    ssim_metrics.append(ssim_metric)
+                    self.discriminator.trainable = True
 
-            # Display information for current epoch
-            print('Ep: {:d} - DLoss: {:f} - CLoss: {:f} - PSNR: {:f} - SSIM: {:f}\n'.format(ep,
-                                                                                            np.mean(d_losses),
-                                                                                            np.mean(c_losses),
-                                                                                            np.mean(psnr_metrics),
-                                                                                            np.mean(ssim_metrics)))
+                # Display information for current epoch
+                print('Ep: {:d} - DLoss: {:f} - CLoss: {:f} - PSNR: {:f} - SSIM: {:f}\n'.format(ep,
+                                                                                                np.mean(d_losses),
+                                                                                                np.mean(c_losses),
+                                                                                                np.mean(psnr_metrics),
+                                                                                                np.mean(ssim_metrics)))
+        else:
+            print('Training using NumPy arrays')
+            for ep in tqdm_notebook(range(epochs)):
+                permuted_indexes = np.random.permutation(len(train_data[0]))
+                d_losses = []
+                c_losses = []
+                psnr_metrics = []
+                ssim_metrics = []
+                for bat in tqdm_notebook(range(steps_per_epoch)):
+                    # Prepare batch
+                    batch_indexes = permuted_indexes[bat * batch_size:(bat + 1) * batch_size]
+                    blur_batch = train_data[0][batch_indexes]
+                    sharp_batch = train_data[1][batch_indexes]
+
+                    # Generate fake inputs
+                    generated_batch = self.generator.predict(x=blur_batch, batch_size=batch_size)
+
+                    # Train discriminator
+                    for _ in range(critic_updates):
+                        d_loss_real = self.discriminator.train_on_batch(sharp_batch, output_true_batch)
+                        d_loss_fake = self.discriminator.train_on_batch(generated_batch, output_false_batch)
+                        d_loss = 0.5 * np.add(d_loss_fake, d_loss_real)
+                        d_losses.append(d_loss)
+
+                    # Train generator only on discriminator's decisions
+                    self.discriminator.trainable = False
+                    c_loss = self.combined.train_on_batch(blur_batch, [sharp_batch, output_true_batch])
+                    c_losses.append(c_loss)
+                    psnr_metric = psnr(tf.convert_to_tensor(sharp_batch, dtype='bfloat16'),
+                                       tf.convert_to_tensor(generated_batch, dtype='bfloat16'))
+                    psnr_metrics.append(psnr_metric)
+                    ssim_metric = ssim(tf.convert_to_tensor(sharp_batch, dtype='bfloat16'),
+                                       tf.convert_to_tensor(generated_batch, dtype='bfloat16'))
+                    ssim_metrics.append(ssim_metric)
+                    self.discriminator.trainable = True
+
+                # Display information for current epoch
+                print('Ep: {:d} - DLoss: {:f} - CLoss: {:f} - PSNR: {:f} - SSIM: {:f}\n'.format(ep,
+                                                                                                np.mean(d_losses),
+                                                                                                np.mean(c_losses),
+                                                                                                np.mean(psnr_metrics),
+                                                                                                np.mean(ssim_metrics)))
