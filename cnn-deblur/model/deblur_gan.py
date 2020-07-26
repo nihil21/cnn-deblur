@@ -9,7 +9,7 @@ from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, ELU, Flat
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import LogCosh
 from tqdm import tqdm_notebook
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Union
 
 
 def create_generator(input_shape):
@@ -88,7 +88,7 @@ class DeblurGan:
         self.discriminator.trainable = True
 
     def train(self,
-              train_data: tf.data.Dataset,
+              train_data: Union[tf.data.Dataset, Tuple[np.ndarray, np.ndarray]],
               batch_size: int,
               steps_per_epoch: int,
               epochs: int,
@@ -96,22 +96,26 @@ class DeblurGan:
         output_true_batch = np.ones((batch_size, 1))
         output_false_batch = -np.ones((batch_size, 1))
         for ep in tqdm_notebook(range(epochs)):
-            permuted_indexes = np.random.permutation(len(train_data[0]))
+            if type(train_data) is tf.data.Dataset:
+                permuted_indexes = np.random.permutation(len(train_data[0]))
+            else:
+                permuted_indexes = None
             d_losses = []
             c_losses = []
             psnr_metrics = []
             ssim_metrics = []
             for bat in tqdm_notebook(range(steps_per_epoch)):
                 # Prepare batch
-                batch_indexes = permuted_indexes[bat * batch_size:(bat + 1) * batch_size]
-                blur_batch = train_data[0][batch_indexes]
-                sharp_batch = train_data[1][batch_indexes]
-
-                # blur_batch = None
-                # sharp_batch = None
-                # for batch in train_data.take(1):
-                    # blur_batch = batch[0]
-                    # sharp_batch = batch[1]
+                if type(train_data) is tf.data.Dataset:
+                    batch_indexes = permuted_indexes[bat * batch_size:(bat + 1) * batch_size]
+                    blur_batch = train_data[0][batch_indexes]
+                    sharp_batch = train_data[1][batch_indexes]
+                else:
+                    blur_batch = None
+                    sharp_batch = None
+                    for batch in train_data.take(1):
+                        blur_batch = batch[0]
+                        sharp_batch = batch[1]
 
                 # Generate fake inputs
                 generated_batch = self.generator.predict(x=blur_batch, batch_size=batch_size)
@@ -136,9 +140,8 @@ class DeblurGan:
                 self.discriminator.trainable = True
 
             # Display information for current epoch
-            print('Ep: {:d} - DLoss: {:f} - CLoss: {:f} - PSNR: {:f} - SSIM: {:f}\n'
-                  .format(ep,
-                          np.mean(d_losses),
-                          np.mean(c_losses),
-                          np.mean(psnr_metrics),
-                          np.mean(ssim_metrics)))
+            print('Ep: {:d} - DLoss: {:f} - CLoss: {:f} - PSNR: {:f} - SSIM: {:f}\n'.format(ep,
+                                                                                            np.mean(d_losses),
+                                                                                            np.mean(c_losses),
+                                                                                            np.mean(psnr_metrics),
+                                                                                            np.mean(ssim_metrics)))
