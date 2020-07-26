@@ -1,5 +1,6 @@
 import numpy as np
 from model.rednet import REDNet10
+from model.custom_losses_metrics import psnr, ssim
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.models import Model
@@ -96,8 +97,10 @@ class DeblurGan:
         output_false_batch = -np.ones((batch_size, 1))
         for ep in tqdm_notebook(range(epochs)):
             permuted_indexes = np.random.permutation(len(train_data[0]))
-            discriminator_losses = []
-            combined_losses = []
+            d_losses = []
+            c_losses = []
+            psnr_metrics = []
+            ssim_metrics = []
             for bat in tqdm_notebook(range(steps_per_epoch)):
                 # Prepare batch
                 batch_indexes = permuted_indexes[bat * batch_size:(bat + 1) * batch_size]
@@ -111,20 +114,29 @@ class DeblurGan:
                     # sharp_batch = batch[1]
 
                 # Generate fake inputs
-                generated_images = self.generator.predict(x=blur_batch, batch_size=batch_size)
+                generated_batch = self.generator.predict(x=blur_batch, batch_size=batch_size)
 
                 # Train discriminator
                 for _ in range(critic_updates):
                     d_loss_real = self.discriminator.train_on_batch(sharp_batch, output_true_batch)
-                    d_loss_fake = self.discriminator.train_on_batch(generated_images, output_false_batch)
+                    d_loss_fake = self.discriminator.train_on_batch(generated_batch, output_false_batch)
                     d_loss = 0.5 * np.add(d_loss_fake, d_loss_real)
-                    discriminator_losses.append(d_loss)
+                    d_losses.append(d_loss)
 
                 # Train generator only on discriminator's decisions
                 self.discriminator.trainable = False
                 c_loss = self.combined.train_on_batch(blur_batch, [sharp_batch, output_true_batch])
-                combined_losses.append(c_loss)
+                c_losses.append(c_loss)
+                psnr_metric = psnr(sharp_batch, generated_batch)
+                psnr_metrics.append(psnr_metric)
+                ssim_metric = ssim(sharp_batch, generated_batch)
+                ssim_metrics.append(ssim_metric)
                 self.discriminator.trainable = True
 
             # Display information for current epoch
-            print('{:d} - {} - {}\n'.format(ep, np.mean(discriminator_losses), np.mean(combined_losses)))
+            print('Ep: {:d} - DLoss: {:f} - CLoss: {:f} - PSNR: {:f} - SSIM: {:f}\n'
+                  .format(ep,
+                          np.mean(d_losses),
+                          np.mean(c_losses),
+                          np.mean(psnr_metrics),
+                          np.mean(ssim_metrics)))
