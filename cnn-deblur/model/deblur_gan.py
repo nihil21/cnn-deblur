@@ -138,5 +138,5 @@ class DeblurGan:
                   .format(ep,
                           np.mean(d_losses),
                           np.mean(c_losses),
-                          np.mean(psnr_metrics),
-                          np.mean(ssim_metrics)))
+                          tf.math.reduce_mean(psnr_metrics),
+                          tf.math.reduce_mean(ssim_metrics)))
