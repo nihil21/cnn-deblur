@@ -1,5 +1,6 @@
-from model.rednet import REDNet10
 import numpy as np
+from model.rednet import REDNet10
+import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications import VGG16
@@ -7,7 +8,7 @@ from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, ELU, Flat
 from tensorflow.keras.optimizers import Adam
 # from tensorflow.keras.callbacks import Callback
 import tqdm
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 
 def create_generator(input_shape):
@@ -89,31 +90,37 @@ class DeblurGan:
         self.discriminator.trainable = True
 
     def train(self,
-              blurred,
-              sharp,
-              batch_size,
-              steps_per_epoch,
-              epochs,
-              critic_updates=5):
+              train_data: tf.data.Dataset,
+              batch_size: int,
+              steps_per_epoch: int,
+              epochs: int,
+              critic_updates: Optional[int] = 5):
         output_true_batch = np.ones((batch_size, 1))
         output_false_batch = -np.ones((batch_size, 1))
         for ep in tqdm.tqdm(range(epochs)):
             d_losses = []
             gan_losses = []
             for bat in range(steps_per_epoch):
+                # Prepare batch
+                blur_batch = None
+                sharp_batch = None
+                for batch in train_data.take(1):
+                    blur_batch = batch[0]
+                    sharp_batch = batch[1]
+
                 # Generate fake inputs
-                generated_images = self.generator.predict(x=blurred, batch_size=batch_size)
+                generated_images = self.generator.predict(x=blur_batch, batch_size=batch_size)
 
                 # Train discriminator
                 for _ in range(critic_updates):
-                    d_loss_real = self.discriminator.train_on_batch(sharp, output_true_batch)
+                    d_loss_real = self.discriminator.train_on_batch(sharp_batch, output_true_batch)
                     d_loss_fake = self.discriminator.train_on_batch(generated_images, output_false_batch)
                     d_loss = 0.5 * np.add(d_loss_fake, d_loss_real)
                     d_losses.append(d_loss)
 
                 self.discriminator.trainable = False
                 # Train generator only on discriminator's decisions
-                gan_loss = self.model.train_on_batch(blurred, [sharp, output_true_batch])
+                gan_loss = self.model.train_on_batch(blur_batch, [sharp_batch, output_true_batch])
                 gan_losses.append(gan_loss)
 
                 self.discriminator.trainable = True
