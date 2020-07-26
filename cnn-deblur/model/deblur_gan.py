@@ -10,8 +10,6 @@ from tensorflow.keras.optimizers import Adam
 # from tensorflow.keras.callbacks import Callback
 from tqdm import tqdm_notebook
 from typing import Tuple, List, Optional
-# import imageio
-# from IPython import display
 
 
 def create_generator(input_shape):
@@ -99,8 +97,8 @@ class DeblurGan:
         output_false_batch = -np.ones((batch_size, 1))
         for ep in tqdm_notebook(range(epochs)):
             permuted_indexes = np.random.permutation(len(train_data[0]))
-            d_losses = []
-            gan_losses = []
+            discriminator_losses = []
+            combined_losses = []
             for bat in tqdm_notebook(range(steps_per_epoch)):
                 # Prepare batch
                 batch_indexes = permuted_indexes[bat * batch_size:(bat + 1) * batch_size]
@@ -121,11 +119,13 @@ class DeblurGan:
                     d_loss_real = self.discriminator.train_on_batch(sharp_batch, output_true_batch)
                     d_loss_fake = self.discriminator.train_on_batch(generated_images, output_false_batch)
                     d_loss = 0.5 * np.add(d_loss_fake, d_loss_real)
-                    d_losses.append(d_loss)
+                    discriminator_losses.append(d_loss)
 
-                self.discriminator.trainable = False
                 # Train generator only on discriminator's decisions
-                gan_loss = self.combined.train_on_batch(blur_batch, [sharp_batch, output_true_batch])
-                gan_losses.append(gan_loss)
-
+                self.discriminator.trainable = False
+                c_loss = self.combined.train_on_batch(blur_batch, [sharp_batch, output_true_batch])
+                combined_losses.append(c_loss)
                 self.discriminator.trainable = True
+
+            # Display information for current epoch
+            print('{:d} - {} - {}\n'.format(ep, np.mean(discriminator_losses), np.mean(combined_losses)))
