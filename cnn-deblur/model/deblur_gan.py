@@ -122,6 +122,7 @@ class DeblurGan:
                     d_loss_fake = self.discriminator.train_on_batch(generated_images, output_false_batch)
                     d_loss = 0.5 * np.add(d_loss_fake, d_loss_real)
                     d_losses.append(d_loss)
+                print("Ep. {:d}: discriminator trained".format(ep))
 
                 self.discriminator.trainable = False
                 # Train generator only on discriminator's decisions
