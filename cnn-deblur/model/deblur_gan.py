@@ -190,7 +190,7 @@ class DeblurGan:
 
                     # Generate GIF
                     display.clear_output(wait=True)
-                    predictions = self.generator.predict(img, batch_size=1)
+                    predictions = self.generator.predict(tf.expand_dims(img, axis=0))
                     fig = plt.figure(figsize=(4, 4))
                     plt.imshow(predictions[0])
                     plt.axis('off')
