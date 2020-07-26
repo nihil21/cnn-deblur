@@ -8,7 +8,7 @@ from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, ELU, Flat
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import LogCosh
 # from tensorflow.keras.callbacks import Callback
-import tqdm
+from tqdm import tqdm_notebook
 from typing import Tuple, List, Optional
 # import imageio
 # from IPython import display
@@ -95,11 +95,11 @@ class DeblurGan:
               critic_updates: Optional[int] = 5):
         output_true_batch = np.ones((batch_size, 1))
         output_false_batch = -np.ones((batch_size, 1))
-        for ep in tqdm.tqdm(range(epochs)):
+        for ep in tqdm_notebook(range(epochs)):
             permuted_indexes = np.random.permutation(len(train_data[0]))
             d_losses = []
             gan_losses = []
-            for bat in range(steps_per_epoch):
+            for bat in tqdm_notebook(range(steps_per_epoch)):
                 # Prepare batch
                 batch_indexes = permuted_indexes[bat * batch_size:(bat + 1) * batch_size]
                 blur_batch = train_data[0][batch_indexes]
@@ -115,7 +115,7 @@ class DeblurGan:
                 generated_images = self.generator.predict(x=blur_batch, batch_size=batch_size)
 
                 # Train discriminator
-                for _ in range(critic_updates):
+                for _ in tqdm_notebook(range(critic_updates)):
                     d_loss_real = self.discriminator.train_on_batch(sharp_batch, output_true_batch)
                     d_loss_fake = self.discriminator.train_on_batch(generated_images, output_false_batch)
                     d_loss = 0.5 * np.add(d_loss_fake, d_loss_real)
