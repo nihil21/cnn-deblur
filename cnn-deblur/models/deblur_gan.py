@@ -63,8 +63,8 @@ class DeblurGan(Model):
         # Generator's loss function
         def total_loss(blurred_batch: tf.Tensor,
                        sharp_batch: tf.Tensor):
-            generated_batch = self.generator(blurred_batch, reuse=False)
-            fake_logits = self.critic(generated_batch, reuse=False)
+            generated_batch = self.generator(blurred_batch)
+            fake_logits = self.critic(generated_batch)
             adv_loss = tf.reduce_mean(-fake_logits)
             content_loss = perceptual_loss(sharp_batch, generated_batch)
             return adv_loss + 100.0 * content_loss
@@ -99,7 +99,6 @@ class DeblurGan(Model):
         # Return gradient penalty
         return tf.reduce_mean((norm - 1.0) ** 2)
 
-    @tf.function
     def train_step(self,
                    batch_size: int,
                    blurred_batch: tf.Tensor,
@@ -116,7 +115,7 @@ class DeblurGan(Model):
                 # Calculate critic's loss
                 d_loss_fake = self.d_loss(tf.zeros_like(fake_logits), fake_logits)
                 d_loss_real = self.d_loss(tf.ones_like(real_logits), real_logits)
-                d_loss = 0.5 * np.add(d_loss_fake, d_loss_real)
+                d_loss = 0.5 * tf.add(d_loss_fake, d_loss_real)
                 # Calculate gradient penalty
                 gp = self.gradient_penalty(batch_size, blurred_batch, sharp_batch)
                 # Add gradient penalty to the loss
@@ -129,10 +128,6 @@ class DeblurGan(Model):
 
         # Train the generator
         with tf.GradientTape() as g_tape:
-            # Generate fake inputs
-            generated_batch = self.generator(blurred_batch, training=True)
-            # Get logits for fake images
-            fake_logits = self.critic(generated_batch, training=True)
             # Calculate generator's loss
             g_loss = self.g_loss(blurred_batch, sharp_batch)
         # Get gradient w.r.t. generator's loss and update weights
@@ -143,7 +138,7 @@ class DeblurGan(Model):
         ssim_metric = ssim(sharp_batch, generated_batch)
         psnr_metric = psnr(sharp_batch, generated_batch)
 
-        return {"d_loss": tf.reduce_mean(d_losses),
+        return {  # "d_loss": tf.reduce_mean(d_losses),
                 "g_loss": g_loss,
                 "ssim": ssim_metric,
                 "psnr": psnr_metric}
@@ -169,7 +164,9 @@ class DeblurGan(Model):
                 sharp_batch = sharp_images[batch_indexes]
 
                 # Perform train step
-                step_result = self.train_step(batch_size, blurred_batch, sharp_batch)
+                step_result = self.train_step(batch_size,
+                                              tf.cast(blurred_batch, dtype='float32'),
+                                              tf.cast(sharp_batch, dtype='float32'))
 
                 # Collect results
                 d_losses.append(step_result['d_loss'])
