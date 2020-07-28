@@ -1,4 +1,4 @@
-from model.conv_net import ConvNet
+from models.conv_net import ConvNet
 from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, BatchNormalization
 from tensorflow.keras.models import Model
 from typing import Tuple, List, Optional

@@ -1,5 +1,5 @@
 from tensorflow.keras import Model
-from model.conv_net import ConvNet
+from models.conv_net import ConvNet
 from tensorflow.keras.layers import (Input, MaxPooling2D, Layer, Conv2D, Conv2DTranspose, concatenate)
 from typing import Tuple, List, Optional
 

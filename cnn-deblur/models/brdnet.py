@@ -1,5 +1,5 @@
 from tensorflow.keras.models import Model
-from model.conv_net import ConvNet
+from models.conv_net import ConvNet
 from tensorflow.keras.layers import Input, Layer, Conv2D, BatchNormalization, Activation, Subtract, concatenate
 from typing import Tuple
 

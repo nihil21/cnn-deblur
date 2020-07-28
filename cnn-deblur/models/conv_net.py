@@ -1,7 +1,7 @@
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import Adam
-from model.custom_losses_metrics import *
+from utils.custom_metrics import *
 from tensorflow.keras.losses import MeanSquaredError, MeanAbsoluteError, LogCosh
 from typing import List, Optional
 

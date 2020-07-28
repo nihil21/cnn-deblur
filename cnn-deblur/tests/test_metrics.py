@@ -1,5 +1,5 @@
 import tensorflow as tf
-from model.custom_losses_metrics import ssim, psnr_loss
+from utils.custom_metrics import ssim, psnr
 from datasets import cifar_dataset
 import matplotlib.pyplot as plt
 
@@ -14,7 +14,7 @@ ax2.imshow(img2)
 plt.show()
 
 print('SSIM metric (should be 1):', ssim(img1, img2))
-print('PSNR (should be -inf):', psnr_loss(img1, img2))
+print('PSNR (should be inf):', psnr(img1, img2))
 print('-'*50)
 
 img2 = tf.ones(shape=(32, 32, 3)) - img1
@@ -25,7 +25,7 @@ ax2.imshow(img2)
 plt.show()
 
 print('SSIM metric (should be 0):', ssim(img1, img2))
-print('PSNR (should be 0):', psnr_loss(img1, img2))
+print('PSNR (should be 0):', psnr(img1, img2))
 
 
 print('-'*50)
@@ -38,4 +38,4 @@ ax2.imshow(img2)
 plt.show()
 
 print('SSIM metric:', ssim(img1, img2))
-print('PSNR:', psnr_loss(img1, img2))
+print('PSNR:', psnr(img1, img2))

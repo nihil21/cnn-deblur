@@ -1,4 +1,4 @@
-from model.conv_net import ConvNet
+from models.conv_net import ConvNet
 from tensorflow.keras.layers import (Input, AveragePooling2D, Flatten, Dense, Dropout, Reshape, Layer,
                                      Conv2D, Conv2DTranspose, BatchNormalization, Activation, Add)
 from tensorflow.keras.models import Model
