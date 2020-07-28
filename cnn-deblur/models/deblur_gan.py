@@ -7,6 +7,8 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, ELU, Flatten, Dense
 from tensorflow.keras.optimizers import Adam
 from typing import Tuple, List
+from tqdm import tqdm_notebook
+
 
 # Function to build generator and critic
 def create_generator(input_shape):
@@ -145,3 +147,36 @@ class DeblurGan(Model):
                 "g_loss": g_loss,
                 "ssim": ssim_metric,
                 "psnr": psnr_metric}
+
+    def train(self,
+              train_data: Tuple[np.ndarray, np.ndarray],
+              epochs: int,
+              batch_size: int):
+        blurred_images, sharp_images = train_data
+        for ep in tqdm_notebook(range(epochs)):
+            # Permute indexes
+            random_index = np.random.permutation(len(blurred_images))
+
+            # Set up lists that will contain losses and metrics for each epoch
+            d_losses = []
+            g_losses = []
+            ssim_metrics = []
+            psnr_metrics = []
+            for bat in tqdm_notebook(range(len(blurred_images // batch_size))):
+                # Prepare batch
+                batch_indexes = random_index[bat * batch_size:(bat + 1) * batch_size]
+                blurred_batch = blurred_images[batch_indexes]
+                sharp_batch = sharp_images[batch_indexes]
+
+                # Perform train step
+                step_result = self.train_step(batch_size, blurred_batch, sharp_batch)
+
+                # Collect results
+                d_losses.append(step_result['d_loss'])
+                g_losses.append(step_result['g_loss'])
+                ssim_metrics.append(step_result['ssim'])
+                psnr_metrics.append(step_result['psnr'])
+
+            # Display results
+            print('Ep: {:d} - d_loss: {:f} - g_loss: {:f} - ssim: {:f} - psnr: {:f}\n'
+                  .format(ep, np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)))
