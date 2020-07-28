@@ -54,8 +54,8 @@ class DeblurGan(Model):
         self.generator = create_generator(input_shape)
         # Build critic (discriminator)
         self.critic = create_critic(input_shape,
-                                    filters=[64, 128, 256, 512],
-                                    kernels=[7, 3, 3, 3])
+                                    filters=[64, 128, 256],
+                                    kernels=[7, 3, 3])
         # Define optimizers
         self.g_optimizer = Adam(lr=1e-4)
         self.d_optimizer = Adam(lr=1e-4)
