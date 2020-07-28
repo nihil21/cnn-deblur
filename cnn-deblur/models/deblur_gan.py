@@ -1,10 +1,8 @@
 from models.rednet import REDNet10
-from utils.custom_losses import wasserstein_loss, perceptual_loss
 from utils.custom_metrics import psnr, ssim
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, ELU, Flatten, Dense
-from tensorflow.keras.optimizers import Adam
 from typing import Tuple, List
 
 
@@ -54,27 +52,25 @@ class DeblurGan(Model):
         self.critic = create_critic(input_shape,
                                     filters=[64, 128, 256],
                                     kernels=[7, 3, 3])
-        # Define optimizers
-        self.g_optimizer = Adam(lr=1e-4)
-        self.d_optimizer = Adam(lr=1e-4)
 
-        # Generator's loss function
-        def total_loss(blurred_batch: tf.Tensor,
-                       sharp_batch: tf.Tensor):
-            generated_batch = self.generator(blurred_batch)
-            fake_logits = self.critic(generated_batch)
-            adv_loss = tf.reduce_mean(-fake_logits)
-            content_loss = perceptual_loss(sharp_batch, generated_batch)
-            return adv_loss + 100.0 * content_loss
-
-        # Set loss functions
-        self.d_loss = wasserstein_loss
-        self.g_loss = total_loss
+        # Set optimizers and loss functions to None
+        self.g_optimizer = None
+        self.d_optimizer = None
+        self.g_loss = None
+        self.d_loss = None
 
         # Set critic_updates, i.e. the times the critic gets trained w.r.t. one training step of the generator
         self.critic_updates = 5
         # Set weight of gradient penalty
         self.gp_weight = 10.0
+
+    def compile(self, g_optimizer, d_optimizer, g_loss, d_loss):
+        super(DeblurGan, self).compile()
+        # Define optimizers
+        self.g_optimizer = g_optimizer
+        self.d_optimizer = d_optimizer
+        self.g_loss = g_loss
+        self.d_loss = d_loss
 
     @tf.function
     def gradient_penalty(self,
@@ -82,9 +78,11 @@ class DeblurGan(Model):
                          real_imgs: tf.Tensor,
                          fake_imgs: tf.Tensor):
         # Get interpolated image
-        alpha = tf.random.normal([batch_size, 1, 1, 1], 0.0, 1.0)
-        diff = fake_imgs - real_imgs
-        interpolated = real_imgs + alpha * diff
+        alpha = tf.random.normal(shape=[batch_size, 1, 1, 1],
+                                 mean=0.0,
+                                 stddev=1.0)
+        diff = tf.cast(fake_imgs - real_imgs, dtype='float32')
+        interpolated = tf.cast(real_imgs, dtype='float32') + alpha * diff
 
         with tf.GradientTape() as gp_tape:
             gp_tape.watch(interpolated)
@@ -101,7 +99,7 @@ class DeblurGan(Model):
                    batch):
         blurred_batch = batch[0]
         sharp_batch = batch[1]
-        batch_size = blurred_batch.shape[0]
+        batch_size = 32 * 8
 
         d_losses = []
         # Train the critic multiple times according to critic_updates (by default, 5)
