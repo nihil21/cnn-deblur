@@ -1,13 +1,11 @@
 from models.rednet import REDNet10
 from utils.custom_losses import wasserstein_loss, perceptual_loss
 from utils.custom_metrics import psnr, ssim
-import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, ELU, Flatten, Dense
 from tensorflow.keras.optimizers import Adam
 from typing import Tuple, List
-from tqdm import tqdm_notebook
 
 
 # Function to build generator and critic
@@ -100,9 +98,11 @@ class DeblurGan(Model):
         return tf.reduce_mean((norm - 1.0) ** 2)
 
     def train_step(self,
-                   batch_size: int,
-                   blurred_batch: tf.Tensor,
-                   sharp_batch: tf.Tensor):
+                   batch):
+        blurred_batch = batch[0]
+        sharp_batch = batch[1]
+        batch_size = blurred_batch.shape[0]
+
         d_losses = []
         # Train the critic multiple times according to critic_updates (by default, 5)
         for _ in range(self.critic_updates):
@@ -143,7 +143,7 @@ class DeblurGan(Model):
                 "ssim": ssim_metric,
                 "psnr": psnr_metric}
 
-    def train(self,
+    """def train(self,
               train_data: Tuple[np.ndarray, np.ndarray],
               epochs: int,
               batch_size: int):
@@ -176,4 +176,4 @@ class DeblurGan(Model):
 
             # Display results
             print('Ep: {:d} - d_loss: {:f} - g_loss: {:f} - ssim: {:f} - psnr: {:f}\n'
-                  .format(ep, np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)))
+                  .format(ep, np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)))"""
