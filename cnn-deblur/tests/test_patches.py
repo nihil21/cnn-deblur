@@ -1,5 +1,5 @@
 import tensorflow as tf
-import numpy as np
+
 
 def _extract_patches(img):
     img = tf.reshape(img, (1, 720, 1280, 3))
