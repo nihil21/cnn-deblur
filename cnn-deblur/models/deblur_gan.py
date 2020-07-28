@@ -143,7 +143,7 @@ class DeblurGan(Model):
         ssim_metric = ssim(sharp_batch, generated_batch)
         psnr_metric = psnr(sharp_batch, generated_batch)
 
-        return {"d_loss": np.mean(d_losses),
+        return {"d_loss": tf.reduce_mean(d_losses),
                 "g_loss": g_loss,
                 "ssim": ssim_metric,
                 "psnr": psnr_metric}
