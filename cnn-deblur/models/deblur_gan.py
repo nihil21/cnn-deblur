@@ -159,7 +159,7 @@ class DeblurGan(Model):
                                batch: tf.Tensor,
                                batch_size: int,
                                strategy: Optional[tf.distribute.Strategy] = None):
-        per_replica_results = strategy.run(self.train_step, args=(batch, batch_size))
+        per_replica_results = strategy.run(self.train_step, args=(batch, batch_size,))
         reduced_d_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
                                          per_replica_results['d_loss'], axis=None)
         reduced_g_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
