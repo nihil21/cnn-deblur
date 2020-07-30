@@ -108,10 +108,11 @@ class DeblurGan(Model):
         return tf.reduce_mean((norm - 1.0) ** 2)
 
     @tf.function
-    def train_step(self, batch):
+    def train_step(self,
+                   batch: Tuple[tf.Tensor, tf.Tensor],
+                   batch_size: int):
         blurred_batch = batch[0]
         sharp_batch = batch[1]
-        batch_size = 32 * 8
 
         d_losses = []
         # Train the critic multiple times according to critic_updates (by default, 5)
@@ -156,8 +157,9 @@ class DeblurGan(Model):
     @tf.function
     def distributed_train_step(self,
                                batch: tf.Tensor,
+                               batch_size: int,
                                strategy: Optional[tf.distribute.Strategy] = None):
-        per_replica_results = strategy.run(self.train_step, args=(batch,))
+        per_replica_results = strategy.run(self.train_step, args=(batch, batch_size))
         reduced_d_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
                                          per_replica_results['d_loss'], axis=None)
         reduced_g_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
@@ -174,6 +176,7 @@ class DeblurGan(Model):
     def train(self,
               train_data: tf.Tensor,
               epochs: int,
+              batch_size: int,
               steps_per_epoch: int):
         for ep in notebook.tqdm(range(epochs)):
             # Set up lists that will contain losses and metrics for each epoch
@@ -183,7 +186,7 @@ class DeblurGan(Model):
             psnr_metrics = []
             for batch in notebook.tqdm(train_data, total=steps_per_epoch):
                 # Perform train step
-                step_result = self.train_step(batch)
+                step_result = self.train_step(batch, batch_size)
 
                 # Collect results
                 d_losses.append(step_result['d_loss'])
@@ -209,7 +212,7 @@ class DeblurGan(Model):
             psnr_metrics = []
             for batch in notebook.tqdm(train_data, total=steps_per_epoch):
                 # Perform train step
-                step_result = self.distributed_train_step(batch, strategy)
+                step_result = self.distributed_train_step(batch, batch_size, strategy)
 
                 # Collect results
                 d_losses.append(step_result['d_loss'])
