@@ -145,8 +145,8 @@ class DeblurGan(Model):
         self.g_optimizer.apply_gradients(zip(g_grad, self.generator.trainable_variables))
 
         # Compute metrics
-        ssim_metric = ssim(sharp_batch, generated_batch)
-        psnr_metric = psnr(sharp_batch, generated_batch)
+        ssim_metric = ssim(sharp_batch, tf.cast(generated_batch, dtype='bfloat16'))
+        psnr_metric = psnr(sharp_batch, tf.cast(generated_batch, dtype='bfloat16'))
 
         return {"d_loss": tf.reduce_mean(d_losses),
                 "g_loss": g_loss,
