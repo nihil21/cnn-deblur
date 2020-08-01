@@ -112,7 +112,7 @@ class DeblurGan(Model):
                    batch: Tuple[tf.Tensor, tf.Tensor]):
         blurred_batch = batch[0]
         sharp_batch = batch[1]
-        batch_size = blurred_batch._batch_size.numpy()
+        batch_size = blurred_batch.shape[0]
 
         d_losses = []
         # Train the critic multiple times according to critic_updates (by default, 5)
