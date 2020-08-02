@@ -12,7 +12,8 @@ def load_dataset_from_gcs(project_id: str,
                           batch_size: int,
                           epochs: int,
                           seed: Optional[int] = 42,
-                          use_patches: Optional[bool] = False):
+                          use_patches: Optional[bool] = False,
+                          repeat: Optional[bool] = True):
     # Shuffle buffer size
     BUF = 50
 
