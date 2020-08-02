@@ -156,7 +156,7 @@ class DeblurGan(Model):
 
     @tf.function
     def distributed_train_step(self,
-                               batch: tf.Tensor,
+                               batch: tf.data.Dataset,
                                strategy: Optional[tf.distribute.Strategy] = None):
         per_replica_results = strategy.run(self.train_step, args=(batch,))
         reduced_d_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
@@ -239,7 +239,7 @@ class DeblurGan(Model):
                   .format(ep, np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)))
 
     def distributed_train(self,
-                          train_data: tf.Tensor,
+                          train_data: tf.data.Dataset,
                           epochs: int,
                           steps_per_epoch: int,
                           strategy: tf.distribute.Strategy):
@@ -249,7 +249,10 @@ class DeblurGan(Model):
             g_losses = []
             ssim_metrics = []
             psnr_metrics = []
-            for batch in notebook.tqdm(train_data, total=steps_per_epoch):
+            for _ in notebook.tqdm(range(steps_per_epoch)):
+                # Retrieve batch
+                batch = train_data.take(1)
+
                 # Perform train step
                 step_result = self.distributed_train_step(batch, strategy)
 
