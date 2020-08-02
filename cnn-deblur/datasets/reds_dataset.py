@@ -8,7 +8,8 @@ from typing import Optional
 def load_data(batch_size: int,
               epochs: int,
               val_size: int,
-              seed: Optional[int] = 42):
+              seed: Optional[int] = 42,
+              repeat: Optional[bool] = True):
     return load_dataset_from_gcs(project_id='cnn-deblur',
                                  bucket_name='cnn-d3blur-buck3t',
                                  prefix='REDS',
@@ -17,7 +18,8 @@ def load_data(batch_size: int,
                                  batch_size=batch_size,
                                  epochs=epochs,
                                  seed=seed,
-                                 use_patches=True)
+                                 use_patches=True,
+                                 repeat=repeat)
 
 
 def load_image_dataset(dataset_root,

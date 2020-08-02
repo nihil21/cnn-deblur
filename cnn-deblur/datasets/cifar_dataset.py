@@ -11,7 +11,8 @@ from typing import Optional
 def load_data(batch_size: int,
               epochs: int,
               val_size: int,
-              seed: Optional[int] = 42):
+              seed: Optional[int] = 42,
+              repeat: Optional[bool] = True):
     return load_dataset_from_gcs(project_id='cnn-deblur',
                                  bucket_name='cnn-d3blur-buck3t',
                                  prefix='cifar10',
@@ -19,7 +20,8 @@ def load_data(batch_size: int,
                                  val_size=val_size,
                                  batch_size=batch_size,
                                  epochs=epochs,
-                                 seed=seed)
+                                 seed=seed,
+                                 repeat=repeat)
 
 
 def load_image_dataset(do_val_split: Optional[bool] = True, normalize: Optional[bool] = False):

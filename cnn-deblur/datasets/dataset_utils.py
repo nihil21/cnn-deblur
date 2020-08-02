@@ -91,9 +91,14 @@ def load_dataset_from_gcs(project_id: str,
     train_data = train_data.shuffle(buffer_size=BUF, seed=seed, reshuffle_each_iteration=True)
     val_data = val_data.shuffle(buffer_size=BUF, seed=seed, reshuffle_each_iteration=True)
 
-    # Batch and repeat train and validation sets
-    train_data = train_data.batch(batch_size).repeat(epochs)
-    val_data = val_data.batch(batch_size).repeat(epochs)
+    # Batch train and validation sets
+    train_data = train_data.batch(batch_size)
+    val_data = val_data.batch(batch_size)
+
+    # Repeat train and validation sets if required
+    if repeat:
+        train_data = train_data.repeat(epochs)
+        val_data = val_data.repeat(epochs)
 
     # Batch test set only if use_patches is set to false
     if not use_patches:
