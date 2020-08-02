@@ -8,7 +8,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.applications import VGG16
 from utils.custom_losses import wasserstein_loss, perceptual_loss
 from tqdm import notebook
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Union
 
 
 # Function to build generator and critic
@@ -173,10 +173,51 @@ class DeblurGan(Model):
                 'psnr': reduced_psnr}
 
     def train(self,
-              train_data: tf.Tensor,
+              train_data: Union[tf.data.Dataset, np.ndarray],
               epochs: int,
-              batch_size: int,
               steps_per_epoch: int):
+        if isinstance(train_data, tf.data.Dataset):
+            self.__train_on_dataset(train_data, epochs, steps_per_epoch)
+        elif isinstance(train_data, Tuple):
+            self.__train_on_tensor(train_data, epochs, steps_per_epoch)
+
+    def __train_on_tensor(self,
+                          train_data: Tuple[np.ndarray, np.ndarray],
+                          epochs: int,
+                          steps_per_epoch: int):
+        batch_size = train_data[0].shape[0]
+        for ep in notebook.tqdm(range(epochs)):
+            # Permute indexes
+            permuted_indexes = np.random.permutation(batch_size)
+
+            # Set up lists that will contain losses and metrics for each epoch
+            d_losses = []
+            g_losses = []
+            ssim_metrics = []
+            psnr_metrics = []
+            for i in notebook.tqdm(range(steps_per_epoch)):
+                # Prepare batch
+                batch_indexes = permuted_indexes[i * batch_size:(i + 1) * batch_size]
+                blurred_batch = train_data[0][batch_indexes]
+                sharp_batch = train_data[1][batch_indexes]
+
+                # Perform train step
+                step_result = self.train_step((blurred_batch, sharp_batch))
+
+                # Collect results
+                d_losses.append(step_result['d_loss'])
+                g_losses.append(step_result['g_loss'])
+                ssim_metrics.append(step_result['ssim'])
+                psnr_metrics.append(step_result['psnr'])
+
+            # Display results
+            print('Ep: {:d} - d_loss: {:f} - g_loss: {:f} - ssim: {:f} - psnr: {:f}\n'
+                  .format(ep, np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)))
+
+    def __train_on_dataset(self,
+                           train_data: tf.data.Dataset,
+                           epochs: int,
+                           steps_per_epoch: int):
         for ep in notebook.tqdm(range(epochs)):
             # Set up lists that will contain losses and metrics for each epoch
             d_losses = []
@@ -197,11 +238,11 @@ class DeblurGan(Model):
             print('Ep: {:d} - d_loss: {:f} - g_loss: {:f} - ssim: {:f} - psnr: {:f}\n'
                   .format(ep, np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)))
 
-    def distributed_training(self,
-                             train_data: tf.Tensor,
-                             epochs: int,
-                             steps_per_epoch: int,
-                             strategy: tf.distribute.Strategy):
+    def distributed_train(self,
+                          train_data: tf.Tensor,
+                          epochs: int,
+                          steps_per_epoch: int,
+                          strategy: tf.distribute.Strategy):
         for ep in notebook.tqdm(range(epochs)):
             # Set up lists that will contain losses and metrics for each epoch
             d_losses = []
