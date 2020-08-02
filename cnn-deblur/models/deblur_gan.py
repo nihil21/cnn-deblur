@@ -338,10 +338,7 @@ class DeblurGan(Model):
             g_losses = []
             ssim_metrics = []
             psnr_metrics = []
-            for _ in notebook.tqdm(range(steps_per_epoch)):
-                # Retrieve batch
-                batch = train_data.take(1)
-
+            for batch in notebook.tqdm(train_data, total=steps_per_epoch):
                 # Perform train step
                 step_result = self.distributed_train_step(batch, strategy)
 
