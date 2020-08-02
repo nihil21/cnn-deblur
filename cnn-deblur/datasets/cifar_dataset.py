@@ -12,7 +12,8 @@ def load_data(batch_size: int,
               epochs: int,
               val_size: int,
               seed: Optional[int] = 42,
-              repeat: Optional[bool] = True):
+              repeat: Optional[bool] = True,
+              zero_mean: Optional[bool] = False):
     return load_dataset_from_gcs(project_id='cnn-deblur',
                                  bucket_name='cnn-d3blur-buck3t',
                                  prefix='cifar10',
@@ -21,7 +22,8 @@ def load_data(batch_size: int,
                                  batch_size=batch_size,
                                  epochs=epochs,
                                  seed=seed,
-                                 repeat=repeat)
+                                 repeat=repeat,
+                                 zero_mean=zero_mean)
 
 
 def load_image_dataset(do_val_split: Optional[bool] = True, normalize: Optional[bool] = False):
