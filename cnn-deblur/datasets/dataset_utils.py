@@ -13,7 +13,8 @@ def load_dataset_from_gcs(project_id: str,
                           epochs: int,
                           seed: Optional[int] = 42,
                           use_patches: Optional[bool] = False,
-                          repeat: Optional[bool] = True):
+                          repeat: Optional[bool] = True,
+                          zero_mean: Optional[bool] = False):
     # Shuffle buffer size
     BUF = 50
 
@@ -42,11 +43,17 @@ def load_dataset_from_gcs(project_id: str,
 
         blur_img = tf.image.decode_png(images['blur'], channels=3)
         blur_img = tf.image.resize(blur_img, res)
-        blur_img /= 255.0
-        blur_img = tf.cast(blur_img, dtype=tf.bfloat16)
         sharp_img = tf.image.decode_png(images['sharp'], channels=3)
         sharp_img = tf.image.resize(sharp_img, res)
-        sharp_img /= 255.0
+
+        if zero_mean:
+            blur_img = 2.0 * blur_img / 255.0 + 1.0
+            sharp_img = 2.0 * sharp_img / 255.0 + 1.0
+        else:
+            blur_img /= 255.0
+            sharp_img /= 255.0
+
+        blur_img = tf.cast(blur_img, dtype=tf.bfloat16)
         sharp_img = tf.cast(sharp_img, dtype=tf.bfloat16)
 
         return blur_img, sharp_img

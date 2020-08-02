@@ -213,7 +213,7 @@ class DeblurGan(Model):
                 fake_logits = self.critic(generated_batch, training=True)
                 real_logits = self.critic(sharp_batch, training=True)
                 # Calculate critic's loss
-                d_loss_fake = self.d_loss(tf.zeros_like(fake_logits), fake_logits)
+                d_loss_fake = self.d_loss(-tf.ones_like(fake_logits), fake_logits)
                 d_loss_real = self.d_loss(tf.ones_like(real_logits), real_logits)
                 d_loss = 0.5 * tf.add(d_loss_fake, d_loss_real)
                 # Calculate gradient penalty
