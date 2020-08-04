@@ -376,15 +376,15 @@ class DeblurGan(Model):
             # Save model every 15 epochs if required
             if checkpoint_dir is not None and ep % 15 == 0:
                 print('Saving generator\'s model...', end='')
-                self.generator.save(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}').format(
+                self.generator.save_weights(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}.h5').format(
                         ep, np.mean(psnr_metrics)
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
-                self.critic.save(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}').format(
+                self.critic.save_weights(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.h5').format(
                         ep, np.mean(d_losses)
                     )
                 )
@@ -470,15 +470,15 @@ class DeblurGan(Model):
             # Save model every 15 epochs if required
             if checkpoint_dir is not None and ep % 15 == 0:
                 print('Saving generator\'s model...', end='')
-                self.generator.save(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}').format(
+                self.generator.save_weights(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}.h5').format(
                         ep, np.mean(psnr_metrics)
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
-                self.critic.save(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}').format(
+                self.critic.save_weights(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.h5').format(
                         ep, np.mean(d_losses)
                     )
                 )
@@ -545,15 +545,15 @@ class DeblurGan(Model):
             # Save model every 15 epochs if required
             if checkpoint_dir is not None and ep % 15 == 0:
                 print('Saving generator\'s model...', end='')
-                self.generator.save(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}').format(
+                self.generator.save_weights(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}.h5').format(
                         ep, np.mean(psnr_metrics)
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
-                self.critic.save(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}').format(
+                self.critic.save_weights(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.h5').format(
                         ep, np.mean(d_losses)
                     )
                 )
