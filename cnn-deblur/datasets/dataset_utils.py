@@ -46,12 +46,12 @@ def load_dataset_from_gcs(project_id: str,
         sharp_img = tf.image.decode_png(images['sharp'], channels=3)
         sharp_img = tf.image.resize(sharp_img, res)
 
+        blur_img /= 255.0
+        sharp_img /= 255.0
+
         if zero_mean:
-            blur_img = 2.0 * blur_img / 255.0 + 1.0
-            sharp_img = 2.0 * sharp_img / 255.0 + 1.0
-        else:
-            blur_img /= 255.0
-            sharp_img /= 255.0
+            blur_img = 2.0 * blur_img - 1.0
+            sharp_img = 2.0 * sharp_img - 1.0
 
         blur_img = tf.cast(blur_img, dtype=tf.bfloat16)
         sharp_img = tf.cast(sharp_img, dtype=tf.bfloat16)
