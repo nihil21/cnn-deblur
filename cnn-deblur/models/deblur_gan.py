@@ -237,7 +237,7 @@ class DeblurGan(Model):
         # Compute metrics
         ssim_metric = tf.image.ssim(sharp_batch,
                                     tf.cast(generated_batch, dtype='bfloat16'),
-                                    maxval=2.)
+                                    max_val=2.)
         psnr_metric = tf.image.psnr(sharp_batch,
                                     tf.cast(generated_batch, dtype='bfloat16'),
                                     max_val=2.)
@@ -286,7 +286,7 @@ class DeblurGan(Model):
         # Compute metrics
         ssim_metric = tf.image.ssim(sharp_batch,
                                     tf.cast(generated_batch, dtype='bfloat16'),
-                                    maxval=2.)
+                                    max_val=2.)
         psnr_metric = tf.image.psnr(sharp_batch,
                                     tf.cast(generated_batch, dtype='bfloat16'),
                                     max_val=2.)
