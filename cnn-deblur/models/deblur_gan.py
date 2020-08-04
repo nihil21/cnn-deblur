@@ -377,14 +377,14 @@ class DeblurGan(Model):
             if checkpoint_dir is not None and ep % 15 == 0:
                 print('Saving generator\'s model...', end='')
                 self.generator.save(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}.hdf5').format(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}').format(
                         ep, np.mean(psnr_metrics)
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.hdf5').format(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}').format(
                         ep, np.mean(d_losses)
                     )
                 )
@@ -471,14 +471,14 @@ class DeblurGan(Model):
             if checkpoint_dir is not None and ep % 15 == 0:
                 print('Saving generator\'s model...', end='')
                 self.generator.save(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}.hdf5').format(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}').format(
                         ep, np.mean(psnr_metrics)
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.hdf5').format(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}').format(
                         ep, np.mean(d_losses)
                     )
                 )
@@ -546,14 +546,14 @@ class DeblurGan(Model):
             if checkpoint_dir is not None and ep % 15 == 0:
                 print('Saving generator\'s model...', end='')
                 self.generator.save(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}.hdf5').format(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}').format(
                         ep, np.mean(psnr_metrics)
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.hdf5').format(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}').format(
                         ep, np.mean(d_losses)
                     )
                 )
