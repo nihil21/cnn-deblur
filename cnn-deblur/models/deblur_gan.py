@@ -325,6 +325,8 @@ class DeblurGan(Model):
                            validation_steps: Optional[int] = None,
                            checkpoint_dir: Optional[str] = None):
         for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
+            print('Epoch {:d}/{:d}'.format(ep, epochs))
+
             # Set up lists that will contain losses and metrics for each epoch
             d_losses = []
             g_losses = []
@@ -342,12 +344,13 @@ class DeblurGan(Model):
                 ssim_metrics.append(step_result['ssim'])
                 psnr_metrics.append(step_result['psnr'])
 
+            # Display training results
             train_results = 'd_loss: {:.4f} - g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
                 np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
             )
+            print(train_results)
 
             # Perform validation if required
-            val_results = None
             if validation_data is not None and validation_steps is not None:
                 val_d_losses = []
                 val_g_losses = []
@@ -363,28 +366,28 @@ class DeblurGan(Model):
                     val_ssim_metrics.append(step_result['val_ssim'])
                     val_psnr_metrics.append(step_result['val_psnr'])
 
+                # Display validation results
                 val_results = 'val_d_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
                     np.mean(val_d_losses), np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics)
                 )
+                print(val_results)
 
             # Save model every 15 epochs if required
             if checkpoint_dir is not None and ep % 15 == 0:
+                print('Saving generator\'s model...', end='')
                 self.generator.save(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}.hdf5').format(
                         ep, np.mean(psnr_metrics)
                     )
                 )
+                print(' OK')
+                print('Saving critic\'s model...', end='')
                 self.critic.save(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.hdf5').format(
                         ep, np.mean(d_losses)
                     )
                 )
-
-            # Display results
-            results = 'Epoch {:d}/{:d} - {:s}\n'.format(ep, epochs, train_results)\
-                if val_results is None \
-                else 'Epoch {:d}/{:d} - {:s} - {:s}\n'.format(ep, epochs, train_results, val_results)
-            print(results)
+                print(' OK')
 
     def __train_on_tensor(self,
                           train_data: Tuple[np.ndarray, np.ndarray],
@@ -399,6 +402,8 @@ class DeblurGan(Model):
             if validation_data is not None and validation_steps is not None \
             else None
         for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
+            print('Epoch {:d}/{:d}'.format(ep, epochs))
+
             # Permute indexes
             val_permuted_indexes = np.random.permutation(batch_size)
 
@@ -424,12 +429,13 @@ class DeblurGan(Model):
                 ssim_metrics.append(step_result['ssim'])
                 psnr_metrics.append(step_result['psnr'])
 
+            # Display training results
             train_results = 'd_loss: {:.4f} - g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
                 np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
             )
+            print(train_results)
 
             # Perform validation if required
-            val_results = None
             if validation_data is not None and validation_steps is not None:
                 # Permute indexes
                 val_permuted_indexes = np.random.permutation(val_batch_size)
@@ -453,28 +459,28 @@ class DeblurGan(Model):
                     val_ssim_metrics.append(step_result['val_ssim'])
                     val_psnr_metrics.append(step_result['val_psnr'])
 
+                # Display validation results
                 val_results = 'val_d_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
                     np.mean(val_d_losses), np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics)
                 )
+                print(val_results)
 
             # Save model every 15 epochs if required
             if checkpoint_dir is not None and ep % 15 == 0:
+                print('Saving generator\'s model...', end='')
                 self.generator.save(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}.hdf5').format(
                         ep, np.mean(psnr_metrics)
                     )
                 )
+                print(' OK')
+                print('Saving critic\'s model...', end='')
                 self.critic.save(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.hdf5').format(
                         ep, np.mean(d_losses)
                     )
                 )
-
-            # Display results
-            results = 'Epoch {:d}/{:d} - {:s}\n'.format(ep, epochs, train_results) \
-                if val_results is None \
-                else 'Epoch {:d}/{:d} - {:s} - {:s}\n'.format(ep, epochs, train_results, val_results)
-            print(results)
+                print(' OK')
 
     def distributed_train(self,
                           train_data: tf.data.Dataset,
@@ -486,6 +492,8 @@ class DeblurGan(Model):
                           validation_steps: Optional[int] = None,
                           checkpoint_dir: Optional[str] = None):
         for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
+            print('Epoch {:d}/{:d}'.format(ep, epochs))
+
             # Set up lists that will contain losses and metrics for each epoch
             d_losses = []
             g_losses = []
@@ -503,12 +511,13 @@ class DeblurGan(Model):
                 ssim_metrics.append(step_result['ssim'])
                 psnr_metrics.append(step_result['psnr'])
 
+            # Display training results
             train_results = 'd_loss: {:.4f} - g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
                 np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
             )
+            print(train_results)
 
             # Perform validation if required
-            val_results = None
             if validation_data is not None and validation_steps is not None:
                 val_d_losses = []
                 val_g_losses = []
@@ -524,25 +533,25 @@ class DeblurGan(Model):
                     val_ssim_metrics.append(step_result['val_ssim'])
                     val_psnr_metrics.append(step_result['val_psnr'])
 
+                # Display validation results
                 val_results = 'val_d_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
                     np.mean(val_d_losses), np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics)
                 )
+                print(val_results)
 
             # Save model every 15 epochs if required
             if checkpoint_dir is not None and ep % 15 == 0:
+                print('Saving generator\'s model...', end='')
                 self.generator.save(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}.hdf5').format(
                         ep, np.mean(psnr_metrics)
                     )
                 )
+                print(' OK')
+                print('Saving critic\'s model...', end='')
                 self.critic.save(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.hdf5').format(
                         ep, np.mean(d_losses)
                     )
                 )
-
-            # Display results
-            results = 'Epoch {:d}/{:d} - {:s}\n'.format(ep, epochs, train_results) \
-                if val_results is None \
-                else 'Epoch {:d}/{:d} - {:s} - {:s}\n'.format(ep, epochs, train_results, val_results)
-            print(results)
+                print(' OK')
