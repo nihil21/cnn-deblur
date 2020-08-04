@@ -325,6 +325,7 @@ class DeblurGan(Model):
                            validation_steps: Optional[int] = None,
                            checkpoint_dir: Optional[str] = None):
         for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
+            print('=' * 50)
             print('Epoch {:d}/{:d}'.format(ep, epochs))
 
             # Set up lists that will contain losses and metrics for each epoch
@@ -402,6 +403,7 @@ class DeblurGan(Model):
             if validation_data is not None and validation_steps is not None \
             else None
         for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
+            print('=' * 50)
             print('Epoch {:d}/{:d}'.format(ep, epochs))
 
             # Permute indexes
@@ -492,6 +494,7 @@ class DeblurGan(Model):
                           validation_steps: Optional[int] = None,
                           checkpoint_dir: Optional[str] = None):
         for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
+            print('=' * 50)
             print('Epoch {:d}/{:d}'.format(ep, epochs))
 
             # Set up lists that will contain losses and metrics for each epoch
