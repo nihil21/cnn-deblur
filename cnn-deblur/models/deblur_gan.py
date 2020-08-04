@@ -6,9 +6,9 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Layer, Input, Conv2D, Conv2DTranspose, Dropout, Add, Activation, ELU
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.applications import VGG16
-from tensorflow.python.training.tracking.util import Checkpoint
 from utils.custom_losses import wasserstein_loss, perceptual_loss
 from tqdm import notebook
+import os
 from typing import Tuple, Optional, Union
 
 
@@ -289,11 +289,11 @@ class DeblurGan(Model):
         # Compute metrics
         ssim_metric = ssim(
             tf.divide(tf.add(sharp_batch, 1.0), 2.0),
-            tf.divide(tf.add(tf.cast(generated_batch, dtype='bfloat16'), 1.0), 2.0)
+            tf.divide(tf.add(generated_batch, 1.0), 2.0)
         )
         psnr_metric = psnr(
             tf.divide(tf.add(sharp_batch, 1.0), 2.0),
-            tf.divide(tf.add(tf.cast(generated_batch, dtype='bfloat16'), 1.0), 2.0)
+            tf.divide(tf.add(generated_batch, 1.0), 2.0)
         )
 
         return {"val_d_loss": d_loss,
@@ -308,13 +308,13 @@ class DeblurGan(Model):
               initial_epoch: Optional[int] = 1,
               validation_data: Optional[tf.data.Dataset] = None,
               validation_steps: Optional[int] = None,
-              checkpoint: Optional[Checkpoint] = None):
+              checkpoint_dir: Optional[str] = None):
         if isinstance(train_data, tf.data.Dataset):
             self.__train_on_dataset(train_data, epochs, steps_per_epoch,
-                                    initial_epoch, validation_data, validation_steps, checkpoint)
+                                    initial_epoch, validation_data, validation_steps, checkpoint_dir)
         elif isinstance(train_data, Tuple):
             self.__train_on_tensor(train_data, epochs, steps_per_epoch,
-                                   initial_epoch, validation_data, validation_steps, checkpoint)
+                                   initial_epoch, validation_data, validation_steps, checkpoint_dir)
 
     def __train_on_dataset(self,
                            train_data: tf.data.Dataset,
@@ -323,7 +323,7 @@ class DeblurGan(Model):
                            initial_epoch: Optional[int] = 1,
                            validation_data: Optional[tf.data.Dataset] = None,
                            validation_steps: Optional[int] = None,
-                           checkpoint: Optional[Checkpoint] = None):
+                           checkpoint_dir: Optional[str] = None):
         for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
             # Set up lists that will contain losses and metrics for each epoch
             d_losses = []
@@ -368,8 +368,17 @@ class DeblurGan(Model):
                 )
 
             # Save model every 15 epochs if required
-            if checkpoint is not None:
-                checkpoint.save(file_prefix='ckpt')
+            if checkpoint_dir is not None and ep % 15 == 0:
+                self.generator.save(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}.hdf5').format(
+                        ep, np.mean(psnr_metrics)
+                    )
+                )
+                self.critic.save(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.hdf5').format(
+                        ep, np.mean(d_losses)
+                    )
+                )
 
             # Display results
             results = 'Epoch {:d}/{:d} - {:s}\n'.format(ep, epochs, train_results)\
@@ -384,7 +393,7 @@ class DeblurGan(Model):
                           initial_epoch: Optional[int] = 1,
                           validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None,
                           validation_steps: Optional[int] = None,
-                          checkpoint: Optional[Checkpoint] = None):
+                          checkpoint_dir: Optional[str] = None):
         batch_size = train_data[0].shape[0]
         val_batch_size = validation_data[0].shape[0] \
             if validation_data is not None and validation_steps is not None \
@@ -449,8 +458,17 @@ class DeblurGan(Model):
                 )
 
             # Save model every 15 epochs if required
-            if checkpoint is not None:
-                checkpoint.save(file_prefix='ckpt')
+            if checkpoint_dir is not None and ep % 15 == 0:
+                self.generator.save(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}.hdf5').format(
+                        ep, np.mean(psnr_metrics)
+                    )
+                )
+                self.critic.save(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.hdf5').format(
+                        ep, np.mean(d_losses)
+                    )
+                )
 
             # Display results
             results = 'Epoch {:d}/{:d} - {:s}\n'.format(ep, epochs, train_results) \
@@ -466,7 +484,7 @@ class DeblurGan(Model):
                           initial_epoch: Optional[int] = 1,
                           validation_data: Optional[tf.data.Dataset] = None,
                           validation_steps: Optional[int] = None,
-                          checkpoint: Optional[Checkpoint] = None):
+                          checkpoint_dir: Optional[str] = None):
         for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
             # Set up lists that will contain losses and metrics for each epoch
             d_losses = []
@@ -498,7 +516,7 @@ class DeblurGan(Model):
                 val_psnr_metrics = []
                 for val_batch in notebook.tqdm(validation_data, total=validation_steps):
                     # Perform eval step
-                    step_result = self.eval_step(val_batch)
+                    step_result = self.eval_step(tf.cast(val_batch, dtype='float32'))
 
                     # Collect results
                     val_d_losses.append(step_result['val_d_loss'])
@@ -511,8 +529,17 @@ class DeblurGan(Model):
                 )
 
             # Save model every 15 epochs if required
-            if checkpoint is not None:
-                checkpoint.save(file_prefix='ckpt')
+            if checkpoint_dir is not None and ep % 15 == 0:
+                self.generator.save(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}.hdf5').format(
+                        ep, np.mean(psnr_metrics)
+                    )
+                )
+                self.critic.save(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.hdf5').format(
+                        ep, np.mean(d_losses)
+                    )
+                )
 
             # Display results
             results = 'Epoch {:d}/{:d} - {:s}\n'.format(ep, epochs, train_results) \
