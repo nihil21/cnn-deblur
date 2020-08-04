@@ -6,6 +6,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Layer, Input, Conv2D, Conv2DTranspose, Dropout, Add, Activation, ELU
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.applications import VGG16
+from tensorflow.python.training.tracking.util import Checkpoint
 from utils.custom_losses import wasserstein_loss, perceptual_loss
 from tqdm import notebook
 from typing import Tuple, Optional, Union
@@ -198,9 +199,9 @@ class DeblurGan(Model):
 
     @tf.function
     def train_step(self,
-                   batch: Tuple[tf.Tensor, tf.Tensor]):
-        blurred_batch = batch[0]
-        sharp_batch = batch[1]
+                   train_batch: Tuple[tf.Tensor, tf.Tensor]):
+        blurred_batch = train_batch[0]
+        sharp_batch = train_batch[1]
         batch_size = blurred_batch.shape[0]
 
         d_losses = []
@@ -235,8 +236,14 @@ class DeblurGan(Model):
         self.g_optimizer.apply_gradients(zip(g_grad, self.generator.trainable_variables))
 
         # Compute metrics
-        ssim_metric = ssim(sharp_batch, tf.cast(generated_batch, dtype='bfloat16'))
-        psnr_metric = psnr(sharp_batch, tf.cast(generated_batch, dtype='bfloat16'))
+        ssim_metric = ssim(
+            tf.divide(tf.add(sharp_batch, 1.0), 2.0),
+            tf.divide(tf.add(tf.cast(generated_batch, dtype='bfloat16'), 1.0), 2.0)
+        )
+        psnr_metric = psnr(
+            tf.divide(tf.add(sharp_batch, 1.0), 2.0),
+            tf.divide(tf.add(tf.cast(generated_batch, dtype='bfloat16'), 1.0), 2.0)
+        )
 
         return {"d_loss": tf.reduce_mean(d_losses),
                 "g_loss": g_loss,
@@ -245,9 +252,9 @@ class DeblurGan(Model):
 
     @tf.function
     def distributed_train_step(self,
-                               batch: tf.data.Dataset,
+                               train_batch: tf.data.Dataset,
                                strategy: Optional[tf.distribute.Strategy] = None):
-        per_replica_results = strategy.run(self.train_step, args=(batch,))
+        per_replica_results = strategy.run(self.train_step, args=(train_batch,))
         reduced_d_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
                                          per_replica_results['d_loss'], axis=None)
         reduced_g_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
@@ -261,28 +268,73 @@ class DeblurGan(Model):
                 'ssim': reduced_ssim,
                 'psnr': reduced_psnr}
 
+    @tf.function
+    def eval_step(self,
+                  val_batch: Tuple[tf.Tensor, tf.Tensor]):
+        blurred_batch = val_batch[0]
+        sharp_batch = val_batch[1]
+
+        # Generate fake inputs
+        generated_batch = self.generator(blurred_batch, training=False)
+        # Get logits for both fake and real images
+        fake_logits = self.critic(generated_batch, training=False)
+        real_logits = self.critic(sharp_batch, training=False)
+        # Calculate critic's loss
+        d_loss_fake = self.d_loss(-tf.ones_like(fake_logits), fake_logits)
+        d_loss_real = self.d_loss(tf.ones_like(real_logits), real_logits)
+        d_loss = 0.5 * tf.add(d_loss_fake, d_loss_real)
+        # Calculate generator's loss
+        g_loss = self.g_loss(blurred_batch, sharp_batch)
+
+        # Compute metrics
+        ssim_metric = ssim(
+            tf.divide(tf.add(sharp_batch, 1.0), 2.0),
+            tf.divide(tf.add(tf.cast(generated_batch, dtype='bfloat16'), 1.0), 2.0)
+        )
+        psnr_metric = psnr(
+            tf.divide(tf.add(sharp_batch, 1.0), 2.0),
+            tf.divide(tf.add(tf.cast(generated_batch, dtype='bfloat16'), 1.0), 2.0)
+        )
+
+        return {"val_d_loss": d_loss,
+                "val_g_loss": g_loss,
+                "val_ssim": tf.reduce_mean(ssim_metric),
+                "val_psnr": tf.reduce_mean(psnr_metric)}
+
     def train(self,
               train_data: Union[tf.data.Dataset, np.ndarray],
               epochs: int,
-              steps_per_epoch: int):
+              steps_per_epoch: int,
+              initial_epoch: Optional[int] = 1,
+              validation_data: Optional[tf.data.Dataset] = None,
+              validation_steps: Optional[int] = None,
+              checkpoint: Optional[Checkpoint] = None):
         if isinstance(train_data, tf.data.Dataset):
-            self.__train_on_dataset(train_data, epochs, steps_per_epoch)
+            self.__train_on_dataset(train_data, epochs, steps_per_epoch,
+                                    initial_epoch, validation_data, validation_steps, checkpoint)
         elif isinstance(train_data, Tuple):
-            self.__train_on_tensor(train_data, epochs, steps_per_epoch)
+            self.__train_on_tensor(train_data, epochs, steps_per_epoch,
+                                   initial_epoch, validation_data, validation_steps, checkpoint)
 
     def __train_on_dataset(self,
                            train_data: tf.data.Dataset,
                            epochs: int,
-                           steps_per_epoch: int):
-        for ep in notebook.tqdm(range(epochs)):
+                           steps_per_epoch: int,
+                           initial_epoch: Optional[int] = 1,
+                           validation_data: Optional[tf.data.Dataset] = None,
+                           validation_steps: Optional[int] = None,
+                           checkpoint: Optional[Checkpoint] = None):
+        for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
             # Set up lists that will contain losses and metrics for each epoch
             d_losses = []
             g_losses = []
             ssim_metrics = []
             psnr_metrics = []
-            for batch in notebook.tqdm(train_data, total=steps_per_epoch):
+
+            # Perform training
+            for train_batch in notebook.tqdm(train_data, total=steps_per_epoch):
                 # Perform train step
-                step_result = self.train_step(batch)
+                step_result = self.train_step(train_batch)
 
                 # Collect results
                 d_losses.append(step_result['d_loss'])
@@ -290,32 +342,72 @@ class DeblurGan(Model):
                 ssim_metrics.append(step_result['ssim'])
                 psnr_metrics.append(step_result['psnr'])
 
+            train_results = 'd_loss: {:.4f} - g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
+                np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
+            )
+
+            # Perform validation if required
+            val_results = None
+            if validation_data is not None and validation_steps is not None:
+                val_d_losses = []
+                val_g_losses = []
+                val_ssim_metrics = []
+                val_psnr_metrics = []
+                for val_batch in notebook.tqdm(validation_data, total=validation_steps):
+                    # Perform eval step
+                    step_result = self.eval_step(val_batch)
+
+                    # Collect results
+                    val_d_losses.append(step_result['val_d_loss'])
+                    val_g_losses.append(step_result['val_g_loss'])
+                    val_ssim_metrics.append(step_result['val_ssim'])
+                    val_psnr_metrics.append(step_result['val_psnr'])
+
+                val_results = 'val_d_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
+                    np.mean(val_d_losses), np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics)
+                )
+
+            # Save model every 15 epochs if required
+            if checkpoint is not None:
+                checkpoint.save(file_prefix='ckpt')
+
             # Display results
-            print('Ep: {:d} - d_loss: {:f} - g_loss: {:f} - ssim: {:f} - psnr: {:f}\n'
-                  .format(ep, np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)))
+            results = 'Epoch {:d}/{:d} - {:s}\n'.format(ep, epochs, train_results)\
+                if val_results is None \
+                else 'Epoch {:d}/{:d} - {:s} - {:s}\n'.format(ep, epochs, train_results, val_results)
+            print(results)
 
     def __train_on_tensor(self,
                           train_data: Tuple[np.ndarray, np.ndarray],
                           epochs: int,
-                          steps_per_epoch: int):
+                          steps_per_epoch: int,
+                          initial_epoch: Optional[int] = 1,
+                          validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+                          validation_steps: Optional[int] = None,
+                          checkpoint: Optional[Checkpoint] = None):
         batch_size = train_data[0].shape[0]
-        for ep in notebook.tqdm(range(epochs)):
+        val_batch_size = validation_data[0].shape[0] \
+            if validation_data is not None and validation_steps is not None \
+            else None
+        for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
             # Permute indexes
-            permuted_indexes = np.random.permutation(batch_size)
+            val_permuted_indexes = np.random.permutation(batch_size)
 
             # Set up lists that will contain losses and metrics for each epoch
             d_losses = []
             g_losses = []
             ssim_metrics = []
             psnr_metrics = []
+
+            # Perform training
             for i in notebook.tqdm(range(steps_per_epoch)):
                 # Prepare batch
-                batch_indexes = permuted_indexes[i * batch_size:(i + 1) * batch_size]
-                blurred_batch = train_data[0][batch_indexes]
-                sharp_batch = train_data[1][batch_indexes]
+                val_batch_indexes = val_permuted_indexes[i * batch_size:(i + 1) * batch_size]
+                val_blurred_batch = train_data[0][val_batch_indexes]
+                val_sharp_batch = train_data[1][val_batch_indexes]
 
                 # Perform train step
-                step_result = self.train_step((blurred_batch, sharp_batch))
+                step_result = self.train_step((val_blurred_batch, val_sharp_batch))
 
                 # Collect results
                 d_losses.append(step_result['d_loss'])
@@ -323,21 +415,66 @@ class DeblurGan(Model):
                 ssim_metrics.append(step_result['ssim'])
                 psnr_metrics.append(step_result['psnr'])
 
+            train_results = 'd_loss: {:.4f} - g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
+                np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
+            )
+
+            # Perform validation if required
+            val_results = None
+            if validation_data is not None and validation_steps is not None:
+                # Permute indexes
+                val_permuted_indexes = np.random.permutation(val_batch_size)
+
+                val_d_losses = []
+                val_g_losses = []
+                val_ssim_metrics = []
+                val_psnr_metrics = []
+                for i in notebook.tqdm(range(validation_steps)):
+                    # Prepare batch
+                    val_batch_indexes = val_permuted_indexes[i * val_batch_size:(i + 1) * val_batch_size]
+                    val_blurred_batch = validation_data[0][val_batch_indexes]
+                    val_sharp_batch = validation_data[1][val_batch_indexes]
+
+                    # Perform eval step
+                    step_result = self.eval_step((val_blurred_batch, val_sharp_batch))
+
+                    # Collect results
+                    val_d_losses.append(step_result['val_d_loss'])
+                    val_g_losses.append(step_result['val_g_loss'])
+                    val_ssim_metrics.append(step_result['val_ssim'])
+                    val_psnr_metrics.append(step_result['val_psnr'])
+
+                val_results = 'val_d_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
+                    np.mean(val_d_losses), np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics)
+                )
+
+            # Save model every 15 epochs if required
+            if checkpoint is not None:
+                checkpoint.save(file_prefix='ckpt')
+
             # Display results
-            print('Ep: {:d} - d_loss: {:f} - g_loss: {:f} - ssim: {:f} - psnr: {:f}\n'
-                  .format(ep, np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)))
+            results = 'Epoch {:d}/{:d} - {:s}\n'.format(ep, epochs, train_results) \
+                if val_results is None \
+                else 'Epoch {:d}/{:d} - {:s} - {:s}\n'.format(ep, epochs, train_results, val_results)
+            print(results)
 
     def distributed_train(self,
                           train_data: tf.data.Dataset,
                           epochs: int,
                           steps_per_epoch: int,
-                          strategy: tf.distribute.Strategy):
-        for ep in notebook.tqdm(range(epochs)):
+                          strategy: tf.distribute.Strategy,
+                          initial_epoch: Optional[int] = 1,
+                          validation_data: Optional[tf.data.Dataset] = None,
+                          validation_steps: Optional[int] = None,
+                          checkpoint: Optional[Checkpoint] = None):
+        for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
             # Set up lists that will contain losses and metrics for each epoch
             d_losses = []
             g_losses = []
             ssim_metrics = []
             psnr_metrics = []
+
+            # Perform training
             for batch in notebook.tqdm(train_data, total=steps_per_epoch):
                 # Perform train step
                 step_result = self.distributed_train_step(batch, strategy)
@@ -348,6 +485,37 @@ class DeblurGan(Model):
                 ssim_metrics.append(step_result['ssim'])
                 psnr_metrics.append(step_result['psnr'])
 
+            train_results = 'd_loss: {:.4f} - g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
+                np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
+            )
+
+            # Perform validation if required
+            val_results = None
+            if validation_data is not None and validation_steps is not None:
+                val_d_losses = []
+                val_g_losses = []
+                val_ssim_metrics = []
+                val_psnr_metrics = []
+                for val_batch in notebook.tqdm(validation_data, total=validation_steps):
+                    # Perform eval step
+                    step_result = self.eval_step(val_batch)
+
+                    # Collect results
+                    val_d_losses.append(step_result['val_d_loss'])
+                    val_g_losses.append(step_result['val_g_loss'])
+                    val_ssim_metrics.append(step_result['val_ssim'])
+                    val_psnr_metrics.append(step_result['val_psnr'])
+
+                val_results = 'val_d_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
+                    np.mean(val_d_losses), np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics)
+                )
+
+            # Save model every 15 epochs if required
+            if checkpoint is not None:
+                checkpoint.save(file_prefix='ckpt')
+
             # Display results
-            print('Ep: {:d} - d_loss: {:f} - g_loss: {:f} - ssim: {:f} - psnr: {:f}\n'
-                  .format(ep, np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)))
+            results = 'Epoch {:d}/{:d} - {:s}\n'.format(ep, epochs, train_results) \
+                if val_results is None \
+                else 'Epoch {:d}/{:d} - {:s} - {:s}\n'.format(ep, epochs, train_results, val_results)
+            print(results)
