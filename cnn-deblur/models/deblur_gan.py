@@ -1,4 +1,3 @@
-from utils.custom_metrics import psnr, ssim
 import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
@@ -236,14 +235,12 @@ class DeblurGan(Model):
         self.g_optimizer.apply_gradients(zip(g_grad, self.generator.trainable_variables))
 
         # Compute metrics
-        ssim_metric = ssim(
-            tf.divide(tf.add(sharp_batch, 1.0), 2.0),
-            tf.divide(tf.add(tf.cast(generated_batch, dtype='bfloat16'), 1.0), 2.0)
-        )
-        psnr_metric = psnr(
-            tf.divide(tf.add(sharp_batch, 1.0), 2.0),
-            tf.divide(tf.add(tf.cast(generated_batch, dtype='bfloat16'), 1.0), 2.0)
-        )
+        ssim_metric = tf.image.ssim(sharp_batch,
+                                    tf.cast(generated_batch, dtype='bfloat16'),
+                                    maxval=2.)
+        psnr_metric = tf.image.psnr(sharp_batch,
+                                    tf.cast(generated_batch, dtype='bfloat16'),
+                                    max_val=2.)
 
         return {"d_loss": tf.reduce_mean(d_losses),
                 "g_loss": g_loss,
@@ -287,14 +284,12 @@ class DeblurGan(Model):
         g_loss = self.g_loss(blurred_batch, sharp_batch)
 
         # Compute metrics
-        ssim_metric = ssim(
-            tf.divide(tf.add(sharp_batch, 1.0), 2.0),
-            tf.divide(tf.add(generated_batch, 1.0), 2.0)
-        )
-        psnr_metric = psnr(
-            tf.divide(tf.add(sharp_batch, 1.0), 2.0),
-            tf.divide(tf.add(generated_batch, 1.0), 2.0)
-        )
+        ssim_metric = tf.image.ssim(sharp_batch,
+                                    tf.cast(generated_batch, dtype='bfloat16'),
+                                    maxval=2.)
+        psnr_metric = tf.image.psnr(sharp_batch,
+                                    tf.cast(generated_batch, dtype='bfloat16'),
+                                    max_val=2.)
 
         return {"val_d_loss": d_loss,
                 "val_g_loss": g_loss,
