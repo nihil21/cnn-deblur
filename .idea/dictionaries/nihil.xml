@@ -1,6 +1,7 @@
 <component name="ProjectDictionaryState">
   <dictionary name="nihil">
     <words>
+      <w>batchnorm</w>
       <w>bfloat</w>
       <w>cifar</w>
       <w>ckpt</w>
@@ -20,6 +21,7 @@
       <w>mape</w>
       <w>mattia</w>
       <w>maxpool</w>
+      <w>multiscale</w>
       <w>orlandi</w>
       <w>pinardi</w>
       <w>preproc</w>
