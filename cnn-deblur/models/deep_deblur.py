@@ -126,8 +126,8 @@ class DeepDeblur:
     def train_step(self,
                    train_batch: Tuple[tf.Tensor, tf.Tensor]):
         # Determine height and width
-        height = train_batch[0].shape[0]
-        width = train_batch[0].shape[1]
+        height = train_batch[0].shape[1]
+        width = train_batch[0].shape[2]
         # Prepare Gaussian pyramid
         blurred_batch1 = train_batch[0]
         sharp_batch1 = train_batch[1]
