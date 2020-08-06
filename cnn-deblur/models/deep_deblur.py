@@ -150,24 +150,14 @@ class DeepDeblur:
         self.g_optimizer.apply_gradients(zip(g_grad, self.model.trainable_variables))
 
         # Compute metrics
-        ssim_metrics = []
-        psnr_metrics = []
-        ssim_metrics.append(ssim(tf.cast(sharp_batch1, dtype='float32'),
-                                 prediction_pyramid[0]))
-        psnr_metrics.append(psnr(tf.cast(sharp_batch1, dtype='float32'),
-                                 prediction_pyramid[0]))
-        ssim_metrics.append(ssim(tf.cast(sharp_batch2, dtype='float32'),
-                                 prediction_pyramid[1]))
-        psnr_metrics.append(psnr(tf.cast(sharp_batch2, dtype='float32'),
-                                 prediction_pyramid[1]))
-        ssim_metrics.append(ssim(tf.cast(sharp_batch3, dtype='float32'),
-                                 prediction_pyramid[2]))
-        psnr_metrics.append(psnr(tf.cast(sharp_batch3, dtype='float32'),
-                                 prediction_pyramid[2]))
+        ssim_metric = ssim(tf.cast(sharp_batch1, dtype='float32'),
+                           prediction_pyramid[0])
+        psnr_metric = psnr(tf.cast(sharp_batch1, dtype='float32'),
+                           prediction_pyramid[0])
 
         return {"g_loss": g_loss,
-                "ssim": tf.reduce_mean(ssim_metrics),
-                "psnr": tf.reduce_mean(psnr_metrics)}
+                "ssim": ssim_metric,
+                "psnr": psnr_metric}
 
     @tf.function
     def distributed_train_step(self,
