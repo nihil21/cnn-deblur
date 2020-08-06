@@ -152,12 +152,12 @@ class DeepDeblur:
         # Compute metrics
         ssim_metrics = []
         psnr_metrics = []
-        ssim_metrics.append(ssim(sharp_batch1, tf.cast(blurred_batch1, dtype='bfloat16')))
-        psnr_metrics.append(psnr(sharp_batch1, tf.cast(blurred_batch1, dtype='bfloat16')))
-        ssim_metrics.append(ssim(sharp_batch2, tf.cast(blurred_batch2, dtype='bfloat16')))
-        psnr_metrics.append(psnr(sharp_batch2, tf.cast(blurred_batch2, dtype='bfloat16')))
-        ssim_metrics.append(ssim(sharp_batch3, tf.cast(blurred_batch3, dtype='bfloat16')))
-        psnr_metrics.append(psnr(sharp_batch3, tf.cast(blurred_batch3, dtype='bfloat16')))
+        ssim_metrics.append(ssim(sharp_batch1, blurred_batch1))
+        psnr_metrics.append(psnr(sharp_batch1, blurred_batch1))
+        ssim_metrics.append(ssim(sharp_batch2, blurred_batch2))
+        psnr_metrics.append(psnr(sharp_batch2, blurred_batch2))
+        ssim_metrics.append(ssim(sharp_batch3, blurred_batch3))
+        psnr_metrics.append(psnr(sharp_batch3, blurred_batch3))
 
         return {"g_loss": g_loss,
                 "ssim": tf.reduce_mean(ssim_metrics),
