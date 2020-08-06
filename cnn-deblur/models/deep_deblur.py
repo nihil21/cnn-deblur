@@ -156,8 +156,8 @@ class DeepDeblur:
                            prediction_pyramid[0])
 
         return {"g_loss": g_loss,
-                "ssim": ssim_metric,
-                "psnr": psnr_metric}
+                "ssim": tf.reduce_mean(ssim_metric),
+                "psnr": tf.reduce_mean(psnr_metric)}
 
     @tf.function
     def distributed_train_step(self,
