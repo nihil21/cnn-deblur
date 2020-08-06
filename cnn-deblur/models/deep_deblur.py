@@ -38,89 +38,123 @@ def res_block(in_layer: Layer,
     return x
 
 
-class DeepDeblur:
+def create_generator(input_shape):
+    # Coarsest branch
+    in_layer3 = Input(shape=(input_shape[0] // 4, input_shape[1] // 4, input_shape[2]),
+                      name='in_layer3')
+    conv3 = Conv2D(filters=64,
+                   kernel_size=5,
+                   padding='same',
+                   name='conv3')(in_layer3)
+    x = conv3
+    for i in range(19):
+        x = res_block(in_layer=x,
+                      layer_id='3_{:d}'.format(i))
+    out_layer3 = Conv2D(filters=3,
+                        kernel_size=5,
+                        padding='same',
+                        name='out_layer_3')(x)
+
+    # Middle branch
+    in_layer2 = Input(shape=(input_shape[0] // 2, input_shape[1] // 2, input_shape[2]),
+                      name='in_layer2')
+    up_conv2 = Conv2DTranspose(filters=64,
+                               kernel_size=5,
+                               strides=2,
+                               padding='same')(out_layer3)
+    concat2 = concatenate([in_layer2, up_conv2])
+    conv2 = Conv2D(filters=64,
+                   kernel_size=5,
+                   padding='same',
+                   name='conv2')(concat2)
+    x = conv2
+    for i in range(19):
+        x = res_block(in_layer=x,
+                      layer_id='2_{:d}'.format(i))
+    out_layer2 = Conv2D(filters=3,
+                        kernel_size=5,
+                        padding='same',
+                        name='out_layer2')(x)
+
+    # Finest branch
+    in_layer1 = Input(shape=input_shape,
+                      name='in_layer1')
+    up_conv1 = Conv2DTranspose(filters=64,
+                               kernel_size=5,
+                               strides=2,
+                               padding='same')(out_layer2)
+    concat1 = concatenate([in_layer1, up_conv1])
+    conv1 = Conv2D(filters=64,
+                   kernel_size=5,
+                   padding='same',
+                   name='conv1')(concat1)
+    x = conv1
+    for i in range(19):
+        x = res_block(in_layer=x,
+                      layer_id='1_{:d}'.format(i))
+    out_layer1 = Conv2D(filters=3,
+                        kernel_size=5,
+                        padding='same',
+                        name='out_layer1')(x)
+
+    # Final model
+    generator = Model(inputs=[in_layer1, in_layer2, in_layer3],
+                      outputs=[out_layer1, out_layer2, out_layer3],
+                      name='Generator')
+    return generator
+
+
+def create_discriminator(input_shape):
+    pass
+
+
+class DeepDeblur(Model):
     def __init__(self, input_shape: Tuple[int, int, int]):
-        # Coarsest branch
-        in_layer3 = Input(shape=(input_shape[0] // 4, input_shape[1] // 4, input_shape[2]),
-                          name='in_layer3')
-        conv3 = Conv2D(filters=64,
-                       kernel_size=5,
-                       padding='same',
-                       name='conv3')(in_layer3)
-        x = conv3
-        for i in range(19):
-            x = res_block(in_layer=x,
-                          layer_id='3_{:d}'.format(i))
-        out_layer3 = Conv2D(filters=3,
-                            kernel_size=5,
-                            padding='same',
-                            name='out_layer_3')(x)
+        super(DeepDeblur, self).__init__()
 
-        # Middle branch
-        in_layer2 = Input(shape=(input_shape[0] // 2, input_shape[1] // 2, input_shape[2]),
-                          name='in_layer2')
-        up_conv2 = Conv2DTranspose(filters=64,
-                                   kernel_size=5,
-                                   strides=2,
-                                   padding='same')(out_layer3)
-        concat2 = concatenate([in_layer2, up_conv2])
-        conv2 = Conv2D(filters=64,
-                       kernel_size=5,
-                       padding='same',
-                       name='conv2')(concat2)
-        x = conv2
-        for i in range(19):
-            x = res_block(in_layer=x,
-                          layer_id='2_{:d}'.format(i))
-        out_layer2 = Conv2D(filters=3,
-                            kernel_size=5,
-                            padding='same',
-                            name='out_layer2')(x)
+        # Build generator
+        self.generator = create_generator(input_shape)
+        # Build discriminator
+        self.discriminator = create_discriminator(input_shape)
 
-        # Finest branch
-        in_layer1 = Input(shape=input_shape,
-                          name='in_layer1')
-        up_conv1 = Conv2DTranspose(filters=64,
-                                   kernel_size=5,
-                                   strides=2,
-                                   padding='same')(out_layer2)
-        concat1 = concatenate([in_layer1, up_conv1])
-        conv1 = Conv2D(filters=64,
-                       kernel_size=5,
-                       padding='same',
-                       name='conv1')(concat1)
-        x = conv1
-        for i in range(19):
-            x = res_block(in_layer=x,
-                          layer_id='1_{:d}'.format(i))
-        out_layer1 = Conv2D(filters=3,
-                            kernel_size=5,
-                            padding='same',
-                            name='out_layer1')(x)
-
-        # Final model
-        self.model = Model(inputs=[in_layer1, in_layer2, in_layer3], outputs=[out_layer1, out_layer2, out_layer3])
-
-        # Define and set loss function
+        # Define and set loss functions
         K = 3
 
-        def multiscale_logcosh(trueY: List[tf.Tensor], predY: List[tf.Tensor]):
+        # As content loss, a multiscale version of LogCosh is chosen
+        def content_loss(sharp_pyramid: List[tf.Tensor],
+                         predicted_pyramid: List[tf.Tensor]):
             # Check input
-            assert len(trueY) == K, 'The list \'trueY\' should contain {:d} elements'.format(K)
-            assert len(predY) == K, 'The list \'predY\' should contain {:d} elements'.format(K)
+            assert len(sharp_pyramid) == K, 'The list \'trueY\' should contain {:d} elements'.format(K)
+            assert len(predicted_pyramid) == K, 'The list \'predY\' should contain {:d} elements'.format(K)
 
             loss = 0.
-            for scale_trueY, scale_predY in zip(trueY, predY):
+            for scale_trueY, scale_predY in zip(sharp_pyramid, predicted_pyramid):
                 scale_shape = scale_trueY.shape[1:]
                 norm_factor = functools.reduce(operator.mul, scale_shape, 1)
                 scale_loss = tf.reduce_sum(logcosh(scale_trueY, scale_predY)) / norm_factor
                 loss += scale_loss
             return 1./(2. * K) * loss
 
-        self.g_loss = multiscale_logcosh
+        def total_loss(blurred_pyramid: List[tf.Tensor],
+                       sharp_pyramid: List[tf.Tensor]):
+            # Check input
+            assert len(blurred_pyramid) == K, 'The list \'trueY\' should contain {:d} elements'.format(K)
+            assert len(blurred_pyramid) == K, 'The list \'predY\' should contain {:d} elements'.format(K)
 
-        # Set optimizer as Adam with lr=1e-4
+            predicted_pyramid = self.generator(blurred_pyramid)
+            real_response = self.discriminator(sharp_pyramid)
+            fake_response = self.discriminator(predicted_pyramid)
+            adv_loss = tf.reduce_mean(tf.math.log(real_response) + tf.math.log(1 - fake_response))
+            total = content_loss(sharp_pyramid, predicted_pyramid) + 1e-4 * adv_loss
+            return total
+
+        self.g_loss = total_loss
+        self.d_loss = lambda real_response, fake_response: - tf.reduce_mean(tf.math.log(real_response) +
+                                                                            tf.math.log(1 - fake_response))
+
+        # Set optimizers as Adam with lr=1e-4
         self.g_optimizer = Adam(lr=1e-4)
+        self.d_optimizer = Adam(lr=1e-4)
 
     @tf.function
     def train_step(self,
@@ -138,24 +172,32 @@ class DeepDeblur:
         blurred_pyramid = [blurred_batch1, blurred_batch2, blurred_batch3]
         sharp_pyramid = [sharp_batch1, sharp_batch2, sharp_batch3]
 
-        # Train the network
-        with tf.GradientTape() as g_tape:
+        # Train the networks
+        with tf.GradientTape() as g_tape, tf.GradientTape() as d_tape:
             # Make predictions
-            prediction_pyramid = self.model(blurred_pyramid, training=True)
-            # Calculate generator's loss
+            predicted_pyramid = self.model(blurred_pyramid, training=True)
+            # Compute discriminator's output
+            real_response = self.discriminator(sharp_pyramid, training=True)
+            fake_response = self.discriminator(predicted_pyramid, training=True)
+            # Calculate generator's and discriminator's loss
             g_loss = self.g_loss(sharp_pyramid,
-                                 prediction_pyramid)
+                                 predicted_pyramid)
+            d_loss = self.d_loss(real_response,
+                                 fake_response)
         # Get gradient w.r.t. network's loss and update weights
-        g_grad = g_tape.gradient(g_loss, self.model.trainable_variables)
-        self.g_optimizer.apply_gradients(zip(g_grad, self.model.trainable_variables))
+        g_grad = g_tape.gradient(g_loss, self.generator.trainable_variables)
+        self.g_optimizer.apply_gradients(zip(g_grad, self.generator.trainable_variables))
+        d_grad = d_tape.gradient(d_loss, self.discriminator.trainable_variables)
+        self.d_optimizer.apply_gradients(zip(d_grad, self.discriminator.trainable_variables))
 
         # Compute metrics
         ssim_metric = ssim(tf.cast(sharp_batch1, dtype='float32'),
-                           prediction_pyramid[0])
+                           predicted_pyramid[0])
         psnr_metric = psnr(tf.cast(sharp_batch1, dtype='float32'),
-                           prediction_pyramid[0])
+                           predicted_pyramid[0])
 
         return {'g_loss': g_loss,
+                'd_loss': d_loss,
                 'ssim': tf.reduce_mean(ssim_metric),
                 'psnr': tf.reduce_mean(psnr_metric)}
 
@@ -166,11 +208,14 @@ class DeepDeblur:
         per_replica_results = strategy.run(self.train_step, args=(train_batch,))
         reduced_g_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
                                          per_replica_results['g_loss'], axis=None)
+        reduced_d_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
+                                         per_replica_results['d_loss'], axis=None)
         reduced_ssim = strategy.reduce(tf.distribute.ReduceOp.MEAN,
                                        per_replica_results['ssim'], axis=None)
         reduced_psnr = strategy.reduce(tf.distribute.ReduceOp.MEAN,
                                        per_replica_results['psnr'], axis=None)
         return {'g_loss': reduced_g_loss,
+                'd_loss': reduced_d_loss,
                 'ssim': reduced_ssim,
                 'psnr': reduced_psnr}
 
@@ -191,24 +236,25 @@ class DeepDeblur:
         sharp_pyramid = [sharp_batch1, sharp_batch2, sharp_batch3]
 
         # Generate fake inputs
-        prediction_pyramid = self.model(blurred_pyramid, training=False)
-        """# Get logits for both fake and real images
-        fake_logits = self.critic(generated_batch, training=False)
-        real_logits = self.critic(sharp_batch, training=False)
-        # Calculate critic's loss
+        predicted_pyramid = self.generator(blurred_pyramid, training=False)
+        # Get logits for both fake and real images
+        fake_logits = self.discriminator(sharp_pyramid, training=False)
+        real_logits = self.discriminator(predicted_pyramid, training=False)
+        # Calculate discriminator's loss
         d_loss_fake = self.d_loss(-tf.ones_like(fake_logits), fake_logits)
         d_loss_real = self.d_loss(tf.ones_like(real_logits), real_logits)
-        d_loss = 0.5 * tf.add(d_loss_fake, d_loss_real)"""
+        d_loss = 0.5 * tf.add(d_loss_fake, d_loss_real)
         # Calculate generator's loss
-        g_loss = self.g_loss(sharp_pyramid, prediction_pyramid)
+        g_loss = self.g_loss(sharp_pyramid, predicted_pyramid)
 
         # Compute metrics
         ssim_metric = ssim(tf.cast(sharp_batch1, dtype='float32'),
-                           prediction_pyramid[0])
+                           predicted_pyramid[0])
         psnr_metric = psnr(tf.cast(sharp_batch1, dtype='float32'),
-                           prediction_pyramid[0])
+                           predicted_pyramid[0])
 
         return {'val_g_loss': g_loss,
+                'val_d_loss': d_loss,
                 'val_ssim': tf.reduce_mean(ssim_metric),
                 'val_psnr': tf.reduce_mean(psnr_metric)}
 
@@ -227,6 +273,7 @@ class DeepDeblur:
 
             # Set up lists that will contain losses and metrics for each epoch
             g_losses = []
+            d_losses = []
             ssim_metrics = []
             psnr_metrics = []
 
@@ -237,18 +284,20 @@ class DeepDeblur:
 
                 # Collect results
                 g_losses.append(step_result['g_loss'])
+                d_losses.append(step_result['d_loss'])
                 ssim_metrics.append(step_result['ssim'])
                 psnr_metrics.append(step_result['psnr'])
 
             # Display training results
-            train_results = 'g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
-                np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
+            train_results = 'g_loss: {:.4f} - d_loss: {:.4f} ssim: {:.4f} - psnr: {:.4f}'.format(
+                np.mean(g_losses), np.mean(d_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
             )
             print(train_results)
 
             # Perform validation if required
             if validation_data is not None and validation_steps is not None:
                 val_g_losses = []
+                val_d_losses = []
                 val_ssim_metrics = []
                 val_psnr_metrics = []
                 for val_batch in notebook.tqdm(validation_data, total=validation_steps):
@@ -257,21 +306,29 @@ class DeepDeblur:
 
                     # Collect results
                     val_g_losses.append(step_result['val_g_loss'])
+                    val_d_losses.append(step_result['val_d_loss'])
                     val_ssim_metrics.append(step_result['val_ssim'])
                     val_psnr_metrics.append(step_result['val_psnr'])
 
                 # Display validation results
-                val_results = 'val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
-                    np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics)
+                val_results = 'val_g_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
+                    np.mean(val_g_losses), np.mean(val_d_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics)
                 )
                 print(val_results)
 
             # Save model every 15 epochs if required
             if checkpoint_dir is not None and ep % 15 == 0:
-                print('Saving model...', end='')
-                self.model.save_weights(
+                print('Saving generator\'s model...', end='')
+                self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}.h5').format(
                         ep, np.mean(psnr_metrics)
+                    )
+                )
+                print(' OK')
+                print('Saving critic\'s model...', end='')
+                self.critic.save_weights(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.h5').format(
+                        ep, np.mean(d_losses)
                     )
                 )
                 print(' OK')
