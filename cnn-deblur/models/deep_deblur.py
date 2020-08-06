@@ -152,12 +152,18 @@ class DeepDeblur:
         # Compute metrics
         ssim_metrics = []
         psnr_metrics = []
-        ssim_metrics.append(ssim(sharp_batch1, prediction_pyramid[0]))
-        psnr_metrics.append(psnr(sharp_batch1, prediction_pyramid[0]))
-        ssim_metrics.append(ssim(sharp_batch2, prediction_pyramid[1]))
-        psnr_metrics.append(psnr(sharp_batch2, prediction_pyramid[1]))
-        ssim_metrics.append(ssim(sharp_batch3, prediction_pyramid[2]))
-        psnr_metrics.append(psnr(sharp_batch3, prediction_pyramid[2]))
+        ssim_metrics.append(ssim(tf.cast(sharp_batch1, dtype='float32'),
+                                 prediction_pyramid[0]))
+        psnr_metrics.append(psnr(tf.cast(sharp_batch1, dtype='float32'),
+                                 prediction_pyramid[0]))
+        ssim_metrics.append(ssim(tf.cast(sharp_batch2, dtype='float32'),
+                                 prediction_pyramid[1]))
+        psnr_metrics.append(psnr(tf.cast(sharp_batch2, dtype='float32'),
+                                 prediction_pyramid[1]))
+        ssim_metrics.append(ssim(tf.cast(sharp_batch3, dtype='float32'),
+                                 prediction_pyramid[2]))
+        psnr_metrics.append(psnr(tf.cast(sharp_batch3, dtype='float32'),
+                                 prediction_pyramid[2]))
 
         return {"g_loss": g_loss,
                 "ssim": tf.reduce_mean(ssim_metrics),
