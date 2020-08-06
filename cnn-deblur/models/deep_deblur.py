@@ -155,9 +155,9 @@ class DeepDeblur:
         psnr_metric = psnr(tf.cast(sharp_batch1, dtype='float32'),
                            prediction_pyramid[0])
 
-        return {"g_loss": g_loss,
-                "ssim": tf.reduce_mean(ssim_metric),
-                "psnr": tf.reduce_mean(psnr_metric)}
+        return {'g_loss': g_loss,
+                'ssim': tf.reduce_mean(ssim_metric),
+                'psnr': tf.reduce_mean(psnr_metric)}
 
     @tf.function
     def distributed_train_step(self,
@@ -173,6 +173,44 @@ class DeepDeblur:
         return {'g_loss': reduced_g_loss,
                 'ssim': reduced_ssim,
                 'psnr': reduced_psnr}
+
+    @tf.function
+    def eval_step(self,
+                  val_batch: Tuple[tf.Tensor, tf.Tensor]):
+        # Determine height and width
+        height = val_batch[0].shape[1]
+        width = val_batch[0].shape[2]
+        # Prepare Gaussian pyramid
+        blurred_batch1 = val_batch[0]
+        sharp_batch1 = val_batch[1]
+        blurred_batch2 = tf.image.resize(val_batch[0], size=(height // 2, width // 2))
+        sharp_batch2 = tf.image.resize(val_batch[1], size=(height // 2, width // 2))
+        blurred_batch3 = tf.image.resize(val_batch[0], size=(height // 4, width // 4))
+        sharp_batch3 = tf.image.resize(val_batch[1], size=(height // 4, width // 4))
+        blurred_pyramid = [blurred_batch1, blurred_batch2, blurred_batch3]
+        sharp_pyramid = [sharp_batch1, sharp_batch2, sharp_batch3]
+
+        # Generate fake inputs
+        prediction_pyramid = self.model(blurred_pyramid, training=False)
+        """# Get logits for both fake and real images
+        fake_logits = self.critic(generated_batch, training=False)
+        real_logits = self.critic(sharp_batch, training=False)
+        # Calculate critic's loss
+        d_loss_fake = self.d_loss(-tf.ones_like(fake_logits), fake_logits)
+        d_loss_real = self.d_loss(tf.ones_like(real_logits), real_logits)
+        d_loss = 0.5 * tf.add(d_loss_fake, d_loss_real)"""
+        # Calculate generator's loss
+        g_loss = self.g_loss(sharp_pyramid, prediction_pyramid)
+
+        # Compute metrics
+        ssim_metric = ssim(tf.cast(sharp_batch1, dtype='float32'),
+                           prediction_pyramid[0])
+        psnr_metric = psnr(tf.cast(sharp_batch1, dtype='float32'),
+                           prediction_pyramid[0])
+
+        return {'val_g_loss': g_loss,
+                'val_ssim': tf.reduce_mean(ssim_metric),
+                'val_psnr': tf.reduce_mean(psnr_metric)}
 
     def distributed_train(self,
                           train_data: tf.data.Dataset,
@@ -208,7 +246,7 @@ class DeepDeblur:
             )
             print(train_results)
 
-            """# Perform validation if required
+            # Perform validation if required
             if validation_data is not None and validation_steps is not None:
                 val_g_losses = []
                 val_ssim_metrics = []
@@ -218,16 +256,15 @@ class DeepDeblur:
                     step_result = self.eval_step(tf.cast(val_batch, dtype='float32'))
 
                     # Collect results
-                    val_d_losses.append(step_result['val_d_loss'])
                     val_g_losses.append(step_result['val_g_loss'])
                     val_ssim_metrics.append(step_result['val_ssim'])
                     val_psnr_metrics.append(step_result['val_psnr'])
 
                 # Display validation results
-                val_results = 'val_d_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
-                    np.mean(val_d_losses), np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics)
+                val_results = 'val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
+                    np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics)
                 )
-                print(val_results)"""
+                print(val_results)
 
             # Save model every 15 epochs if required
             if checkpoint_dir is not None and ep % 15 == 0:

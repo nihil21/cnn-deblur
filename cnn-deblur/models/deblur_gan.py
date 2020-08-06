@@ -242,10 +242,10 @@ class DeblurGan(Model):
                                     tf.cast(generated_batch, dtype='bfloat16'),
                                     max_val=2.)
 
-        return {"d_loss": tf.reduce_mean(d_losses),
-                "g_loss": g_loss,
-                "ssim": tf.reduce_mean(ssim_metric),
-                "psnr": tf.reduce_mean(psnr_metric)}
+        return {'d_loss': tf.reduce_mean(d_losses),
+                'g_loss': g_loss,
+                'ssim': tf.reduce_mean(ssim_metric),
+                'psnr': tf.reduce_mean(psnr_metric)}
 
     @tf.function
     def distributed_train_step(self,
@@ -291,10 +291,10 @@ class DeblurGan(Model):
                                     generated_batch,
                                     max_val=2.)
 
-        return {"val_d_loss": d_loss,
-                "val_g_loss": g_loss,
-                "val_ssim": tf.reduce_mean(ssim_metric),
-                "val_psnr": tf.reduce_mean(psnr_metric)}
+        return {'val_d_loss': d_loss,
+                'val_g_loss': g_loss,
+                'val_ssim': tf.reduce_mean(ssim_metric),
+                'val_psnr': tf.reduce_mean(psnr_metric)}
 
     def train(self,
               train_data: Union[tf.data.Dataset, np.ndarray],
