@@ -1,11 +1,13 @@
-import tensorflow as tf
-import numpy as np
 import os
+import numpy as np
+import tensorflow as tf
 from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, BatchNormalization, concatenate
 from tensorflow.keras.models import Model
 from tensorflow.keras.losses import logcosh
 from tensorflow.keras.optimizers import Adam
 from utils.custom_metrics import ssim, psnr
+import operator
+import functools
 from tqdm import notebook
 from typing import Tuple, List, Optional
 
@@ -103,10 +105,16 @@ class DeepDeblur:
         K = 3
 
         def multiscale_logcosh(trueY: List[tf.Tensor], predY: List[tf.Tensor]):
-            loss = 0
-            for s in range(K):
-                scale_shape = trueY[s].shape
-                loss += logcosh(trueY[s], predY[s]) / (scale_shape[0] * scale_shape[1] * scale_shape[2])
+            # Check input
+            assert len(trueY) == K, 'The list \'trueY\' should contain {:d} elements'.format(K)
+            assert len(predY) == K, 'The list \'predY\' should contain {:d} elements'.format(K)
+
+            loss = 0.
+            for scale_trueY, scale_predY in zip(trueY, predY):
+                scale_shape = scale_trueY.shape[1:]
+                norm_factor = functools.reduce(operator.mul, scale_shape, 1)
+                scale_loss = tf.reduce_sum(logcosh(scale_trueY, scale_predY)) / norm_factor
+                loss += scale_loss
             return 1./(2. * K) * loss
 
         self.g_loss = multiscale_logcosh
@@ -127,12 +135,16 @@ class DeepDeblur:
         sharp_batch2 = tf.image.resize(train_batch[1], size=(height // 2, width // 2))
         blurred_batch3 = tf.image.resize(train_batch[0], size=(height // 4, width // 4))
         sharp_batch3 = tf.image.resize(train_batch[1], size=(height // 4, width // 4))
+        blurred_pyramid = [blurred_batch1, blurred_batch2, blurred_batch3]
+        sharp_pyramid = [sharp_batch1, sharp_batch2, sharp_batch3]
 
         # Train the network
         with tf.GradientTape() as g_tape:
+            # Make predictions
+            prediction_pyramid = self.model(blurred_pyramid, training=True)
             # Calculate generator's loss
-            g_loss = self.g_loss([blurred_batch1, blurred_batch2, blurred_batch3],
-                                 [sharp_batch1, sharp_batch2, sharp_batch3])
+            g_loss = self.g_loss(sharp_pyramid,
+                                 prediction_pyramid)
         # Get gradient w.r.t. network's loss and update weights
         g_grad = g_tape.gradient(g_loss, self.model.trainable_variables)
         self.g_optimizer.apply_gradients(zip(g_grad, self.model.trainable_variables))
