@@ -1,7 +1,8 @@
 import os
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, BatchNormalization, concatenate
+from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add, Dense,
+                                     ELU, ReLU, LeakyReLU, BatchNormalization, concatenate)
 from tensorflow.keras.models import Model
 from tensorflow.keras.losses import logcosh
 from tensorflow.keras.optimizers import Adam
@@ -16,7 +17,8 @@ def res_block(in_layer: Layer,
               layer_id: str,
               filters: Optional[int] = 64,
               kernels: Optional[int] = 5,
-              use_batchnorm: Optional[bool] = True):
+              use_batchnorm: Optional[bool] = True,
+              use_elu: Optional[bool] = False):
     # Block 1
     x = Conv2D(filters=filters,
                kernel_size=kernels,
@@ -24,7 +26,10 @@ def res_block(in_layer: Layer,
                name='res_conv{:s}_1'.format(layer_id))(in_layer)
     if use_batchnorm:
         x = BatchNormalization(name='res_bn{:s}_1'.format(layer_id))(x)
-    x = ELU(name='res_elu{:s}_1'.format(layer_id))(x)
+    if use_elu:
+        x = ELU(name='res_elu{:s}_1'.format(layer_id))(x)
+    else:
+        x = ReLU(name='res_relu{:s}_1'.format(layer_id))(x)
     # Block 2
     x = Conv2D(filters=filters,
                kernel_size=kernels,
@@ -34,11 +39,16 @@ def res_block(in_layer: Layer,
         x = BatchNormalization(name='res_bn{:s}_2'.format(layer_id))(x)
     # Skip connection
     x = Add(name='res_add{:s}'.format(layer_id))([x, in_layer])
-    x = ELU(name='res_elu{:s}_2'.format(layer_id))(x)
+    if use_elu:
+        x = ELU(name='res_elu{:s}_2'.format(layer_id))(x)
+    else:
+        x = ReLU(name='res_relu{:s}_2'.format(layer_id))(x)
     return x
 
 
-def create_generator(input_shape):
+def create_generator(input_shape,
+                     use_elu: Optional[bool] = False,
+                     num_res_blocks: Optional[int] = 19):
     # Coarsest branch
     in_layer3 = Input(shape=(input_shape[0] // 4, input_shape[1] // 4, input_shape[2]),
                       name='in_layer3')
@@ -47,9 +57,10 @@ def create_generator(input_shape):
                    padding='same',
                    name='conv3')(in_layer3)
     x = conv3
-    for i in range(19):
+    for i in range(num_res_blocks):
         x = res_block(in_layer=x,
-                      layer_id='3_{:d}'.format(i))
+                      layer_id='3_{:d}'.format(i),
+                      use_elu=use_elu)
     out_layer3 = Conv2D(filters=3,
                         kernel_size=5,
                         padding='same',
@@ -68,9 +79,10 @@ def create_generator(input_shape):
                    padding='same',
                    name='conv2')(concat2)
     x = conv2
-    for i in range(19):
+    for i in range(num_res_blocks):
         x = res_block(in_layer=x,
-                      layer_id='2_{:d}'.format(i))
+                      layer_id='2_{:d}'.format(i),
+                      use_elu=use_elu)
     out_layer2 = Conv2D(filters=3,
                         kernel_size=5,
                         padding='same',
@@ -89,9 +101,10 @@ def create_generator(input_shape):
                    padding='same',
                    name='conv1')(concat1)
     x = conv1
-    for i in range(19):
+    for i in range(num_res_blocks):
         x = res_block(in_layer=x,
-                      layer_id='1_{:d}'.format(i))
+                      layer_id='1_{:d}'.format(i),
+                      use_elu=use_elu)
     out_layer1 = Conv2D(filters=3,
                         kernel_size=5,
                         padding='same',
@@ -104,18 +117,123 @@ def create_generator(input_shape):
     return generator
 
 
-def create_discriminator(input_shape):
-    pass
+def create_discriminator(input_shape,
+                         use_elu: Optional[bool] = False):
+    in_layer = Input(input_shape)
+    # Block 1
+    x = Conv2D(filters=32,
+               kernel_size=5,
+               strides=2,
+               padding='same',
+               name='conv1')(in_layer)
+    if use_elu:
+        x = ELU(name='elu1')(x)
+    else:
+        x = LeakyReLU(name='lrelu1')(x)
+    # Block 2
+    x = Conv2D(filters=64,
+               kernel_size=5,
+               strides=1,
+               padding='same',
+               name='conv2')(x)
+    if use_elu:
+        x = ELU(name='elu2')(x)
+    else:
+        x = LeakyReLU(name='lrelu2')(x)
+    # Block 3
+    x = Conv2D(filters=64,
+               kernel_size=5,
+               strides=2,
+               padding='same',
+               name='conv3')(x)
+    if use_elu:
+        x = ELU(name='elu3')(x)
+    else:
+        x = LeakyReLU(name='lrelu3')(x)
+    # Block 4
+    x = Conv2D(filters=128,
+               kernel_size=5,
+               strides=1,
+               padding='same',
+               name='conv4')(x)
+    if use_elu:
+        x = ELU(name='elu4')(x)
+    else:
+        x = LeakyReLU(name='lrelu4')(x)
+    # Block 5
+    x = Conv2D(filters=128,
+               kernel_size=5,
+               strides=2,
+               padding='same',
+               name='conv5')(x)
+    if use_elu:
+        x = ELU(name='elu5')(x)
+    else:
+        x = LeakyReLU(name='lrelu5')(x)
+    # Block 6
+    x = Conv2D(filters=256,
+               kernel_size=5,
+               strides=1,
+               padding='same',
+               name='conv6')(x)
+    if use_elu:
+        x = ELU(name='elu6')(x)
+    else:
+        x = LeakyReLU(name='lrelu6')(x)
+    # Block 7
+    x = Conv2D(filters=256,
+               kernel_size=5,
+               strides=2,
+               padding='same',
+               name='conv7')(x)
+    if use_elu:
+        x = ELU(name='elu7')(x)
+    else:
+        x = LeakyReLU(name='lrelu7')(x)
+    # Block 8
+    x = Conv2D(filters=512,
+               kernel_size=5,
+               strides=1,
+               padding='same',
+               name='conv8')(x)
+    if use_elu:
+        x = ELU(name='elu8')(x)
+    else:
+        x = LeakyReLU(name='lrelu8')(x)
+    # Block 9
+    x = Conv2D(filters=512,
+               kernel_size=4,
+               strides=2,
+               padding='same',
+               name='conv9')(x)
+    if use_elu:
+        x = ELU(name='elu9')(x)
+    else:
+        x = LeakyReLU(name='lrelu9')(x)
+    # Dense
+    out_layer = Dense(1, name='dense', activation='sigmoid')(x)
+
+    # Final model
+    discriminator = Model(inputs=in_layer,
+                          outputs=out_layer,
+                          name='Discriminator')
+    return discriminator
 
 
 class DeepDeblur(Model):
-    def __init__(self, input_shape: Tuple[int, int, int]):
+    def __init__(self,
+                 input_shape: Tuple[int, int, int],
+                 use_elu: Optional[bool] = False,
+                 num_res_blocks: Optional[int] = 19):
         super(DeepDeblur, self).__init__()
 
         # Build generator
-        self.generator = create_generator(input_shape)
+        self.generator = create_generator(input_shape,
+                                          use_elu,
+                                          num_res_blocks)
         # Build discriminator
-        self.discriminator = create_discriminator(input_shape)
+        self.discriminator = create_discriminator(input_shape,
+                                                  use_elu)
 
         # Define and set loss functions
         K = 3
