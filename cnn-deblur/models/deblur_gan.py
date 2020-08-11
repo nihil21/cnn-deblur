@@ -2,7 +2,8 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Layer, Input, Conv2D, Conv2DTranspose, Dropout, Add, Activation, ELU
+from tensorflow.keras.layers import (Layer, Input, Conv2D, Conv2DTranspose, Dropout, Add, Activation,
+                                     ELU, ReLU, LeakyReLU)
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.applications import VGG16
 from utils.custom_losses import wasserstein_loss, perceptual_loss
@@ -16,13 +17,17 @@ def res_block(in_layer: Layer,
               layer_id: int,
               filters: Optional[int] = 256,
               kernel_size: Optional[Tuple[int]] = 3,
-              use_dropout: Optional[bool] = False):
+              use_dropout: Optional[bool] = False,
+              use_elu: Optional[bool] = False):
     x = Conv2D(filters=filters,
                kernel_size=kernel_size,
                padding='same',
                name='res_block_conv{:d}_1'.format(layer_id))(in_layer)
     x = tfa.layers.InstanceNormalization(name='res_block_in{:d}_1'.format(layer_id))(x)
-    x = ELU(name='res_block_elu{:d}'.format(layer_id))(x)
+    if use_elu:
+        x = ELU(name='res_block_elu{:d}'.format(layer_id))(x)
+    else:
+        x = ReLU(name='res_block_relu{:d}'.format(layer_id))(x)
     if use_dropout:
         x = Dropout(rate=0.5,
                     name='res_block_drop{:d}'.format(layer_id))(x)
@@ -35,7 +40,9 @@ def res_block(in_layer: Layer,
     return x
 
 
-def create_generator(input_shape):
+def create_generator(input_shape,
+                     use_elu: Optional[bool] = False,
+                     num_res_blocks: Optional[int] = 9):
     in_layer = Input(input_shape)
     # Block 1
     x = Conv2D(filters=64,
@@ -43,7 +50,10 @@ def create_generator(input_shape):
                padding='same',
                name='conv1')(in_layer)
     x = tfa.layers.InstanceNormalization(name='in1')(x)
-    x = ELU(name='elu1')(x)
+    if use_elu:
+        x = ELU(name='elu1')(x)
+    else:
+        x = ReLU(name='relu1')(x)
     # Block 2
     x = Conv2D(filters=128,
                kernel_size=3,
@@ -51,7 +61,10 @@ def create_generator(input_shape):
                padding='same',
                name='conv2')(x)
     x = tfa.layers.InstanceNormalization(name='in2')(x)
-    x = ELU(name='elu2')(x)
+    if use_elu:
+        x = ELU(name='elu2')(x)
+    else:
+        x = ReLU(name='relu2')(x)
     # Block 3
     x = Conv2D(filters=256,
                kernel_size=3,
@@ -59,11 +72,15 @@ def create_generator(input_shape):
                padding='same',
                name='conv3')(x)
     x = tfa.layers.InstanceNormalization(name='in3')(x)
-    x = ELU(name='elu3')(x)
+    if use_elu:
+        x = ELU(name='elu3')(x)
+    else:
+        x = ReLU(name='relu3')(x)
     # ResBlocks
-    for i in range(9):
+    for i in range(num_res_blocks):
         x = res_block(in_layer=x,
                       layer_id=i,
+                      use_elu=use_elu,
                       use_dropout=True)
     # Block 4
     x = Conv2DTranspose(filters=128,
@@ -72,7 +89,10 @@ def create_generator(input_shape):
                         padding='same',
                         name='conv4')(x)
     x = tfa.layers.InstanceNormalization(name='in4')(x)
-    x = ELU(name='elu4')(x)
+    if use_elu:
+        x = ELU(name='elu4')(x)
+    else:
+        x = ReLU(name='relu4')(x)
     # Block 5
     x = Conv2DTranspose(filters=64,
                         kernel_size=3,
@@ -80,7 +100,10 @@ def create_generator(input_shape):
                         padding='same',
                         name='conv5')(x)
     x = tfa.layers.InstanceNormalization(name='in5')(x)
-    x = ELU(name='elu5')(x)
+    if use_elu:
+        x = ELU(name='elu5')(x)
+    else:
+        x = ReLU(name='relu5')(x)
     # Block 6
     x = Conv2D(filters=3,
                kernel_size=7,
@@ -93,7 +116,8 @@ def create_generator(input_shape):
     return generator
 
 
-def create_critic(input_shape):
+def create_critic(input_shape,
+                  use_elu: Optional[bool] = False):
     in_layer = Input(input_shape)
     # Block 1
     x = Conv2D(filters=64,
@@ -102,7 +126,10 @@ def create_critic(input_shape):
                padding='same',
                name='conv1')(in_layer)
     x = tfa.layers.InstanceNormalization(name='in1')(x)
-    x = ELU(name='elu1')(x)
+    if use_elu:
+        x = ELU(name='elu1')(x)
+    else:
+        x = LeakyReLU(name='lrelu1')(x)
     # Block 2
     x = Conv2D(filters=128,
                kernel_size=4,
@@ -110,7 +137,10 @@ def create_critic(input_shape):
                padding='same',
                name='conv2')(x)
     x = tfa.layers.InstanceNormalization(name='in2')(x)
-    x = ELU(name='elu2')(x)
+    if use_elu:
+        x = ELU(name='elu2')(x)
+    else:
+        x = LeakyReLU(name='lrelu2')(x)
     # Block 3
     x = Conv2D(filters=256,
                kernel_size=4,
@@ -118,7 +148,10 @@ def create_critic(input_shape):
                padding='same',
                name='conv3')(x)
     x = tfa.layers.InstanceNormalization(name='in3')(x)
-    x = ELU(name='elu3')(x)
+    if use_elu:
+        x = ELU(name='elu3')(x)
+    else:
+        x = LeakyReLU(name='lrelu3')(x)
     # Block 4
     x = Conv2D(filters=512,
                kernel_size=4,
@@ -126,7 +159,10 @@ def create_critic(input_shape):
                padding='same',
                name='conv4')(x)
     x = tfa.layers.InstanceNormalization(name='in4')(x)
-    x = ELU(name='elu4')(x)
+    if use_elu:
+        x = ELU(name='elu4')(x)
+    else:
+        x = ELU(name='elu4')(x)
     # Block 5
     x = Conv2D(filters=1,
                kernel_size=4,
