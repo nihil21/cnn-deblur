@@ -169,7 +169,7 @@ def create_critic(input_shape,
                name='conv5')(x)
     out_layer = Activation('sigmoid')(x)
 
-    return Model(inputs=in_layer, outputs=out_layer, name='Discriminator')
+    return Model(inputs=in_layer, outputs=out_layer, name='Critic')
 
 
 class DeepDeblurWGAN(Model):
@@ -183,7 +183,7 @@ class DeepDeblurWGAN(Model):
         self.generator = create_generator(input_shape,
                                           use_elu,
                                           num_res_blocks)
-        # Build discriminator
+        # Build critic
         self.critic = create_critic(input_shape,
                                     use_elu)
 
@@ -196,7 +196,7 @@ class DeepDeblurWGAN(Model):
             assert len(sharp_pyramid) == 3, 'The list \'trueY\' should contain {:d} elements'.format(3)
 
             predicted_pyramid = self.generator(blurred_pyramid)
-            fake_logits = self.discriminator(predicted_pyramid)
+            fake_logits = self.critic(predicted_pyramid)
             adv_loss = tf.reduce_mean(-fake_logits)
             total = adv_loss + 100. * content_loss(sharp_pyramid, predicted_pyramid)
             return total
@@ -262,8 +262,8 @@ class DeepDeblurWGAN(Model):
                 # Make predictions
                 predicted_pyramid = self.generator(blurred_pyramid, training=True)
                 # Get logits for both fake and real images
-                fake_logits = self.discriminator(predicted_pyramid, training=True)
-                real_logits = self.discriminator(sharp_pyramid, training=True)
+                fake_logits = self.critic(predicted_pyramid, training=True)
+                real_logits = self.critic(sharp_pyramid, training=True)
                 # Calculate critic's loss
                 c_loss_fake = self.c_loss(-tf.ones_like(fake_logits), fake_logits)
                 c_loss_real = self.c_loss(tf.ones_like(real_logits), real_logits)
@@ -349,9 +349,9 @@ class DeepDeblurWGAN(Model):
         # Generate fake inputs
         predicted_pyramid = self.generator(blurred_pyramid, training=False)
         # Get logits for both fake and real images
-        fake_logits = self.discriminator(sharp_pyramid, training=False)
-        real_logits = self.discriminator(predicted_pyramid, training=False)
-        # Calculate discriminator's loss
+        fake_logits = self.critic(sharp_pyramid, training=False)
+        real_logits = self.critic(predicted_pyramid, training=False)
+        # Calculate critic's loss
         c_loss_fake = self.c_loss(-tf.ones_like(fake_logits), fake_logits)
         c_loss_real = self.c_loss(tf.ones_like(real_logits), real_logits)
         c_loss = 0.5 * tf.add(c_loss_fake, c_loss_real)
