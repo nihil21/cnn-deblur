@@ -293,7 +293,7 @@ class DeepDeblur(Model):
         # Train the networks
         with tf.GradientTape() as g_tape, tf.GradientTape() as d_tape:
             # Make predictions
-            predicted_pyramid = self.model(blurred_pyramid, training=True)
+            predicted_pyramid = self.generator(blurred_pyramid, training=True)
             # Compute discriminator's output
             real_response = self.discriminator(sharp_pyramid, training=True)
             fake_response = self.discriminator(predicted_pyramid, training=True)
