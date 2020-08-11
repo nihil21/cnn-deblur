@@ -2,7 +2,7 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications import VGG16
-from tensorflow.keras.losses import logcosh
+from tensorflow.keras.losses import mse
 import functools
 import operator
 from typing import Optional, List
@@ -20,9 +20,9 @@ def perceptual_loss(trueY, predY, loss_model: Optional[Model] = None):
     return K.mean(K.square(loss_model(trueY) - loss_model(predY)))
 
 
-def content_loss(sharp_pyramid: List[tf.Tensor],
-                 predicted_pyramid: List[tf.Tensor],
-                 num_scales: Optional[int] = 3):
+def ms_mse(sharp_pyramid: List[tf.Tensor],
+           predicted_pyramid: List[tf.Tensor],
+           num_scales: Optional[int] = 3):
     # Check input
     assert len(sharp_pyramid) == num_scales, 'The list \'trueY\' should contain {:d} elements'.format(num_scales)
     assert len(predicted_pyramid) == num_scales, 'The list \'predY\' should contain {:d} elements'.format(num_scales)
@@ -31,6 +31,6 @@ def content_loss(sharp_pyramid: List[tf.Tensor],
     for scale_trueY, scale_predY in zip(sharp_pyramid, predicted_pyramid):
         scale_shape = scale_trueY.shape[1:]
         norm_factor = functools.reduce(operator.mul, scale_shape, 1)
-        scale_loss = tf.reduce_sum(logcosh(scale_trueY, scale_predY)) / norm_factor
+        scale_loss = tf.reduce_sum(mse(scale_trueY, scale_predY)) / norm_factor
         loss += scale_loss
     return 1./(2. * num_scales) * loss

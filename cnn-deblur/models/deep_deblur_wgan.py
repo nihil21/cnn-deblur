@@ -5,7 +5,7 @@ from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add,
                                      ELU, ReLU, LeakyReLU, BatchNormalization, concatenate)
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
-from utils.custom_losses import wasserstein_loss, content_loss
+from utils.custom_losses import wasserstein_loss, ms_mse
 from tqdm import notebook
 from typing import Tuple, List, Optional, Union
 
@@ -198,7 +198,7 @@ class DeepDeblurWGAN(Model):
             predicted_pyramid = self.generator(blurred_pyramid)
             fake_logits = self.critic(predicted_pyramid)
             adv_loss = tf.reduce_mean(-fake_logits)
-            total = adv_loss + 100. * content_loss(sharp_pyramid, predicted_pyramid)
+            total = adv_loss + 100. * ms_mse(sharp_pyramid, predicted_pyramid)
             return total
 
         self.g_loss = total_loss
