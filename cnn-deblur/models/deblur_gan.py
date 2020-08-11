@@ -17,8 +17,8 @@ def res_block(in_layer: Layer,
               layer_id: int,
               filters: Optional[int] = 256,
               kernel_size: Optional[Tuple[int]] = 3,
-              use_dropout: Optional[bool] = False,
-              use_elu: Optional[bool] = False):
+              use_elu: Optional[bool] = False,
+              use_dropout: Optional[bool] = False):
     x = Conv2D(filters=filters,
                kernel_size=kernel_size,
                padding='same',
@@ -42,6 +42,7 @@ def res_block(in_layer: Layer,
 
 def create_generator(input_shape,
                      use_elu: Optional[bool] = False,
+                     use_dropout: Optional[bool] = False,
                      num_res_blocks: Optional[int] = 9):
     in_layer = Input(input_shape)
     # Block 1
@@ -81,7 +82,7 @@ def create_generator(input_shape,
         x = res_block(in_layer=x,
                       layer_id=i,
                       use_elu=use_elu,
-                      use_dropout=True)
+                      use_dropout=use_dropout)
     # Block 4
     x = Conv2DTranspose(filters=128,
                         kernel_size=3,
@@ -162,7 +163,7 @@ def create_critic(input_shape,
     if use_elu:
         x = ELU(name='elu4')(x)
     else:
-        x = ELU(name='elu4')(x)
+        x = ELU(name='lrelu4')(x)
     # Block 5
     x = Conv2D(filters=1,
                kernel_size=4,
@@ -175,13 +176,21 @@ def create_critic(input_shape,
 
 
 class DeblurGan(Model):
-    def __init__(self, input_shape: Tuple[int, int, int]):
+    def __init__(self,
+                 input_shape: Tuple[int, int, int],
+                 use_elu: Optional[bool] = False,
+                 use_dropout: Optional[bool] = False,
+                 num_res_blocks: Optional[int] = 9):
         super(DeblurGan, self).__init__()
 
         # Build generator
-        self.generator = create_generator(input_shape)
+        self.generator = create_generator(input_shape,
+                                          use_elu,
+                                          use_dropout,
+                                          num_res_blocks)
         # Build critic (discriminator)
-        self.critic = create_critic(input_shape)
+        self.critic = create_critic(input_shape,
+                                    use_elu)
 
         # Set loss_model, based on VGG16, to compute perceptual loss
         vgg = VGG16(include_top=False, weights='imagenet', input_shape=(None, None, 3))
