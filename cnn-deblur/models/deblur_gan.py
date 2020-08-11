@@ -163,7 +163,7 @@ def create_critic(input_shape,
     if use_elu:
         x = ELU(name='elu4')(x)
     else:
-        x = ELU(name='lrelu4')(x)
+        x = LeakyReLU(name='lrelu4')(x)
     # Block 5
     x = Conv2D(filters=1,
                kernel_size=4,
