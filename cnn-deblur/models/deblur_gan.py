@@ -406,7 +406,7 @@ class DeblurGan(Model):
                 fake_l1_metrics.append(step_result['fake_l1'])
 
             # Display training results
-            train_results = 'g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
+            train_results = 'g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f} - '.format(
                 np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
             )
             train_results += 'c_loss: {:.4f} - real_l1: {:.4f} - fake_l1: {:.4f}'.format(
@@ -435,7 +435,7 @@ class DeblurGan(Model):
                     val_fake_l1_metrics.append(step_result['val_fake_l1'])
 
                 # Display validation results
-                val_results = 'val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
+                val_results = 'val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f} - '.format(
                     np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics),
                 )
                 val_results += 'val_c_loss: {:.4f} - val_real_l1: {:.4f} - val_fake_l1: {:.4f}'.format(
@@ -506,7 +506,7 @@ class DeblurGan(Model):
                 fake_l1_metrics.append(step_result['fake_l1'])
 
             # Display training results
-            train_results = 'g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
+            train_results = 'g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f} - '.format(
                 np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
             )
             train_results += 'c_loss: {:.4f} - real_l1: {:.4f} - fake_l1: {:.4f}'.format(
@@ -543,7 +543,7 @@ class DeblurGan(Model):
                     val_fake_l1_metrics.append(step_result['val_fake_l1'])
 
                 # Display validation results
-                val_results = 'val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
+                val_results = 'val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f} - '.format(
                     np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics),
                 )
                 val_results += 'val_c_loss: {:.4f} - val_real_l1: {:.4f} - val_fake_l1: {:.4f}'.format(
@@ -603,7 +603,7 @@ class DeblurGan(Model):
                 fake_l1_metrics.append(step_result['fake_l1'])
 
             # Display training results
-            train_results = 'g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
+            train_results = 'g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f} - '.format(
                 np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
             )
             train_results += 'c_loss: {:.4f} - real_l1: {:.4f} - fake_l1: {:.4f}'.format(
@@ -632,7 +632,7 @@ class DeblurGan(Model):
                     val_fake_l1_metrics.append(step_result['val_fake_l1'])
 
                 # Display validation results
-                val_results = 'val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
+                val_results = 'val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f} - '.format(
                     np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics),
                 )
                 val_results += 'val_c_loss: {:.4f} - val_real_l1: {:.4f} - val_fake_l1: {:.4f}'.format(
