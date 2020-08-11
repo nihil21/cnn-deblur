@@ -289,7 +289,7 @@ class DeblurGan(Model):
                                     tf.cast(generated_batch, dtype='bfloat16'),
                                     max_val=2.)
         real_critic_metric = tf.abs(tf.ones_like(real_logits) - real_logits)
-        fake_critic_metric = tf.abs(tf.ones_like(fake_logits) - fake_logits)
+        fake_critic_metric = tf.abs(-tf.ones_like(fake_logits) - fake_logits)
         critic_metric = 0.5 * (tf.reduce_mean(real_critic_metric) + tf.reduce_mean(fake_critic_metric))
 
         return {'c_loss': tf.reduce_mean(c_losses),
@@ -345,7 +345,7 @@ class DeblurGan(Model):
                                     generated_batch,
                                     max_val=2.)
         real_critic_metric = tf.abs(tf.ones_like(real_logits) - real_logits)
-        fake_critic_metric = tf.abs(tf.ones_like(fake_logits) - fake_logits)
+        fake_critic_metric = tf.abs(-tf.ones_like(fake_logits) - fake_logits)
         critic_metric = 0.5 * (tf.reduce_mean(real_critic_metric) + tf.reduce_mean(fake_critic_metric))
 
         return {'val_c_loss': c_loss,
