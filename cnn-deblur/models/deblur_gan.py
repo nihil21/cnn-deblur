@@ -262,7 +262,7 @@ class DeblurGan(Model):
                 d_loss_real = self.d_loss(tf.ones_like(real_logits), real_logits)
                 d_loss = 0.5 * tf.add(d_loss_fake, d_loss_real)
                 # Calculate gradient penalty
-                gp = self.gradient_penalty(batch_size, generated_batch, sharp_batch)
+                gp = self.gradient_penalty(batch_size, real_imgs=sharp_batch, fake_imgs=generated_batch)
                 # Add gradient penalty to the loss
                 d_loss += gp * self.gp_weight
             # Get gradient w.r.t. critic's loss and update weights
