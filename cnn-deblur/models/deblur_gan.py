@@ -227,8 +227,8 @@ class DeblurGan(Model):
         alpha = tf.random.normal(shape=[batch_size, 1, 1, 1],
                                  mean=0.0,
                                  stddev=1.0)
-        diff = tf.cast(fake_imgs - real_imgs, dtype='float32')
-        interpolated = tf.cast(real_imgs, dtype='float32') + alpha * diff
+        diff = fake_imgs - real_imgs
+        interpolated = real_imgs + alpha * diff
 
         with tf.GradientTape() as gp_tape:
             gp_tape.watch(interpolated)
@@ -262,7 +262,9 @@ class DeblurGan(Model):
                 d_loss_real = self.d_loss(tf.ones_like(real_logits), real_logits)
                 d_loss = 0.5 * tf.add(d_loss_fake, d_loss_real)
                 # Calculate gradient penalty
-                gp = self.gradient_penalty(batch_size, real_imgs=sharp_batch, fake_imgs=generated_batch)
+                gp = self.gradient_penalty(batch_size,
+                                           real_imgs=tf.cast(sharp_batch, dtype='float32'),
+                                           fake_imgs=generated_batch)
                 # Add gradient penalty to the loss
                 d_loss += gp * self.gp_weight
             # Get gradient w.r.t. critic's loss and update weights
