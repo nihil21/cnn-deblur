@@ -216,16 +216,14 @@ class DeepDeblurWGAN(Model):
     @tf.function
     def gradient_penalty(self,
                          batch_size: int,
-                         real_pyramid: List[tf.Tensor],
-                         fake_pyramid: List[tf.Tensor]):
+                         real_imgs: tf.Tensor,
+                         fake_imgs: tf.Tensor):
         # Get interpolated pyramid
         alpha = tf.random.normal(shape=[batch_size, 1, 1, 1],
                                  mean=0.0,
                                  stddev=1.0)
-        diff = [fake_imgs - real_imgs
-                for fake_imgs, real_imgs in zip(fake_pyramid, real_pyramid)]
-        interpolated = [real_imgs + alpha * scale_diff
-                        for real_imgs, scale_diff in zip(real_pyramid, diff)]
+        diff = fake_imgs - real_imgs
+        interpolated = real_imgs + alpha * diff
 
         with tf.GradientTape() as gp_tape:
             gp_tape.watch(interpolated)
@@ -270,9 +268,8 @@ class DeepDeblurWGAN(Model):
                 c_loss = 0.5 * tf.add(c_loss_fake, c_loss_real)
                 # Calculate gradient penalty
                 gp = self.gradient_penalty(batch_size,
-                                           real_pyramid=[tf.cast(sharp_imgs, dtype='float32')
-                                                         for sharp_imgs in sharp_pyramid],
-                                           fake_pyramid=predicted_pyramid)
+                                           real_imgs=tf.cast(sharp_pyramid[0], dtype='float32'),
+                                           fake_imgs=predicted_pyramid[0])
                 # Add gradient penalty to the loss
                 c_loss += gp * self.gp_weight
             # Get gradient w.r.t. critic's loss and update weights
