@@ -357,10 +357,10 @@ class DeepDeblurWGAN(Model):
 
         # Compute metrics
         ssim_metric = tf.image.ssim(sharp_pyramid[0],
-                                    tf.cast(predicted_pyramid[0], dtype='bfloat16'),
+                                    predicted_pyramid[0],
                                     max_val=2.)
         psnr_metric = tf.image.psnr(sharp_pyramid[0],
-                                    tf.cast(predicted_pyramid[0], dtype='bfloat16'),
+                                    predicted_pyramid[0],
                                     max_val=2.)
         real_l1_metric = tf.abs(tf.ones_like(real_logits) - real_logits)
         fake_l1_metric = tf.abs(-tf.ones_like(fake_logits) - fake_logits)
