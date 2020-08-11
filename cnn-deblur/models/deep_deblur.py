@@ -376,6 +376,80 @@ class DeepDeblur(Model):
                 'val_ssim': tf.reduce_mean(ssim_metric),
                 'val_psnr': tf.reduce_mean(psnr_metric)}
 
+    def train(self,
+              train_data: tf.data.Dataset,
+              epochs: int,
+              steps_per_epoch: int,
+              initial_epoch: Optional[int] = 1,
+              validation_data: Optional[tf.data.Dataset] = None,
+              validation_steps: Optional[int] = None,
+              checkpoint_dir: Optional[str] = None):
+        for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
+            print('=' * 50)
+            print('Epoch {:d}/{:d}'.format(ep, epochs))
+
+            # Set up lists that will contain losses and metrics for each epoch
+            g_losses = []
+            d_losses = []
+            ssim_metrics = []
+            psnr_metrics = []
+
+            # Perform training
+            for batch in notebook.tqdm(train_data, total=steps_per_epoch):
+                # Perform train step
+                step_result = self.train_step(batch)
+
+                # Collect results
+                g_losses.append(step_result['g_loss'])
+                d_losses.append(step_result['d_loss'])
+                ssim_metrics.append(step_result['ssim'])
+                psnr_metrics.append(step_result['psnr'])
+
+            # Display training results
+            train_results = 'g_loss: {:.4f} - d_loss: {:.4f} ssim: {:.4f} - psnr: {:.4f}'.format(
+                np.mean(g_losses), np.mean(d_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
+            )
+            print(train_results)
+
+            # Perform validation if required
+            if validation_data is not None and validation_steps is not None:
+                val_g_losses = []
+                val_d_losses = []
+                val_ssim_metrics = []
+                val_psnr_metrics = []
+                for val_batch in notebook.tqdm(validation_data, total=validation_steps):
+                    # Perform eval step
+                    step_result = self.eval_step(tf.cast(val_batch, dtype='float32'))
+
+                    # Collect results
+                    val_g_losses.append(step_result['val_g_loss'])
+                    val_d_losses.append(step_result['val_d_loss'])
+                    val_ssim_metrics.append(step_result['val_ssim'])
+                    val_psnr_metrics.append(step_result['val_psnr'])
+
+                # Display validation results
+                val_results = 'val_g_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
+                    np.mean(val_g_losses), np.mean(val_d_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics)
+                )
+                print(val_results)
+
+            # Save model every 15 epochs if required
+            if checkpoint_dir is not None and ep % 15 == 0:
+                print('Saving generator\'s model...', end='')
+                self.generator.save_weights(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-psnr:{:.4f}.h5').format(
+                        ep, np.mean(psnr_metrics)
+                    )
+                )
+                print(' OK')
+                print('Saving critic\'s model...', end='')
+                self.critic.save_weights(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.h5').format(
+                        ep, np.mean(d_losses)
+                    )
+                )
+                print(' OK')
+
     def distributed_train(self,
                           train_data: tf.data.Dataset,
                           epochs: int,
