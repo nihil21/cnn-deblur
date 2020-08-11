@@ -207,11 +207,11 @@ class DeblurGan(Model):
             return adv_loss + 100.0 * content_loss
 
         self.g_loss = total_loss
-        self.d_loss = wasserstein_loss
+        self.c_loss = wasserstein_loss
 
         # Set optimizers as Adam with lr=1e-4
         self.g_optimizer = Adam(lr=1e-4)
-        self.d_optimizer = Adam(lr=1e-4)
+        self.c_optimizer = Adam(lr=1e-4)
 
         # Set critic_updates, i.e. the times the critic gets trained w.r.t. one training step of the generator
         self.critic_updates = 5
@@ -248,30 +248,30 @@ class DeblurGan(Model):
         sharp_batch = train_batch[1]
         batch_size = blurred_batch.shape[0]
 
-        d_losses = []
+        c_losses = []
         # Train the critic multiple times according to critic_updates (by default, 5)
         for _ in range(self.critic_updates):
-            with tf.GradientTape() as d_tape:
+            with tf.GradientTape() as c_tape:
                 # Generate fake inputs
                 generated_batch = self.generator(blurred_batch, training=True)
                 # Get logits for both fake and real images
                 fake_logits = self.critic(generated_batch, training=True)
                 real_logits = self.critic(sharp_batch, training=True)
                 # Calculate critic's loss
-                d_loss_fake = self.d_loss(-tf.ones_like(fake_logits), fake_logits)
-                d_loss_real = self.d_loss(tf.ones_like(real_logits), real_logits)
-                d_loss = 0.5 * tf.add(d_loss_fake, d_loss_real)
+                c_loss_fake = self.c_loss(-tf.ones_like(fake_logits), fake_logits)
+                c_loss_real = self.c_loss(tf.ones_like(real_logits), real_logits)
+                c_loss = 0.5 * tf.add(c_loss_fake, c_loss_real)
                 # Calculate gradient penalty
                 gp = self.gradient_penalty(batch_size,
                                            real_imgs=tf.cast(sharp_batch, dtype='float32'),
                                            fake_imgs=generated_batch)
                 # Add gradient penalty to the loss
-                d_loss += gp * self.gp_weight
+                c_loss += gp * self.gp_weight
             # Get gradient w.r.t. critic's loss and update weights
-            d_grad = d_tape.gradient(d_loss, self.critic.trainable_variables)
-            self.d_optimizer.apply_gradients(zip(d_grad, self.critic.trainable_variables))
+            c_grad = c_tape.gradient(c_loss, self.critic.trainable_variables)
+            self.c_optimizer.apply_gradients(zip(c_grad, self.critic.trainable_variables))
 
-            d_losses.append(d_loss)
+            c_losses.append(c_loss)
 
         # Train the generator
         with tf.GradientTape() as g_tape:
@@ -288,29 +288,36 @@ class DeblurGan(Model):
         psnr_metric = tf.image.psnr(sharp_batch,
                                     tf.cast(generated_batch, dtype='bfloat16'),
                                     max_val=2.)
+        real_critic_metric = tf.abs(tf.ones_like(real_logits) - real_logits)
+        fake_critic_metric = tf.abs(tf.ones_like(fake_logits) - fake_logits)
+        critic_metric = 0.5 * (tf.reduce_mean(real_critic_metric) + tf.reduce_mean(fake_critic_metric))
 
-        return {'d_loss': tf.reduce_mean(d_losses),
+        return {'c_loss': tf.reduce_mean(c_losses),
                 'g_loss': g_loss,
                 'ssim': tf.reduce_mean(ssim_metric),
-                'psnr': tf.reduce_mean(psnr_metric)}
+                'psnr': tf.reduce_mean(psnr_metric),
+                'critic': critic_metric}
 
     @tf.function
     def distributed_train_step(self,
                                train_batch: tf.data.Dataset,
                                strategy: Optional[tf.distribute.Strategy] = None):
         per_replica_results = strategy.run(self.train_step, args=(train_batch,))
-        reduced_d_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                         per_replica_results['d_loss'], axis=None)
+        reduced_c_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
+                                         per_replica_results['c_loss'], axis=None)
         reduced_g_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
                                          per_replica_results['g_loss'], axis=None)
         reduced_ssim = strategy.reduce(tf.distribute.ReduceOp.MEAN,
                                        per_replica_results['ssim'], axis=None)
         reduced_psnr = strategy.reduce(tf.distribute.ReduceOp.MEAN,
                                        per_replica_results['psnr'], axis=None)
-        return {'d_loss': reduced_d_loss,
+        reduced_critic = strategy.reduce(tf.distribute.ReduceOp.MEAN,
+                                         per_replica_results['critic'], axis=None)
+        return {'c_loss': reduced_c_loss,
                 'g_loss': reduced_g_loss,
                 'ssim': reduced_ssim,
-                'psnr': reduced_psnr}
+                'psnr': reduced_psnr,
+                'critic': reduced_critic}
 
     @tf.function
     def eval_step(self,
@@ -324,9 +331,9 @@ class DeblurGan(Model):
         fake_logits = self.critic(generated_batch, training=False)
         real_logits = self.critic(sharp_batch, training=False)
         # Calculate critic's loss
-        d_loss_fake = self.d_loss(-tf.ones_like(fake_logits), fake_logits)
-        d_loss_real = self.d_loss(tf.ones_like(real_logits), real_logits)
-        d_loss = 0.5 * tf.add(d_loss_fake, d_loss_real)
+        c_loss_fake = self.c_loss(-tf.ones_like(fake_logits), fake_logits)
+        c_loss_real = self.c_loss(tf.ones_like(real_logits), real_logits)
+        c_loss = 0.5 * tf.add(c_loss_fake, c_loss_real)
         # Calculate generator's loss
         g_loss = self.g_loss(blurred_batch, sharp_batch)
 
@@ -337,11 +344,15 @@ class DeblurGan(Model):
         psnr_metric = tf.image.psnr(sharp_batch,
                                     generated_batch,
                                     max_val=2.)
+        real_critic_metric = tf.abs(tf.ones_like(real_logits) - real_logits)
+        fake_critic_metric = tf.abs(tf.ones_like(fake_logits) - fake_logits)
+        critic_metric = 0.5 * (tf.reduce_mean(real_critic_metric) + tf.reduce_mean(fake_critic_metric))
 
-        return {'val_d_loss': d_loss,
+        return {'val_c_loss': c_loss,
                 'val_g_loss': g_loss,
                 'val_ssim': tf.reduce_mean(ssim_metric),
-                'val_psnr': tf.reduce_mean(psnr_metric)}
+                'val_psnr': tf.reduce_mean(psnr_metric),
+                'val_critic': critic_metric}
 
     def train(self,
               train_data: Union[tf.data.Dataset, np.ndarray],
@@ -371,10 +382,11 @@ class DeblurGan(Model):
             print('Epoch {:d}/{:d}'.format(ep, epochs))
 
             # Set up lists that will contain losses and metrics for each epoch
-            d_losses = []
+            c_losses = []
             g_losses = []
             ssim_metrics = []
             psnr_metrics = []
+            critic_metrics = []
 
             # Perform training
             for train_batch in notebook.tqdm(train_data, total=steps_per_epoch):
@@ -382,37 +394,44 @@ class DeblurGan(Model):
                 step_result = self.train_step(train_batch)
 
                 # Collect results
-                d_losses.append(step_result['d_loss'])
+                c_losses.append(step_result['c_loss'])
                 g_losses.append(step_result['g_loss'])
                 ssim_metrics.append(step_result['ssim'])
                 psnr_metrics.append(step_result['psnr'])
+                critic_metrics.append(step_result['critic'])
 
             # Display training results
-            train_results = 'd_loss: {:.4f} - g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
-                np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
+            train_results = 'c_loss: {:.4f} - g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f} - critic: {:.4f}'.format(
+                np.mean(c_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics),
+                np.mean(critic_metrics)
             )
             print(train_results)
 
             # Perform validation if required
             if validation_data is not None and validation_steps is not None:
-                val_d_losses = []
+                val_c_losses = []
                 val_g_losses = []
                 val_ssim_metrics = []
                 val_psnr_metrics = []
+                val_critic_metrics = []
                 for val_batch in notebook.tqdm(validation_data, total=validation_steps):
                     # Perform eval step
                     step_result = self.eval_step(val_batch)
 
                     # Collect results
-                    val_d_losses.append(step_result['val_d_loss'])
+                    val_c_losses.append(step_result['val_c_loss'])
                     val_g_losses.append(step_result['val_g_loss'])
                     val_ssim_metrics.append(step_result['val_ssim'])
                     val_psnr_metrics.append(step_result['val_psnr'])
+                    val_critic_metrics.append(step_result['val_critic'])
 
                 # Display validation results
-                val_results = 'val_d_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
-                    np.mean(val_d_losses), np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics)
-                )
+                val_results = 'val_c_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f} - ' \
+                              'val_critic: {:.4f}'.format(np.mean(val_c_losses),
+                                                          np.mean(val_g_losses),
+                                                          np.mean(val_ssim_metrics),
+                                                          np.mean(val_psnr_metrics),
+                                                          np.mean(val_critic_metrics))
                 print(val_results)
 
             # Save model every 15 epochs if required
@@ -426,8 +445,8 @@ class DeblurGan(Model):
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save_weights(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.h5').format(
-                        ep, np.mean(d_losses)
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-critic:{:.4f}.h5').format(
+                        ep, np.mean(critic_metrics)
                     )
                 )
                 print(' OK')
@@ -449,33 +468,36 @@ class DeblurGan(Model):
             print('Epoch {:d}/{:d}'.format(ep, epochs))
 
             # Permute indexes
-            val_permuted_indexes = np.random.permutation(batch_size)
+            permuted_indexes = np.random.permutation(batch_size)
 
             # Set up lists that will contain losses and metrics for each epoch
-            d_losses = []
+            c_losses = []
             g_losses = []
             ssim_metrics = []
             psnr_metrics = []
+            critic_metrics = []
 
             # Perform training
             for i in notebook.tqdm(range(steps_per_epoch)):
                 # Prepare batch
-                val_batch_indexes = val_permuted_indexes[i * batch_size:(i + 1) * batch_size]
-                val_blurred_batch = train_data[0][val_batch_indexes]
-                val_sharp_batch = train_data[1][val_batch_indexes]
+                batch_indexes = permuted_indexes[i * batch_size:(i + 1) * batch_size]
+                blurred_batch = train_data[0][batch_indexes]
+                sharp_batch = train_data[1][batch_indexes]
 
                 # Perform train step
-                step_result = self.train_step((val_blurred_batch, val_sharp_batch))
+                step_result = self.train_step((blurred_batch, sharp_batch))
 
                 # Collect results
-                d_losses.append(step_result['d_loss'])
+                c_losses.append(step_result['c_loss'])
                 g_losses.append(step_result['g_loss'])
                 ssim_metrics.append(step_result['ssim'])
                 psnr_metrics.append(step_result['psnr'])
+                critic_metrics.append(step_result['critic'])
 
             # Display training results
-            train_results = 'd_loss: {:.4f} - g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
-                np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
+            train_results = 'c_loss: {:.4f} - g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f} - critic: {:.4f}'.format(
+                np.mean(c_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics),
+                np.mean(critic_metrics)
             )
             print(train_results)
 
@@ -484,10 +506,11 @@ class DeblurGan(Model):
                 # Permute indexes
                 val_permuted_indexes = np.random.permutation(val_batch_size)
 
-                val_d_losses = []
+                val_c_losses = []
                 val_g_losses = []
                 val_ssim_metrics = []
                 val_psnr_metrics = []
+                val_critic_metrics = []
                 for i in notebook.tqdm(range(validation_steps)):
                     # Prepare batch
                     val_batch_indexes = val_permuted_indexes[i * val_batch_size:(i + 1) * val_batch_size]
@@ -498,15 +521,19 @@ class DeblurGan(Model):
                     step_result = self.eval_step((val_blurred_batch, val_sharp_batch))
 
                     # Collect results
-                    val_d_losses.append(step_result['val_d_loss'])
+                    val_c_losses.append(step_result['val_c_loss'])
                     val_g_losses.append(step_result['val_g_loss'])
                     val_ssim_metrics.append(step_result['val_ssim'])
                     val_psnr_metrics.append(step_result['val_psnr'])
+                    val_critic_metrics.append(step_result['critic'])
 
                 # Display validation results
-                val_results = 'val_d_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
-                    np.mean(val_d_losses), np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics)
-                )
+                val_results = 'val_c_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f} - ' \
+                              'val_critic: {:.4f}'.format(np.mean(val_c_losses),
+                                                          np.mean(val_g_losses),
+                                                          np.mean(val_ssim_metrics),
+                                                          np.mean(val_psnr_metrics),
+                                                          np.mean(val_critic_metrics))
                 print(val_results)
 
             # Save model every 15 epochs if required
@@ -520,8 +547,8 @@ class DeblurGan(Model):
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save_weights(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.h5').format(
-                        ep, np.mean(d_losses)
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-critic:{:.4f}.h5').format(
+                        ep, np.mean(critic_metrics)
                     )
                 )
                 print(' OK')
@@ -540,10 +567,11 @@ class DeblurGan(Model):
             print('Epoch {:d}/{:d}'.format(ep, epochs))
 
             # Set up lists that will contain losses and metrics for each epoch
-            d_losses = []
+            c_losses = []
             g_losses = []
             ssim_metrics = []
             psnr_metrics = []
+            critic_metrics = []
 
             # Perform training
             for batch in notebook.tqdm(train_data, total=steps_per_epoch):
@@ -551,37 +579,44 @@ class DeblurGan(Model):
                 step_result = self.distributed_train_step(batch, strategy)
 
                 # Collect results
-                d_losses.append(step_result['d_loss'])
+                c_losses.append(step_result['c_loss'])
                 g_losses.append(step_result['g_loss'])
                 ssim_metrics.append(step_result['ssim'])
                 psnr_metrics.append(step_result['psnr'])
+                critic_metrics.append(step_result['critic'])
 
             # Display training results
-            train_results = 'd_loss: {:.4f} - g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
-                np.mean(d_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
+            train_results = 'c_loss: {:.4f} - g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f} - critic: {:.4f}'.format(
+                np.mean(c_losses), np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics),
+                np.mean(critic_metrics)
             )
             print(train_results)
 
             # Perform validation if required
             if validation_data is not None and validation_steps is not None:
-                val_d_losses = []
+                val_c_losses = []
                 val_g_losses = []
                 val_ssim_metrics = []
                 val_psnr_metrics = []
+                val_critic_metrics = []
                 for val_batch in notebook.tqdm(validation_data, total=validation_steps):
                     # Perform eval step
                     step_result = self.eval_step(tf.cast(val_batch, dtype='float32'))
 
                     # Collect results
-                    val_d_losses.append(step_result['val_d_loss'])
+                    val_c_losses.append(step_result['val_c_loss'])
                     val_g_losses.append(step_result['val_g_loss'])
                     val_ssim_metrics.append(step_result['val_ssim'])
                     val_psnr_metrics.append(step_result['val_psnr'])
+                    val_critic_metrics.append(step_result['val_critic'])
 
                 # Display validation results
-                val_results = 'val_d_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
-                    np.mean(val_d_losses), np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics)
-                )
+                val_results = 'val_c_loss: {:.4f} - val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f} - ' \
+                              'val_critic: {:.4f}'.format(np.mean(val_c_losses),
+                                                          np.mean(val_g_losses),
+                                                          np.mean(val_ssim_metrics),
+                                                          np.mean(val_psnr_metrics),
+                                                          np.mean(val_critic_metrics))
                 print(val_results)
 
             # Save model every 15 epochs if required
@@ -595,8 +630,8 @@ class DeblurGan(Model):
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save_weights(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-d_loss:{:.4f}.h5').format(
-                        ep, np.mean(d_losses)
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-critic:{:.4f}.h5').format(
+                        ep, np.mean(critic_metrics)
                     )
                 )
                 print(' OK')
