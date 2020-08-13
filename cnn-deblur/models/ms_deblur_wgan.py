@@ -166,9 +166,9 @@ class MSDeblurWGAN(WGAN):
             with tf.GradientTape() as c_tape:
                 # Make predictions
                 predicted_pyramid = self.generator(blurred_pyramid, training=True)
-                # Get logits for both fake and real images
-                fake_logits = self.critic(predicted_pyramid, training=True)
-                real_logits = self.critic(sharp_pyramid, training=True)
+                # Get logits for both fake and real images (only original scale)
+                fake_logits = self.critic(predicted_pyramid[0], training=True)
+                real_logits = self.critic(sharp_pyramid[0], training=True)
                 # Calculate critic's loss
                 c_loss = self.c_loss(real_logits, fake_logits)
                 # Calculate gradient penalty
@@ -185,6 +185,10 @@ class MSDeblurWGAN(WGAN):
 
         # Train the generator
         with tf.GradientTape() as g_tape:
+            # Make predictions
+            predicted_pyramid = self.generator(blurred_pyramid, training=True)
+            # Get logits for fake images (only original scale)
+            fake_logits = self.critic(predicted_pyramid[0], training=True)
             # Calculate generator's loss
             g_loss = self.g_loss(sharp_pyramid, predicted_pyramid, fake_logits)
         # Get gradient w.r.t. generator's loss and update weights

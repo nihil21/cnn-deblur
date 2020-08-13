@@ -383,7 +383,13 @@ class WGAN(Model):
                 'psnr': psnr_hist,
                 'c_loss': c_loss_hist,
                 'real_l1': real_l1_hist,
-                'fake_l1': fake_l1_hist}
+                'fake_l1': fake_l1_hist,
+                'val_g_loss': val_g_loss_hist,
+                'val_ssim': val_ssim_hist,
+                'val_psnr': val_psnr_hist,
+                'val_c_loss': val_c_loss_hist,
+                'val_real_l1': val_real_l1_hist,
+                'val_fake_l1': val_fake_l1_hist}
 
     def __train_on_tensor(self,
                           train_data: Tuple[np.ndarray, np.ndarray],
@@ -544,7 +550,13 @@ class WGAN(Model):
                 'psnr': psnr_hist,
                 'c_loss': c_loss_hist,
                 'real_l1': real_l1_hist,
-                'fake_l1': fake_l1_hist}
+                'fake_l1': fake_l1_hist,
+                'val_g_loss': val_g_loss_hist,
+                'val_ssim': val_ssim_hist,
+                'val_psnr': val_psnr_hist,
+                'val_c_loss': val_c_loss_hist,
+                'val_real_l1': val_real_l1_hist,
+                'val_fake_l1': val_fake_l1_hist}
 
     def distributed_train(self,
                           train_data: tf.data.Dataset,
@@ -686,4 +698,10 @@ class WGAN(Model):
                 'psnr': psnr_hist,
                 'c_loss': c_loss_hist,
                 'real_l1': real_l1_hist,
-                'fake_l1': fake_l1_hist}
+                'fake_l1': fake_l1_hist,
+                'val_g_loss': val_g_loss_hist,
+                'val_ssim': val_ssim_hist,
+                'val_psnr': val_psnr_hist,
+                'val_c_loss': val_c_loss_hist,
+                'val_real_l1': val_real_l1_hist,
+                'val_fake_l1': val_fake_l1_hist}
