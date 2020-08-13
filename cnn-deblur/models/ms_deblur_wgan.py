@@ -116,7 +116,8 @@ class MSDeblurWGAN(WGAN):
     def __init__(self,
                  input_shape: Tuple[int, int, int],
                  use_elu: Optional[bool] = False,
-                 num_res_blocks: Optional[int] = 19):
+                 num_res_blocks: Optional[int] = 19,
+                 learning_rate: Optional[float] = 1e-4):
         # Build generator and critic
         generator = create_generator(input_shape,
                                      use_elu,
@@ -136,9 +137,9 @@ class MSDeblurWGAN(WGAN):
                         fake_logits: tf.Tensor):
             return tf.reduce_mean(fake_logits) - tf.reduce_mean(real_logits)
 
-        # Set optimizers as Adam with lr=1e-4
-        g_optimizer = Adam(lr=1e-4)
-        c_optimizer = Adam(lr=1e-4)
+        # Set optimizers as Adam with given learning_rate
+        g_optimizer = Adam(lr=learning_rate)
+        c_optimizer = Adam(lr=learning_rate)
 
         super(MSDeblurWGAN, self).__init__(generator, critic, generator_loss, critic_loss, g_optimizer, c_optimizer)
 
