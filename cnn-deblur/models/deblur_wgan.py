@@ -368,11 +368,11 @@ class DeblurWGan(Model):
               validation_steps: Optional[int] = None,
               checkpoint_dir: Optional[str] = None):
         if isinstance(train_data, tf.data.Dataset):
-            self.__train_on_dataset(train_data, epochs, steps_per_epoch,
-                                    initial_epoch, validation_data, validation_steps, checkpoint_dir)
+            return self.__train_on_dataset(train_data, epochs, steps_per_epoch,
+                                           initial_epoch, validation_data, validation_steps, checkpoint_dir)
         elif isinstance(train_data, Tuple):
-            self.__train_on_tensor(train_data, epochs, steps_per_epoch,
-                                   initial_epoch, validation_data, validation_steps, checkpoint_dir)
+            return self.__train_on_tensor(train_data, epochs, steps_per_epoch,
+                                          initial_epoch, validation_data, validation_steps, checkpoint_dir)
 
     def __train_on_dataset(self,
                            train_data: tf.data.Dataset,
@@ -382,6 +382,19 @@ class DeblurWGan(Model):
                            validation_data: Optional[tf.data.Dataset] = None,
                            validation_steps: Optional[int] = None,
                            checkpoint_dir: Optional[str] = None):
+        # Set up lists that will contain training history
+        g_loss_hist = []
+        ssim_hist = []
+        psnr_hist = []
+        c_loss_hist = []
+        real_l1_hist = []
+        fake_l1_hist = []
+        val_g_loss_hist = []
+        val_ssim_hist = []
+        val_psnr_hist = []
+        val_c_loss_hist = []
+        val_real_l1_hist = []
+        val_fake_l1_hist = []
         for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
             print('=' * 50)
             print('Epoch {:d}/{:d}'.format(ep, epochs))
@@ -407,14 +420,30 @@ class DeblurWGan(Model):
                 real_l1_metrics.append(step_result['real_l1'])
                 fake_l1_metrics.append(step_result['fake_l1'])
 
+            # Compute mean losses and metrics
+            g_loss_mean = np.mean(g_losses)
+            ssim_mean = np.mean(ssim_metrics)
+            psnr_mean = np.mean(psnr_metrics)
+            c_loss_mean = np.mean(c_losses)
+            real_l1_mean = np.mean(real_l1_metrics)
+            fake_l1_mean = np.mean(fake_l1_metrics)
+
             # Display training results
             train_results = 'g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f} - '.format(
-                np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
+                g_loss_mean, ssim_mean, psnr_mean
             )
             train_results += 'c_loss: {:.4f} - real_l1: {:.4f} - fake_l1: {:.4f}'.format(
-                np.mean(c_losses), np.mean(real_l1_metrics), np.mean(fake_l1_metrics)
+                c_loss_mean, real_l1_mean, fake_l1_mean
             )
             print(train_results)
+
+            # Save results in training history
+            g_loss_hist.append(g_loss_mean)
+            ssim_hist.append(ssim_mean)
+            psnr_hist.append(psnr_mean)
+            c_loss_hist.append(c_loss_mean)
+            real_l1_hist.append(real_l1_mean)
+            fake_l1_hist.append(fake_l1_mean)
 
             # Perform validation if required
             if validation_data is not None and validation_steps is not None:
@@ -436,31 +465,55 @@ class DeblurWGan(Model):
                     val_real_l1_metrics.append(step_result['val_real_l1'])
                     val_fake_l1_metrics.append(step_result['val_fake_l1'])
 
+                # Compute mean losses and metrics
+                val_g_loss_mean = np.mean(val_g_losses)
+                val_ssim_mean = np.mean(val_ssim_metrics)
+                val_psnr_mean = np.mean(val_psnr_metrics)
+                val_c_loss_mean = np.mean(val_c_losses)
+                val_real_l1_mean = np.mean(val_real_l1_metrics)
+                val_fake_l1_mean = np.mean(val_fake_l1_metrics)
+
                 # Display validation results
                 val_results = 'val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f} - '.format(
-                    np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics),
+                    val_g_loss_mean, val_ssim_mean, val_psnr_mean
                 )
                 val_results += 'val_c_loss: {:.4f} - val_real_l1: {:.4f} - val_fake_l1: {:.4f}'.format(
-                    np.mean(val_c_losses), np.mean(val_real_l1_metrics), np.mean(val_fake_l1_metrics),
+                    val_c_loss_mean, val_real_l1_mean, val_fake_l1_mean
                 )
                 print(val_results)
+
+                # Save results in training history
+                val_g_loss_hist.append(val_g_loss_mean)
+                val_ssim_hist.append(val_ssim_mean)
+                val_psnr_hist.append(val_psnr_mean)
+                val_c_loss_hist.append(val_c_loss_mean)
+                val_real_l1_hist.append(val_real_l1_mean)
+                val_fake_l1_hist.append(val_fake_l1_mean)
 
             # Save model every 15 epochs if required
             if checkpoint_dir is not None and ep % 15 == 0:
                 print('Saving generator\'s model...', end='')
                 self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
-                        ep, np.mean(ssim_metrics), np.mean(psnr_metrics)
+                        ep, ssim_mean, psnr_mean
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-real_l1:{:.4f}-fake_l1:{:.4f}.h5').format(
-                        ep, np.mean(real_l1_metrics), np.mean(fake_l1_metrics)
+                        ep, real_l1_mean, fake_l1_mean
                     )
                 )
                 print(' OK')
+
+        # Return history
+        return {'g_loss': g_loss_hist,
+                'ssim': ssim_hist,
+                'psnr': psnr_hist,
+                'c_loss': c_loss_hist,
+                'real_l1': real_l1_hist,
+                'fake_l1': fake_l1_hist}
 
     def __train_on_tensor(self,
                           train_data: Tuple[np.ndarray, np.ndarray],
@@ -474,6 +527,19 @@ class DeblurWGan(Model):
         val_batch_size = validation_data[0].shape[0] \
             if validation_data is not None and validation_steps is not None \
             else None
+        # Set up lists that will contain training history
+        g_loss_hist = []
+        ssim_hist = []
+        psnr_hist = []
+        c_loss_hist = []
+        real_l1_hist = []
+        fake_l1_hist = []
+        val_g_loss_hist = []
+        val_ssim_hist = []
+        val_psnr_hist = []
+        val_c_loss_hist = []
+        val_real_l1_hist = []
+        val_fake_l1_hist = []
         for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
             print('=' * 50)
             print('Epoch {:d}/{:d}'.format(ep, epochs))
@@ -507,14 +573,30 @@ class DeblurWGan(Model):
                 real_l1_metrics.append(step_result['real_l1'])
                 fake_l1_metrics.append(step_result['fake_l1'])
 
+            # Compute mean losses and metrics
+            g_loss_mean = np.mean(g_losses)
+            ssim_mean = np.mean(ssim_metrics)
+            psnr_mean = np.mean(psnr_metrics)
+            c_loss_mean = np.mean(c_losses)
+            real_l1_mean = np.mean(real_l1_metrics)
+            fake_l1_mean = np.mean(fake_l1_metrics)
+
             # Display training results
             train_results = 'g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f} - '.format(
-                np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
+                g_loss_mean, ssim_mean, psnr_mean
             )
             train_results += 'c_loss: {:.4f} - real_l1: {:.4f} - fake_l1: {:.4f}'.format(
-                np.mean(c_losses), np.mean(real_l1_metrics), np.mean(fake_l1_metrics)
+                c_loss_mean, real_l1_mean, fake_l1_mean
             )
             print(train_results)
+
+            # Save results in training history
+            g_loss_hist.append(g_loss_mean)
+            ssim_hist.append(ssim_mean)
+            psnr_hist.append(psnr_mean)
+            c_loss_hist.append(c_loss_mean)
+            real_l1_hist.append(real_l1_mean)
+            fake_l1_hist.append(fake_l1_mean)
 
             # Perform validation if required
             if validation_data is not None and validation_steps is not None:
@@ -544,31 +626,55 @@ class DeblurWGan(Model):
                     val_real_l1_metrics.append(step_result['val_real_l1'])
                     val_fake_l1_metrics.append(step_result['val_fake_l1'])
 
+                # Compute mean losses and metrics
+                val_g_loss_mean = np.mean(val_g_losses)
+                val_ssim_mean = np.mean(val_ssim_metrics)
+                val_psnr_mean = np.mean(val_psnr_metrics)
+                val_c_loss_mean = np.mean(val_c_losses)
+                val_real_l1_mean = np.mean(val_real_l1_metrics)
+                val_fake_l1_mean = np.mean(val_fake_l1_metrics)
+
                 # Display validation results
                 val_results = 'val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f} - '.format(
-                    np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics),
+                    val_g_loss_mean, val_ssim_mean, val_psnr_mean
                 )
                 val_results += 'val_c_loss: {:.4f} - val_real_l1: {:.4f} - val_fake_l1: {:.4f}'.format(
-                    np.mean(val_c_losses), np.mean(val_real_l1_metrics), np.mean(val_fake_l1_metrics),
+                    val_c_loss_mean, val_real_l1_mean, val_fake_l1_mean
                 )
                 print(val_results)
+
+                # Save results in training history
+                val_g_loss_hist.append(val_g_loss_mean)
+                val_ssim_hist.append(val_ssim_mean)
+                val_psnr_hist.append(val_psnr_mean)
+                val_c_loss_hist.append(val_c_loss_mean)
+                val_real_l1_hist.append(val_real_l1_mean)
+                val_fake_l1_hist.append(val_fake_l1_mean)
 
             # Save model every 15 epochs if required
             if checkpoint_dir is not None and ep % 15 == 0:
                 print('Saving generator\'s model...', end='')
                 self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
-                        ep, np.mean(ssim_metrics), np.mean(psnr_metrics)
+                        ep, ssim_mean, psnr_mean
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-real_l1:{:.4f}-fake_l1:{:.4f}.h5').format(
-                        ep, np.mean(real_l1_metrics), np.mean(fake_l1_metrics)
+                        ep, real_l1_mean, fake_l1_mean
                     )
                 )
                 print(' OK')
+
+        # Return history
+        return {'g_loss': g_loss_hist,
+                'ssim': ssim_hist,
+                'psnr': psnr_hist,
+                'c_loss': c_loss_hist,
+                'real_l1': real_l1_hist,
+                'fake_l1': fake_l1_hist}
 
     def distributed_train(self,
                           train_data: tf.data.Dataset,
@@ -579,6 +685,19 @@ class DeblurWGan(Model):
                           validation_data: Optional[tf.data.Dataset] = None,
                           validation_steps: Optional[int] = None,
                           checkpoint_dir: Optional[str] = None):
+        # Set up lists that will contain training history
+        g_loss_hist = []
+        ssim_hist = []
+        psnr_hist = []
+        c_loss_hist = []
+        real_l1_hist = []
+        fake_l1_hist = []
+        val_g_loss_hist = []
+        val_ssim_hist = []
+        val_psnr_hist = []
+        val_c_loss_hist = []
+        val_real_l1_hist = []
+        val_fake_l1_hist = []
         for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
             print('=' * 50)
             print('Epoch {:d}/{:d}'.format(ep, epochs))
@@ -604,14 +723,30 @@ class DeblurWGan(Model):
                 real_l1_metrics.append(step_result['real_l1'])
                 fake_l1_metrics.append(step_result['fake_l1'])
 
+            # Compute mean losses and metrics
+            g_loss_mean = np.mean(g_losses)
+            ssim_mean = np.mean(ssim_metrics)
+            psnr_mean = np.mean(psnr_metrics)
+            c_loss_mean = np.mean(c_losses)
+            real_l1_mean = np.mean(real_l1_metrics)
+            fake_l1_mean = np.mean(fake_l1_metrics)
+
             # Display training results
             train_results = 'g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f} - '.format(
-                np.mean(g_losses), np.mean(ssim_metrics), np.mean(psnr_metrics)
+                g_loss_mean, ssim_mean, psnr_mean
             )
             train_results += 'c_loss: {:.4f} - real_l1: {:.4f} - fake_l1: {:.4f}'.format(
-                np.mean(c_losses), np.mean(real_l1_metrics), np.mean(fake_l1_metrics)
+                c_loss_mean, real_l1_mean, fake_l1_mean
             )
             print(train_results)
+
+            # Save results in training history
+            g_loss_hist.append(g_loss_mean)
+            ssim_hist.append(ssim_mean)
+            psnr_hist.append(psnr_mean)
+            c_loss_hist.append(c_loss_mean)
+            real_l1_hist.append(real_l1_mean)
+            fake_l1_hist.append(fake_l1_mean)
 
             # Perform validation if required
             if validation_data is not None and validation_steps is not None:
@@ -633,28 +768,52 @@ class DeblurWGan(Model):
                     val_real_l1_metrics.append(step_result['val_real_l1'])
                     val_fake_l1_metrics.append(step_result['val_fake_l1'])
 
+                # Compute mean losses and metrics
+                val_g_loss_mean = np.mean(val_g_losses)
+                val_ssim_mean = np.mean(val_ssim_metrics)
+                val_psnr_mean = np.mean(val_psnr_metrics)
+                val_c_loss_mean = np.mean(val_c_losses)
+                val_real_l1_mean = np.mean(val_real_l1_metrics)
+                val_fake_l1_mean = np.mean(val_fake_l1_metrics)
+
                 # Display validation results
                 val_results = 'val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f} - '.format(
-                    np.mean(val_g_losses), np.mean(val_ssim_metrics), np.mean(val_psnr_metrics),
+                    val_g_loss_mean, val_ssim_mean, val_psnr_mean
                 )
                 val_results += 'val_c_loss: {:.4f} - val_real_l1: {:.4f} - val_fake_l1: {:.4f}'.format(
-                    np.mean(val_c_losses), np.mean(val_real_l1_metrics), np.mean(val_fake_l1_metrics),
+                    val_c_loss_mean, val_real_l1_mean, val_fake_l1_mean
                 )
                 print(val_results)
+
+                # Save results in training history
+                val_g_loss_hist.append(val_g_loss_mean)
+                val_ssim_hist.append(val_ssim_mean)
+                val_psnr_hist.append(val_psnr_mean)
+                val_c_loss_hist.append(val_c_loss_mean)
+                val_real_l1_hist.append(val_real_l1_mean)
+                val_fake_l1_hist.append(val_fake_l1_mean)
 
             # Save model every 15 epochs if required
             if checkpoint_dir is not None and ep % 15 == 0:
                 print('Saving generator\'s model...', end='')
                 self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
-                        ep, np.mean(ssim_metrics), np.mean(psnr_metrics)
+                        ep, ssim_mean, psnr_mean
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-real_l1:{:.4f}-fake_l1:{:.4f}.h5').format(
-                        ep, np.mean(real_l1_metrics), np.mean(fake_l1_metrics)
+                        ep, real_l1_mean, fake_l1_mean
                     )
                 )
                 print(' OK')
+
+        # Return history
+        return {'g_loss': g_loss_hist,
+                'ssim': ssim_hist,
+                'psnr': psnr_hist,
+                'c_loss': c_loss_hist,
+                'real_l1': real_l1_hist,
+                'fake_l1': fake_l1_hist}
