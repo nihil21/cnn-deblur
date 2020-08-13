@@ -24,6 +24,7 @@
       <w>maxpool</w>
       <w>multiscale</w>
       <w>orlandi</w>
+      <w>patchgan</w>
       <w>pinardi</w>
       <w>preproc</w>
       <w>preprocessing</w>
@@ -49,6 +50,7 @@
       <w>upscales</w>
       <w>wasserstein</w>
       <w>wassertein</w>
+      <w>wgan</w>
     </words>
   </dictionary>
 </component>
