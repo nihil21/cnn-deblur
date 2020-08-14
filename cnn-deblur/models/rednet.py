@@ -9,7 +9,8 @@ def encode(in_layer: Layer,
            filters: Optional[int] = 64,
            kernel_size: Optional[int] = 3,
            strides: Optional[int] = 1,
-           padding: Optional[str] = 'same') -> List[Layer]:
+           padding: Optional[str] = 'same',
+           scale_id: Optional[str] = '') -> List[Layer]:
     layers = []
     x = in_layer
     for i in range(num_layers):
@@ -17,9 +18,9 @@ def encode(in_layer: Layer,
                    kernel_size=kernel_size,
                    strides=strides,
                    padding=padding,
-                   name='encode_conv{:d}'.format(i))(x)
-        x = ELU(name='encode_act{:d}'.format(i))(x)
-        x = BatchNormalization(name='encode_bn{:d}'.format(i))(x)
+                   name='encode_conv{:d}{:s}'.format(i, scale_id))(x)
+        x = ELU(name='encode_act{:d}{:s}'.format(i, scale_id))(x)
+        x = BatchNormalization(name='encode_bn{:d}{:s}'.format(i, scale_id))(x)
         layers.append(x)
     return layers
 
@@ -29,7 +30,8 @@ def decode(res_layers: List[Layer],
            filters: Optional[int] = 64,
            kernel_size: Optional[int] = 3,
            strides: Optional[int] = 1,
-           padding: Optional[str] = 'same') -> List[Layer]:
+           padding: Optional[str] = 'same',
+           scale_id: Optional[str] = '') -> List[Layer]:
     layers = []
     res_layers.reverse()
     x = res_layers[0]
@@ -38,11 +40,11 @@ def decode(res_layers: List[Layer],
                    kernel_size=kernel_size,
                    strides=strides,
                    padding=padding,
-                   name='decode_conv{:d}'.format(i))(x)
+                   name='decode_conv{:d}{:s}'.format(i, scale_id))(x)
         if i % 2 != 0:
-            x = Add(name='decode_skip{:d}'.format(i))([x, res_layers[i]])
-        x = ELU(name='decode_act{:d}'.format(i))(x)
-        x = BatchNormalization(name='decode_bn{:d}'.format(i))(x)
+            x = Add(name='decode_skip{:d}{:s}'.format(i, scale_id))([x, res_layers[i]])
+        x = ELU(name='decode_act{:d}{:s}'.format(i, scale_id))(x)
+        x = BatchNormalization(name='decode_bn{:d}{:s}'.format(i, scale_id))(x)
         layers.append(x)
 
     return layers
@@ -143,7 +145,7 @@ class MSREDNet30(ConvNet):
         # ENCODER
         in_layer3 = Input(shape=(input_shape[0] // 4, input_shape[1] // 4, input_shape[2]),
                           name='in_layer3')
-        encode_layers3 = encode(in_layer3)
+        encode_layers3 = encode(in_layer3, scale_id='3')
         # DECODER
         decode_layers3 = decode(encode_layers3)
         out_layer3 = Conv2DTranspose(filters=3,
@@ -162,7 +164,7 @@ class MSREDNet30(ConvNet):
                                    strides=2,
                                    padding='same')(out_layer3)
         concat2 = concatenate([in_layer2, up_conv2])
-        encode_layers2 = encode(concat2)
+        encode_layers2 = encode(concat2, scale_id='2')
         # DECODER
         decode_layers2 = decode(encode_layers2)
         out_layer2 = Conv2DTranspose(filters=3,
@@ -181,7 +183,7 @@ class MSREDNet30(ConvNet):
                                    strides=2,
                                    padding='same')(out_layer2)
         concat1 = concatenate([in_layer1, up_conv1])
-        encode_layers1 = encode(concat1)
+        encode_layers1 = encode(concat1, scale_id='1')
         # DECODER
         decode_layers1 = decode(encode_layers1)
         out_layer1 = Conv2DTranspose(filters=3,
