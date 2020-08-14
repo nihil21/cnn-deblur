@@ -147,7 +147,7 @@ class MSREDNet30(ConvNet):
                           name='in_layer3')
         encode_layers3 = encode(in_layer3, scale_id='3')
         # DECODER
-        decode_layers3 = decode(encode_layers3)
+        decode_layers3 = decode(encode_layers3, scale_id='3')
         out_layer3 = Conv2DTranspose(filters=3,
                                      kernel_size=1,
                                      strides=1,
@@ -166,7 +166,7 @@ class MSREDNet30(ConvNet):
         concat2 = concatenate([in_layer2, up_conv2])
         encode_layers2 = encode(concat2, scale_id='2')
         # DECODER
-        decode_layers2 = decode(encode_layers2)
+        decode_layers2 = decode(encode_layers2, scale_id='2')
         out_layer2 = Conv2DTranspose(filters=3,
                                      kernel_size=1,
                                      strides=1,
@@ -185,7 +185,7 @@ class MSREDNet30(ConvNet):
         concat1 = concatenate([in_layer1, up_conv1])
         encode_layers1 = encode(concat1, scale_id='1')
         # DECODER
-        decode_layers1 = decode(encode_layers1)
+        decode_layers1 = decode(encode_layers1, scale_id='1')
         out_layer1 = Conv2DTranspose(filters=3,
                                      kernel_size=1,
                                      strides=1,
