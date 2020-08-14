@@ -1,5 +1,5 @@
 from models.conv_net import ConvNet
-from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, BatchNormalization
+from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, BatchNormalization, concatenate
 from tensorflow.keras.models import Model
 from typing import Tuple, List, Optional
 
@@ -134,3 +134,63 @@ class REDNet30(ConvNet):
         output = ELU(name='output_elu')(output)
 
         self.model = Model(inputs=visible, outputs=output)
+
+
+class MSREDNet30(ConvNet):
+    def __init__(self, input_shape: Tuple[int, int, int]):
+        super().__init__()
+        # --- Coarsest branch ---
+        # ENCODER
+        in_layer3 = Input(shape=(input_shape[0] // 4, input_shape[1] // 4, input_shape[2]),
+                          name='in_layer3')
+        encode_layers3 = encode(in_layer3)
+        # DECODER
+        decode_layers3 = decode(encode_layers3)
+        out_layer3 = Conv2DTranspose(filters=3,
+                                     kernel_size=1,
+                                     strides=1,
+                                     padding='same',
+                                     name='output_conv3')(decode_layers3[-1])
+        out_layer3 = Add(name='output_skip3')([out_layer3, in_layer3])
+        out_layer3 = ELU(name='output_elu3')(out_layer3)
+        # --- Middle branch ---
+        # ENCODER
+        in_layer2 = Input(shape=(input_shape[0] // 2, input_shape[1] // 2, input_shape[2]),
+                          name='in_layer2')
+        up_conv2 = Conv2DTranspose(filters=64,
+                                   kernel_size=5,
+                                   strides=2,
+                                   padding='same')(out_layer3)
+        concat2 = concatenate([in_layer2, up_conv2])
+        encode_layers2 = encode(concat2)
+        # DECODER
+        decode_layers2 = decode(encode_layers2)
+        out_layer2 = Conv2DTranspose(filters=3,
+                                     kernel_size=1,
+                                     strides=1,
+                                     padding='same',
+                                     name='output_conv2')(decode_layers2[-1])
+        out_layer2 = Add(name='output_skip2')([out_layer2, in_layer2])
+        out_layer2 = ELU(name='output_elu2')(out_layer2)
+        # --- Finest branch ---
+        # ENCODER
+        in_layer1 = Input(shape=input_shape,
+                          name='in_layer1')
+        up_conv1 = Conv2DTranspose(filters=64,
+                                   kernel_size=5,
+                                   strides=2,
+                                   padding='same')(out_layer2)
+        concat1 = concatenate([in_layer1, up_conv1])
+        encode_layers1 = encode(concat1)
+        # DECODER
+        decode_layers1 = decode(encode_layers1)
+        out_layer1 = Conv2DTranspose(filters=3,
+                                     kernel_size=1,
+                                     strides=1,
+                                     padding='same',
+                                     name='output_conv1')(decode_layers1[-1])
+        out_layer1 = Add(name='output_skip1')([out_layer1, in_layer1])
+        out_layer1 = ELU(name='output_elu1')(out_layer1)
+
+        self.model = Model(inputs=[in_layer1, in_layer2, in_layer3],
+                           outputs=[out_layer1, out_layer2, out_layer3])
