@@ -4,6 +4,7 @@ import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, Activation, ELU, LeakyReLU, BatchNormalization
 from tensorflow.keras.optimizers import Optimizer
+from utils.custom_metrics import ssim, psnr
 from tqdm import notebook
 from typing import Optional, Callable, Tuple, Union
 
@@ -155,12 +156,10 @@ class WGAN:
         self.g_optimizer.apply_gradients(zip(g_grad, self.generator.trainable_variables))
 
         # Compute metrics
-        ssim_metric = tf.image.ssim(sharp_batch,
-                                    tf.cast(generated_batch, dtype='bfloat16'),
-                                    max_val=2.)
-        psnr_metric = tf.image.psnr(sharp_batch,
-                                    tf.cast(generated_batch, dtype='bfloat16'),
-                                    max_val=2.)
+        ssim_metric = ssim(sharp_batch,
+                           generated_batch)
+        psnr_metric = psnr(sharp_batch,
+                           generated_batch)
         real_l1_metric = tf.abs(tf.ones_like(real_logits) - real_logits)
         fake_l1_metric = tf.abs(-tf.ones_like(fake_logits) - fake_logits)
 
@@ -212,12 +211,10 @@ class WGAN:
         g_loss = self.g_loss(sharp_batch, generated_batch, fake_logits)
 
         # Compute metrics
-        ssim_metric = tf.image.ssim(sharp_batch,
-                                    generated_batch,
-                                    max_val=2.)
-        psnr_metric = tf.image.psnr(sharp_batch,
-                                    generated_batch,
-                                    max_val=2.)
+        ssim_metric = ssim(sharp_batch,
+                           generated_batch)
+        psnr_metric = psnr(sharp_batch,
+                           generated_batch)
         real_l1_metric = tf.abs(tf.ones_like(real_logits) - real_logits)
         fake_l1_metric = tf.abs(-tf.ones_like(fake_logits) - fake_logits)
 
