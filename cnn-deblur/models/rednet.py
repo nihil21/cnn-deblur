@@ -323,7 +323,7 @@ class MSREDNet30:
                 step_result = self.distributed_train_step(tf.cast(batch, dtype='float32'), strategy)
 
                 # Collect results
-                losses.append(step_result['g_loss'])
+                losses.append(step_result['loss'])
                 ssim_metrics.append(step_result['ssim'])
                 psnr_metrics.append(step_result['psnr'])
 
@@ -333,7 +333,7 @@ class MSREDNet30:
             psnr_mean = np.mean(psnr_metrics)
 
             # Display training results
-            train_results = 'g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
+            train_results = 'loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
                 loss_mean, ssim_mean, psnr_mean
             )
             print(train_results)
