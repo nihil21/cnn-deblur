@@ -1,6 +1,10 @@
 from models.conv_net import ConvNet
+import tensorflow as tf
 from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, BatchNormalization, concatenate
 from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
+from utils.custom_losses import ms_mse
+from utils.custom_metrics import ssim, psnr
 from typing import Tuple, List, Optional
 
 
@@ -138,9 +142,10 @@ class REDNet30(ConvNet):
         self.model = Model(inputs=visible, outputs=output)
 
 
-class MSREDNet30(ConvNet):
-    def __init__(self, input_shape: Tuple[int, int, int]):
-        super().__init__()
+class MSREDNet30:
+    def __init__(self,
+                 input_shape: Tuple[int, int, int],
+                 learning_rate: Optional[int] = 1e-4):
         # --- Coarsest branch ---
         # ENCODER
         in_layer3 = Input(shape=(input_shape[0] // 4, input_shape[1] // 4, input_shape[2]),
@@ -194,5 +199,77 @@ class MSREDNet30(ConvNet):
         out_layer1 = Add(name='output_skip1')([out_layer1, in_layer1])
         out_layer1 = ELU(name='output_elu1')(out_layer1)
 
+        # Build model
         self.model = Model(inputs=[in_layer1, in_layer2, in_layer3],
                            outputs=[out_layer1, out_layer2, out_layer3])
+
+        # Set loss function and optimizer
+        self.loss = ms_mse
+        self.optimizer = Adam(lr=learning_rate)
+
+    @tf.function
+    def train_step(self,
+                   train_batch: Tuple[tf.Tensor, tf.Tensor]):
+        # Determine batch size, height and width
+        height = train_batch[0].shape[1]
+        width = train_batch[0].shape[2]
+        # Prepare Gaussian pyramid
+        blurred_batch1 = train_batch[0]
+        sharp_batch1 = train_batch[1]
+        blurred_batch2 = tf.image.resize(train_batch[0], size=(height // 2, width // 2))
+        sharp_batch2 = tf.image.resize(train_batch[1], size=(height // 2, width // 2))
+        blurred_batch3 = tf.image.resize(train_batch[0], size=(height // 4, width // 4))
+        sharp_batch3 = tf.image.resize(train_batch[1], size=(height // 4, width // 4))
+        blurred_pyramid = [blurred_batch1, blurred_batch2, blurred_batch3]
+        sharp_pyramid = [sharp_batch1, sharp_batch2, sharp_batch3]
+
+        # Train the generator
+        with tf.GradientTape() as tape:
+            # Make predictions
+            predicted_pyramid = self.model(blurred_pyramid, training=True)
+            # Calculate model's loss
+            loss = self.loss(sharp_pyramid, predicted_pyramid)
+        # Get gradient w.r.t. model's loss and update weights
+        grad = tape.gradient(loss, self.model.trainable_variables)
+        self.optimizer.apply_gradients(zip(grad, self.model.trainable_variables))
+
+        # Compute metrics
+        ssim_metric = ssim(sharp_pyramid[0],
+                           tf.cast(predicted_pyramid[0], dtype='bfloat16'))
+        psnr_metric = psnr(sharp_pyramid[0],
+                           tf.cast(predicted_pyramid[0], dtype='bfloat16'))
+
+        return {'loss': loss,
+                'ssim': tf.reduce_mean(ssim_metric),
+                'psnr': tf.reduce_mean(psnr_metric)}
+
+    @tf.function
+    def test_step(self,
+                  val_batch: Tuple[tf.Tensor, tf.Tensor]):
+        # Determine height and width
+        height = val_batch[0].shape[1]
+        width = val_batch[0].shape[2]
+        # Prepare Gaussian pyramid
+        blurred_batch1 = val_batch[0]
+        sharp_batch1 = val_batch[1]
+        blurred_batch2 = tf.image.resize(val_batch[0], size=(height // 2, width // 2))
+        sharp_batch2 = tf.image.resize(val_batch[1], size=(height // 2, width // 2))
+        blurred_batch3 = tf.image.resize(val_batch[0], size=(height // 4, width // 4))
+        sharp_batch3 = tf.image.resize(val_batch[1], size=(height // 4, width // 4))
+        blurred_pyramid = [blurred_batch1, blurred_batch2, blurred_batch3]
+        sharp_pyramid = [sharp_batch1, sharp_batch2, sharp_batch3]
+
+        # Make predictions
+        predicted_pyramid = self.model(blurred_pyramid, training=False)
+        # Calculate model's loss
+        loss = self.loss(sharp_pyramid, predicted_pyramid)
+
+        # Compute metrics
+        ssim_metric = ssim(sharp_pyramid[0],
+                           tf.cast(predicted_pyramid[0], dtype='bfloat16'))
+        psnr_metric = psnr(sharp_pyramid[0],
+                           tf.cast(predicted_pyramid[0], dtype='bfloat16'))
+
+        return {'loss': loss,
+                'ssim': tf.reduce_mean(ssim_metric),
+                'psnr': tf.reduce_mean(psnr_metric)}
