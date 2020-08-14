@@ -214,7 +214,7 @@ class MSDeblurWGAN(WGAN):
                 'fake_l1': tf.reduce_mean(fake_l1_metric)}
 
     @tf.function
-    def eval_step(self,
+    def test_step(self,
                   val_batch: Tuple[tf.Tensor, tf.Tensor]):
         # Determine height and width
         height = val_batch[0].shape[1]

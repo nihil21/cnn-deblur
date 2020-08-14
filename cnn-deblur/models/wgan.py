@@ -66,7 +66,7 @@ def create_patchgan_critic(input_shape,
     return Model(inputs=in_layer, outputs=out_layer, name='Critic')
 
 
-class WGAN(Model):
+class WGAN:
     def __init__(self,
                  generator: Model,
                  critic: Model,
@@ -74,7 +74,6 @@ class WGAN(Model):
                  c_loss: Callable,
                  g_optimizer: Optimizer,
                  c_optimizer: Optimizer):
-        super(WGAN, self).__init__()
         # Set generator and critic
         self.generator = generator
         self.critic = critic
@@ -197,7 +196,7 @@ class WGAN(Model):
                 'fake_l1': reduced_fake_l1}
 
     @tf.function
-    def eval_step(self,
+    def test_step(self,
                   val_batch: Tuple[tf.Tensor, tf.Tensor]):
         blurred_batch = val_batch[0]
         sharp_batch = val_batch[1]
@@ -222,36 +221,36 @@ class WGAN(Model):
         real_l1_metric = tf.abs(tf.ones_like(real_logits) - real_logits)
         fake_l1_metric = tf.abs(-tf.ones_like(fake_logits) - fake_logits)
 
-        return {'val_g_loss': g_loss,
-                'val_ssim': tf.reduce_mean(ssim_metric),
-                'val_psnr': tf.reduce_mean(psnr_metric),
-                'val_c_loss': c_loss,
-                'val_real_l1': tf.reduce_mean(real_l1_metric),
-                'val_fake_l1': tf.reduce_mean(fake_l1_metric)}
+        return {'g_loss': g_loss,
+                'ssim': tf.reduce_mean(ssim_metric),
+                'psnr': tf.reduce_mean(psnr_metric),
+                'c_loss': c_loss,
+                'real_l1': tf.reduce_mean(real_l1_metric),
+                'fake_l1': tf.reduce_mean(fake_l1_metric)}
 
-    def train(self,
-              train_data: Union[tf.data.Dataset, np.ndarray],
-              epochs: int,
-              steps_per_epoch: int,
-              initial_epoch: Optional[int] = 1,
-              validation_data: Optional[tf.data.Dataset] = None,
-              validation_steps: Optional[int] = None,
-              checkpoint_dir: Optional[str] = None):
+    def fit(self,
+            train_data: Union[tf.data.Dataset, np.ndarray],
+            epochs: int,
+            steps_per_epoch: int,
+            initial_epoch: Optional[int] = 1,
+            validation_data: Optional[tf.data.Dataset] = None,
+            validation_steps: Optional[int] = None,
+            checkpoint_dir: Optional[str] = None):
         if isinstance(train_data, tf.data.Dataset):
-            return self.__train_on_dataset(train_data, epochs, steps_per_epoch,
-                                           initial_epoch, validation_data, validation_steps, checkpoint_dir)
+            return self.__fit_on_dataset(train_data, epochs, steps_per_epoch,
+                                         initial_epoch, validation_data, validation_steps, checkpoint_dir)
         elif isinstance(train_data, Tuple):
-            return self.__train_on_tensor(train_data, epochs, steps_per_epoch,
-                                          initial_epoch, validation_data, validation_steps, checkpoint_dir)
+            return self.__fit_on_tensor(train_data, epochs, steps_per_epoch,
+                                        initial_epoch, validation_data, validation_steps, checkpoint_dir)
 
-    def __train_on_dataset(self,
-                           train_data: tf.data.Dataset,
-                           epochs: int,
-                           steps_per_epoch: int,
-                           initial_epoch: Optional[int] = 1,
-                           validation_data: Optional[tf.data.Dataset] = None,
-                           validation_steps: Optional[int] = None,
-                           checkpoint_dir: Optional[str] = None):
+    def __fit_on_dataset(self,
+                         train_data: tf.data.Dataset,
+                         epochs: int,
+                         steps_per_epoch: int,
+                         initial_epoch: Optional[int] = 1,
+                         validation_data: Optional[tf.data.Dataset] = None,
+                         validation_steps: Optional[int] = None,
+                         checkpoint_dir: Optional[str] = None):
         # Set up lists that will contain training history
         g_loss_hist = []
         ssim_hist = []
@@ -325,15 +324,15 @@ class WGAN(Model):
                 val_fake_l1_metrics = []
                 for val_batch in notebook.tqdm(validation_data, total=validation_steps):
                     # Perform eval step
-                    step_result = self.eval_step(val_batch)
+                    step_result = self.test_step(val_batch)
 
                     # Collect results
-                    val_g_losses.append(step_result['val_g_loss'])
-                    val_ssim_metrics.append(step_result['val_ssim'])
-                    val_psnr_metrics.append(step_result['val_psnr'])
-                    val_c_losses.append(step_result['val_c_loss'])
-                    val_real_l1_metrics.append(step_result['val_real_l1'])
-                    val_fake_l1_metrics.append(step_result['val_fake_l1'])
+                    val_g_losses.append(step_result['g_loss'])
+                    val_ssim_metrics.append(step_result['ssim'])
+                    val_psnr_metrics.append(step_result['psnr'])
+                    val_c_losses.append(step_result['c_loss'])
+                    val_real_l1_metrics.append(step_result['real_l1'])
+                    val_fake_l1_metrics.append(step_result['fake_l1'])
 
                 # Compute mean losses and metrics
                 val_g_loss_mean = np.mean(val_g_losses)
@@ -391,14 +390,14 @@ class WGAN(Model):
                 'val_real_l1': val_real_l1_hist,
                 'val_fake_l1': val_fake_l1_hist}
 
-    def __train_on_tensor(self,
-                          train_data: Tuple[np.ndarray, np.ndarray],
-                          epochs: int,
-                          steps_per_epoch: int,
-                          initial_epoch: Optional[int] = 1,
-                          validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None,
-                          validation_steps: Optional[int] = None,
-                          checkpoint_dir: Optional[str] = None):
+    def __fit_on_tensor(self,
+                        train_data: Tuple[np.ndarray, np.ndarray],
+                        epochs: int,
+                        steps_per_epoch: int,
+                        initial_epoch: Optional[int] = 1,
+                        validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+                        validation_steps: Optional[int] = None,
+                        checkpoint_dir: Optional[str] = None):
         batch_size = train_data[0].shape[0]
         val_batch_size = validation_data[0].shape[0] \
             if validation_data is not None and validation_steps is not None \
@@ -492,15 +491,15 @@ class WGAN(Model):
                     val_sharp_batch = validation_data[1][val_batch_indexes]
 
                     # Perform eval step
-                    step_result = self.eval_step((val_blurred_batch, val_sharp_batch))
+                    step_result = self.test_step((val_blurred_batch, val_sharp_batch))
 
                     # Collect results
-                    val_g_losses.append(step_result['val_g_loss'])
-                    val_ssim_metrics.append(step_result['val_ssim'])
-                    val_psnr_metrics.append(step_result['val_psnr'])
-                    val_c_losses.append(step_result['val_c_loss'])
-                    val_real_l1_metrics.append(step_result['val_real_l1'])
-                    val_fake_l1_metrics.append(step_result['val_fake_l1'])
+                    val_g_losses.append(step_result['g_loss'])
+                    val_ssim_metrics.append(step_result['ssim'])
+                    val_psnr_metrics.append(step_result['psnr'])
+                    val_c_losses.append(step_result['c_loss'])
+                    val_real_l1_metrics.append(step_result['real_l1'])
+                    val_fake_l1_metrics.append(step_result['fake_l1'])
 
                 # Compute mean losses and metrics
                 val_g_loss_mean = np.mean(val_g_losses)
@@ -558,15 +557,15 @@ class WGAN(Model):
                 'val_real_l1': val_real_l1_hist,
                 'val_fake_l1': val_fake_l1_hist}
 
-    def distributed_train(self,
-                          train_data: tf.data.Dataset,
-                          epochs: int,
-                          steps_per_epoch: int,
-                          strategy: tf.distribute.Strategy,
-                          initial_epoch: Optional[int] = 1,
-                          validation_data: Optional[tf.data.Dataset] = None,
-                          validation_steps: Optional[int] = None,
-                          checkpoint_dir: Optional[str] = None):
+    def distributed_fit(self,
+                        train_data: tf.data.Dataset,
+                        epochs: int,
+                        steps_per_epoch: int,
+                        strategy: tf.distribute.Strategy,
+                        initial_epoch: Optional[int] = 1,
+                        validation_data: Optional[tf.data.Dataset] = None,
+                        validation_steps: Optional[int] = None,
+                        checkpoint_dir: Optional[str] = None):
         # Set up lists that will contain training history
         g_loss_hist = []
         ssim_hist = []
@@ -640,15 +639,15 @@ class WGAN(Model):
                 val_fake_l1_metrics = []
                 for val_batch in notebook.tqdm(validation_data, total=validation_steps):
                     # Perform eval step
-                    step_result = self.eval_step(tf.cast(val_batch, dtype='float32'))
+                    step_result = self.test_step(tf.cast(val_batch, dtype='float32'))
 
                     # Collect results
-                    val_g_losses.append(step_result['val_g_loss'])
-                    val_ssim_metrics.append(step_result['val_ssim'])
-                    val_psnr_metrics.append(step_result['val_psnr'])
-                    val_c_losses.append(step_result['val_c_loss'])
-                    val_real_l1_metrics.append(step_result['val_real_l1'])
-                    val_fake_l1_metrics.append(step_result['val_fake_l1'])
+                    val_g_losses.append(step_result['g_loss'])
+                    val_ssim_metrics.append(step_result['ssim'])
+                    val_psnr_metrics.append(step_result['psnr'])
+                    val_c_losses.append(step_result['c_loss'])
+                    val_real_l1_metrics.append(step_result['real_l1'])
+                    val_fake_l1_metrics.append(step_result['fake_l1'])
 
                 # Compute mean losses and metrics
                 val_g_loss_mean = np.mean(val_g_losses)
@@ -705,3 +704,41 @@ class WGAN(Model):
                 'val_c_loss': val_c_loss_hist,
                 'val_real_l1': val_real_l1_hist,
                 'val_fake_l1': val_fake_l1_hist}
+
+    def evaluate(self,
+                 test_data: tf.data.Dataset,
+                 steps: int):
+        g_losses = []
+        ssim_metrics = []
+        psnr_metrics = []
+        c_losses = []
+        real_l1_metrics = []
+        fake_l1_metrics = []
+        for batch in notebook.tqdm(test_data, total=steps):
+            # Perform test step
+            step_result = self.test_step(tf.cast(batch, dtype='float32'))
+
+            # Collect results
+            g_losses.append(step_result['g_loss'])
+            ssim_metrics.append(step_result['ssim'])
+            psnr_metrics.append(step_result['psnr'])
+            c_losses.append(step_result['c_loss'])
+            real_l1_metrics.append(step_result['real_l1'])
+            fake_l1_metrics.append(step_result['fake_l1'])
+
+        # Compute mean losses and metrics
+        g_loss_mean = np.mean(g_losses)
+        ssim_mean = np.mean(ssim_metrics)
+        psnr_mean = np.mean(psnr_metrics)
+        c_loss_mean = np.mean(c_losses)
+        real_l1_mean = np.mean(real_l1_metrics)
+        fake_l1_mean = np.mean(fake_l1_metrics)
+
+        # Display validation results
+        results = 'g_loss: {:.4f}\nssim: {:.4f}\npsnr: {:.4f}\n'.format(
+            g_loss_mean, ssim_mean, psnr_mean
+        )
+        results += 'c_loss: {:.4f}\nreal_l1: {:.4f}\nfake_l1: {:.4f}'.format(
+            c_loss_mean, real_l1_mean, fake_l1_mean
+        )
+        print(results)
