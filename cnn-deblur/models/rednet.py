@@ -1,10 +1,13 @@
 from models.conv_net import ConvNet
+import os
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, BatchNormalization, concatenate
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from utils.custom_losses import ms_mse
 from utils.custom_metrics import ssim, psnr
+from tqdm import notebook
 from typing import Tuple, List, Optional
 
 
@@ -244,6 +247,21 @@ class MSREDNet30:
                 'psnr': tf.reduce_mean(psnr_metric)}
 
     @tf.function
+    def distributed_train_step(self,
+                               train_batch: tf.data.Dataset,
+                               strategy: Optional[tf.distribute.Strategy] = None):
+        per_replica_results = strategy.run(self.train_step, args=(train_batch,))
+        reduced_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
+                                       per_replica_results['loss'], axis=None)
+        reduced_ssim = strategy.reduce(tf.distribute.ReduceOp.MEAN,
+                                       per_replica_results['ssim'], axis=None)
+        reduced_psnr = strategy.reduce(tf.distribute.ReduceOp.MEAN,
+                                       per_replica_results['psnr'], axis=None)
+        return {'g_loss': reduced_loss,
+                'ssim': reduced_ssim,
+                'psnr': reduced_psnr}
+
+    @tf.function
     def test_step(self,
                   val_batch: Tuple[tf.Tensor, tf.Tensor]):
         # Determine height and width
@@ -273,3 +291,102 @@ class MSREDNet30:
         return {'loss': loss,
                 'ssim': tf.reduce_mean(ssim_metric),
                 'psnr': tf.reduce_mean(psnr_metric)}
+
+    def distributed_fit(self,
+                        train_data: tf.data.Dataset,
+                        epochs: int,
+                        steps_per_epoch: int,
+                        strategy: tf.distribute.Strategy,
+                        initial_epoch: Optional[int] = 1,
+                        validation_data: Optional[tf.data.Dataset] = None,
+                        validation_steps: Optional[int] = None,
+                        checkpoint_dir: Optional[str] = None):
+        # Set up lists that will contain training history
+        loss_hist = []
+        ssim_hist = []
+        psnr_hist = []
+        val_loss_hist = []
+        val_ssim_hist = []
+        val_psnr_hist = []
+        for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
+            print('=' * 50)
+            print('Epoch {:d}/{:d}'.format(ep, epochs))
+
+            # Set up lists that will contain losses and metrics for each epoch
+            losses = []
+            ssim_metrics = []
+            psnr_metrics = []
+
+            # Perform training
+            for batch in notebook.tqdm(train_data, total=steps_per_epoch):
+                # Perform train step
+                step_result = self.distributed_train_step(batch, strategy)
+
+                # Collect results
+                losses.append(step_result['g_loss'])
+                ssim_metrics.append(step_result['ssim'])
+                psnr_metrics.append(step_result['psnr'])
+
+            # Compute mean losses and metrics
+            loss_mean = np.mean(losses)
+            ssim_mean = np.mean(ssim_metrics)
+            psnr_mean = np.mean(psnr_metrics)
+
+            # Display training results
+            train_results = 'g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f} - '.format(
+                loss_mean, ssim_mean, psnr_mean
+            )
+            print(train_results)
+
+            # Save results in training history
+            loss_hist.append(loss_mean)
+            ssim_hist.append(ssim_mean)
+            psnr_hist.append(psnr_mean)
+
+            # Perform validation if required
+            if validation_data is not None and validation_steps is not None:
+                val_losses = []
+                val_ssim_metrics = []
+                val_psnr_metrics = []
+                for val_batch in notebook.tqdm(validation_data, total=validation_steps):
+                    # Perform eval step
+                    step_result = self.test_step(tf.cast(val_batch, dtype='float32'))
+
+                    # Collect results
+                    val_losses.append(step_result['g_loss'])
+                    val_ssim_metrics.append(step_result['ssim'])
+                    val_psnr_metrics.append(step_result['psnr'])
+
+                # Compute mean losses and metrics
+                val_loss_mean = np.mean(val_losses)
+                val_ssim_mean = np.mean(val_ssim_metrics)
+                val_psnr_mean = np.mean(val_psnr_metrics)
+
+                # Display validation results
+                val_results = 'val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f} - '.format(
+                    val_loss_mean, val_ssim_mean, val_psnr_mean
+                )
+                print(val_results)
+
+                # Save results in training history
+                val_loss_hist.append(val_loss_mean)
+                val_ssim_hist.append(val_ssim_mean)
+                val_psnr_hist.append(val_psnr_mean)
+
+            # Save model every 15 epochs if required
+            if checkpoint_dir is not None and ep % 15 == 0:
+                print('Saving model...', end='')
+                self.model.save_weights(
+                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
+                        ep, ssim_mean, psnr_mean
+                    )
+                )
+                print(' OK')
+
+        # Return history
+        return {'g_loss': loss_hist,
+                'ssim': ssim_hist,
+                'psnr': psnr_hist,
+                'val_loss': val_loss_hist,
+                'val_ssim': val_ssim_hist,
+                'val_psnr': val_psnr_hist}
