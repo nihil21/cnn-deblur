@@ -199,9 +199,9 @@ class MSDeblurWGAN(WGAN):
 
         # Compute metrics
         ssim_metric = ssim(sharp_pyramid[0],
-                           tf.cast(predicted_pyramid[0], dtype='bfloat16'))
+                           predicted_pyramid[0])
         psnr_metric = psnr(sharp_pyramid[0],
-                           tf.cast(predicted_pyramid[0], dtype='bfloat16'))
+                           predicted_pyramid[0])
         real_l1_metric = tf.abs(tf.ones_like(real_logits) - real_logits)
         fake_l1_metric = tf.abs(-tf.ones_like(fake_logits) - fake_logits)
 

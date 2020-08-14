@@ -276,7 +276,7 @@ class WGAN:
             # Perform training
             for train_batch in notebook.tqdm(train_data, total=steps_per_epoch):
                 # Perform train step
-                step_result = self.train_step(train_batch)
+                step_result = self.train_step(tf.cast(train_batch, dtype='float32'))
 
                 # Collect results
                 g_losses.append(step_result['g_loss'])
@@ -321,7 +321,7 @@ class WGAN:
                 val_fake_l1_metrics = []
                 for val_batch in notebook.tqdm(validation_data, total=validation_steps):
                     # Perform eval step
-                    step_result = self.test_step(val_batch)
+                    step_result = self.test_step(tf.cast(val_batch, dtype='float32'))
 
                     # Collect results
                     val_g_losses.append(step_result['g_loss'])
@@ -591,7 +591,7 @@ class WGAN:
             # Perform training
             for batch in notebook.tqdm(train_data, total=steps_per_epoch):
                 # Perform train step
-                step_result = self.distributed_train_step(batch, strategy)
+                step_result = self.distributed_train_step(tf.cast(batch, dtype='float32'), strategy)
 
                 # Collect results
                 g_losses.append(step_result['g_loss'])

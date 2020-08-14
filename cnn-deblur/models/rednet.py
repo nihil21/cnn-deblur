@@ -238,9 +238,9 @@ class MSREDNet30:
 
         # Compute metrics
         ssim_metric = ssim(sharp_pyramid[0],
-                           tf.cast(predicted_pyramid[0], dtype='bfloat16'))
+                           predicted_pyramid[0])
         psnr_metric = psnr(sharp_pyramid[0],
-                           tf.cast(predicted_pyramid[0], dtype='bfloat16'))
+                           predicted_pyramid[0])
 
         return {'loss': loss,
                 'ssim': tf.reduce_mean(ssim_metric),
@@ -257,7 +257,7 @@ class MSREDNet30:
                                        per_replica_results['ssim'], axis=None)
         reduced_psnr = strategy.reduce(tf.distribute.ReduceOp.MEAN,
                                        per_replica_results['psnr'], axis=None)
-        return {'g_loss': reduced_loss,
+        return {'loss': reduced_loss,
                 'ssim': reduced_ssim,
                 'psnr': reduced_psnr}
 
@@ -284,9 +284,9 @@ class MSREDNet30:
 
         # Compute metrics
         ssim_metric = ssim(sharp_pyramid[0],
-                           tf.cast(predicted_pyramid[0], dtype='bfloat16'))
+                           predicted_pyramid[0])
         psnr_metric = psnr(sharp_pyramid[0],
-                           tf.cast(predicted_pyramid[0], dtype='bfloat16'))
+                           predicted_pyramid[0])
 
         return {'loss': loss,
                 'ssim': tf.reduce_mean(ssim_metric),
@@ -320,7 +320,7 @@ class MSREDNet30:
             # Perform training
             for batch in notebook.tqdm(train_data, total=steps_per_epoch):
                 # Perform train step
-                step_result = self.distributed_train_step(batch, strategy)
+                step_result = self.distributed_train_step(tf.cast(batch, dtype='float32'), strategy)
 
                 # Collect results
                 losses.append(step_result['g_loss'])
@@ -333,7 +333,7 @@ class MSREDNet30:
             psnr_mean = np.mean(psnr_metrics)
 
             # Display training results
-            train_results = 'g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f} - '.format(
+            train_results = 'g_loss: {:.4f} - ssim: {:.4f} - psnr: {:.4f}'.format(
                 loss_mean, ssim_mean, psnr_mean
             )
             print(train_results)
@@ -353,7 +353,7 @@ class MSREDNet30:
                     step_result = self.test_step(tf.cast(val_batch, dtype='float32'))
 
                     # Collect results
-                    val_losses.append(step_result['g_loss'])
+                    val_losses.append(step_result['loss'])
                     val_ssim_metrics.append(step_result['ssim'])
                     val_psnr_metrics.append(step_result['psnr'])
 
@@ -363,7 +363,7 @@ class MSREDNet30:
                 val_psnr_mean = np.mean(val_psnr_metrics)
 
                 # Display validation results
-                val_results = 'val_g_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f} - '.format(
+                val_results = 'val_loss: {:.4f} - val_ssim: {:.4f} - val_psnr: {:.4f}'.format(
                     val_loss_mean, val_ssim_mean, val_psnr_mean
                 )
                 print(val_results)
@@ -384,7 +384,7 @@ class MSREDNet30:
                 print(' OK')
 
         # Return history
-        return {'g_loss': loss_hist,
+        return {'loss': loss_hist,
                 'ssim': ssim_hist,
                 'psnr': psnr_hist,
                 'val_loss': val_loss_hist,
