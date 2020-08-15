@@ -229,7 +229,7 @@ class WGAN:
             train_data: Union[tf.data.Dataset, np.ndarray],
             epochs: int,
             steps_per_epoch: int,
-            initial_epoch: Optional[int] = 1,
+            initial_epoch: Optional[int] = 0,
             validation_data: Optional[tf.data.Dataset] = None,
             validation_steps: Optional[int] = None,
             checkpoint_dir: Optional[str] = None):
@@ -244,7 +244,7 @@ class WGAN:
                          train_data: tf.data.Dataset,
                          epochs: int,
                          steps_per_epoch: int,
-                         initial_epoch: Optional[int] = 1,
+                         initial_epoch: Optional[int] = 0,
                          validation_data: Optional[tf.data.Dataset] = None,
                          validation_steps: Optional[int] = None,
                          checkpoint_dir: Optional[str] = None):
@@ -261,9 +261,9 @@ class WGAN:
         val_c_loss_hist = []
         val_real_l1_hist = []
         val_fake_l1_hist = []
-        for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
+        for ep in notebook.tqdm(range(initial_epoch, epochs)):
             print('=' * 50)
-            print('Epoch {:d}/{:d}'.format(ep, epochs))
+            print('Epoch {:d}/{:d}'.format(ep + 1, epochs))
 
             # Set up lists that will contain losses and metrics for each epoch
             g_losses = []
@@ -361,14 +361,14 @@ class WGAN:
                 print('Saving generator\'s model...', end='')
                 self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
-                        ep, ssim_mean, psnr_mean
+                        ep + 1, ssim_mean, psnr_mean
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-real_l1:{:.4f}-fake_l1:{:.4f}.h5').format(
-                        ep, real_l1_mean, fake_l1_mean
+                        ep + 1, real_l1_mean, fake_l1_mean
                     )
                 )
                 print(' OK')
@@ -391,7 +391,7 @@ class WGAN:
                         train_data: Tuple[np.ndarray, np.ndarray],
                         epochs: int,
                         steps_per_epoch: int,
-                        initial_epoch: Optional[int] = 1,
+                        initial_epoch: Optional[int] = 0,
                         validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None,
                         validation_steps: Optional[int] = None,
                         checkpoint_dir: Optional[str] = None):
@@ -412,9 +412,9 @@ class WGAN:
         val_c_loss_hist = []
         val_real_l1_hist = []
         val_fake_l1_hist = []
-        for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
+        for ep in notebook.tqdm(range(initial_epoch, epochs)):
             print('=' * 50)
-            print('Epoch {:d}/{:d}'.format(ep, epochs))
+            print('Epoch {:d}/{:d}'.format(ep + 1, epochs))
 
             # Permute indexes
             permuted_indexes = np.random.permutation(batch_size)
@@ -528,14 +528,14 @@ class WGAN:
                 print('Saving generator\'s model...', end='')
                 self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
-                        ep, ssim_mean, psnr_mean
+                        ep + 1, ssim_mean, psnr_mean
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-real_l1:{:.4f}-fake_l1:{:.4f}.h5').format(
-                        ep, real_l1_mean, fake_l1_mean
+                        ep + 1, real_l1_mean, fake_l1_mean
                     )
                 )
                 print(' OK')
@@ -559,7 +559,7 @@ class WGAN:
                         epochs: int,
                         steps_per_epoch: int,
                         strategy: tf.distribute.Strategy,
-                        initial_epoch: Optional[int] = 1,
+                        initial_epoch: Optional[int] = 0,
                         validation_data: Optional[tf.data.Dataset] = None,
                         validation_steps: Optional[int] = None,
                         checkpoint_dir: Optional[str] = None):
@@ -576,9 +576,9 @@ class WGAN:
         val_c_loss_hist = []
         val_real_l1_hist = []
         val_fake_l1_hist = []
-        for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
+        for ep in notebook.tqdm(range(initial_epoch, epochs)):
             print('=' * 50)
-            print('Epoch {:d}/{:d}'.format(ep, epochs))
+            print('Epoch {:d}/{:d}'.format(ep + 1, epochs))
 
             # Set up lists that will contain losses and metrics for each epoch
             g_losses = []
@@ -676,14 +676,14 @@ class WGAN:
                 print('Saving generator\'s model...', end='')
                 self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
-                        ep, ssim_mean, psnr_mean
+                        ep + 1, ssim_mean, psnr_mean
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-real_l1:{:.4f}-fake_l1:{:.4f}.h5').format(
-                        ep, real_l1_mean, fake_l1_mean
+                        ep + 1, real_l1_mean, fake_l1_mean
                     )
                 )
                 print(' OK')

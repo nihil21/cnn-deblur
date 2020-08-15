@@ -297,7 +297,7 @@ class MSREDNet30:
                         epochs: int,
                         steps_per_epoch: int,
                         strategy: tf.distribute.Strategy,
-                        initial_epoch: Optional[int] = 1,
+                        initial_epoch: Optional[int] = 0,
                         validation_data: Optional[tf.data.Dataset] = None,
                         validation_steps: Optional[int] = None,
                         checkpoint_dir: Optional[str] = None):
@@ -308,9 +308,9 @@ class MSREDNet30:
         val_loss_hist = []
         val_ssim_hist = []
         val_psnr_hist = []
-        for ep in notebook.tqdm(range(initial_epoch, epochs + 1)):
+        for ep in notebook.tqdm(range(initial_epoch, epochs)):
             print('=' * 50)
-            print('Epoch {:d}/{:d}'.format(ep, epochs))
+            print('Epoch {:d}/{:d}'.format(ep + 1, epochs))
 
             # Set up lists that will contain losses and metrics for each epoch
             losses = []
@@ -378,7 +378,7 @@ class MSREDNet30:
                 print('Saving model...', end='')
                 self.model.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
-                        ep, ssim_mean, psnr_mean
+                        ep + 1, ssim_mean, psnr_mean
                     )
                 )
                 print(' OK')
