@@ -119,8 +119,7 @@ class DeblurWGan(WGAN):
                  input_shape: Tuple[int, int, int],
                  use_elu: Optional[bool] = False,
                  use_dropout: Optional[bool] = False,
-                 num_res_blocks: Optional[int] = 9,
-                 learning_rate: Optional[float] = 1e-4):
+                 num_res_blocks: Optional[int] = 9):
         # Build generator and critic
         generator = create_generator(input_shape,
                                      use_elu,
@@ -138,7 +137,7 @@ class DeblurWGan(WGAN):
         def generator_loss(sharp_batch: tf.Tensor,
                            generated_batch: tf.Tensor,
                            fake_logits: tf.Tensor):
-            adv_loss = tf.reduce_mean(-fake_logits)
+            adv_loss = -tf.reduce_mean(fake_logits)
             content_loss = perceptual_loss(sharp_batch, generated_batch, loss_model)
             return adv_loss + 100.0 * content_loss
 
@@ -147,7 +146,7 @@ class DeblurWGan(WGAN):
             return tf.reduce_mean(fake_logits) - tf.reduce_mean(real_logits)
 
         # Set optimizers as Adam with given learning rate
-        g_optimizer = Adam(lr=learning_rate)
-        c_optimizer = Adam(lr=learning_rate)
+        g_optimizer = Adam(lr=0.0002, beta_1=0.5, beta_2=0.9)
+        c_optimizer = Adam(lr=0.0002, beta_1=0.5, beta_2=0.9)
 
         super(DeblurWGan, self).__init__(generator, critic, generator_loss, critic_loss, g_optimizer, c_optimizer)

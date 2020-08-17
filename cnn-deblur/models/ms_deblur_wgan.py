@@ -60,6 +60,7 @@ def create_generator(input_shape,
     out_layer3 = Conv2D(filters=3,
                         kernel_size=5,
                         padding='same',
+                        activation='tanh',
                         name='out_layer_3')(x)
 
     # Middle branch
@@ -82,6 +83,7 @@ def create_generator(input_shape,
     out_layer2 = Conv2D(filters=3,
                         kernel_size=5,
                         padding='same',
+                        activation='tanh',
                         name='out_layer2')(x)
 
     # Finest branch
@@ -104,6 +106,7 @@ def create_generator(input_shape,
     out_layer1 = Conv2D(filters=3,
                         kernel_size=5,
                         padding='same',
+                        activation='tanh',
                         name='out_layer1')(x)
 
     # Final model
@@ -117,8 +120,7 @@ class MSDeblurWGAN(WGAN):
     def __init__(self,
                  input_shape: Tuple[int, int, int],
                  use_elu: Optional[bool] = False,
-                 num_res_blocks: Optional[int] = 19,
-                 learning_rate: Optional[float] = 1e-4):
+                 num_res_blocks: Optional[int] = 19):
         # Build generator and critic
         generator = create_generator(input_shape,
                                      use_elu,
@@ -130,7 +132,7 @@ class MSDeblurWGAN(WGAN):
         def generator_loss(sharp_pyramid: List[tf.Tensor],
                            predicted_pyramid: List[tf.Tensor],
                            fake_logits: tf.Tensor):
-            adv_loss = tf.reduce_mean(-fake_logits)
+            adv_loss = -tf.reduce_mean(fake_logits)
             content_loss = ms_mse(sharp_pyramid, predicted_pyramid)
             return content_loss + 1e-4 * adv_loss
 
@@ -139,8 +141,8 @@ class MSDeblurWGAN(WGAN):
             return tf.reduce_mean(fake_logits) - tf.reduce_mean(real_logits)
 
         # Set optimizers as Adam with given learning_rate
-        g_optimizer = Adam(lr=learning_rate)
-        c_optimizer = Adam(lr=learning_rate)
+        g_optimizer = Adam(lr=0.0002, beta_1=0.5, beta_2=0.9)
+        c_optimizer = Adam(lr=0.0002, beta_1=0.5, beta_2=0.9)
 
         super(MSDeblurWGAN, self).__init__(generator, critic, generator_loss, critic_loss, g_optimizer, c_optimizer)
 

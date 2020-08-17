@@ -1,12 +1,12 @@
-import os
-import numpy as np
+# import os
+# import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, Activation, ELU, LeakyReLU, BatchNormalization
 from tensorflow.keras.optimizers import Optimizer
 from utils.custom_metrics import ssim, psnr
-from tqdm import notebook
-from typing import Optional, Callable, Tuple, Union
+# from tqdm import notebook
+from typing import Optional, Callable, Tuple  # , Union
 
 
 def create_patchgan_critic(input_shape,
@@ -67,7 +67,7 @@ def create_patchgan_critic(input_shape,
     return Model(inputs=in_layer, outputs=out_layer, name='Critic')
 
 
-class WGAN:
+class WGAN(Model):
     def __init__(self,
                  generator: Model,
                  critic: Model,
@@ -75,6 +75,7 @@ class WGAN:
                  c_loss: Callable,
                  g_optimizer: Optimizer,
                  c_optimizer: Optimizer):
+        super(WGAN, self).__init__()
         # Set generator and critic
         self.generator = generator
         self.critic = critic
@@ -225,7 +226,7 @@ class WGAN:
                 'real_l1': tf.reduce_mean(real_l1_metric),
                 'fake_l1': tf.reduce_mean(fake_l1_metric)}
 
-    def fit(self,
+    """def fit(self,
             train_data: Union[tf.data.Dataset, np.ndarray],
             epochs: int,
             steps_per_epoch: int,
@@ -738,4 +739,4 @@ class WGAN:
         results += 'c_loss: {:.4f}\nreal_l1: {:.4f}\nfake_l1: {:.4f}'.format(
             c_loss_mean, real_l1_mean, fake_l1_mean
         )
-        print(results)
+        print(results)"""
