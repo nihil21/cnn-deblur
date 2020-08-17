@@ -132,7 +132,7 @@ class WGAN(Model):
                    train_batch: Tuple[tf.Tensor, tf.Tensor]):
         blurred_batch = train_batch[0]
         sharp_batch = train_batch[1]
-        batch_size = blurred_batch.shape[0]
+        batch_size = tf.shape(blurred_batch)[0]
 
         c_losses = []
         # Train the critic multiple times according to critic_updates (by default, 5)

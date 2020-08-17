@@ -156,9 +156,9 @@ class MSDeblurWGAN(WGAN):
     def train_step(self,
                    train_batch: Tuple[tf.Tensor, tf.Tensor]):
         # Determine batch size, height and width
-        batch_size = train_batch[0].shape[0]
-        height = train_batch[0].shape[1]
-        width = train_batch[0].shape[2]
+        batch_size = tf.shape(train_batch[0])[0]
+        height = tf.shape(train_batch[0])[1]
+        width = tf.shape(train_batch[0])[2]
         # Prepare Gaussian pyramid
         blurred_batch1 = train_batch[0]
         sharp_batch1 = train_batch[1]
@@ -225,8 +225,8 @@ class MSDeblurWGAN(WGAN):
     def test_step(self,
                   val_batch: Tuple[tf.Tensor, tf.Tensor]):
         # Determine height and width
-        height = val_batch[0].shape[1]
-        width = val_batch[0].shape[2]
+        height = tf.shape(val_batch[0])[1]
+        width = tf.shape(val_batch[0])[2]
         # Prepare Gaussian pyramid
         blurred_batch1 = val_batch[0]
         sharp_batch1 = val_batch[1]
