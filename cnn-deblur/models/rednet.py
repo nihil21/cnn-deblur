@@ -378,7 +378,7 @@ class MSREDNet30:
                 print('Saving model...', end='')
                 self.model.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
-                        ep + 1, ssim_mean, psnr_mean
+                        ep, ssim_mean, psnr_mean
                     )
                 )
                 print(' OK')

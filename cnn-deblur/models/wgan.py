@@ -528,14 +528,14 @@ class WGAN:
                 print('Saving generator\'s model...', end='')
                 self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
-                        ep + 1, ssim_mean, psnr_mean
+                        ep, ssim_mean, psnr_mean
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-real_l1:{:.4f}-fake_l1:{:.4f}.h5').format(
-                        ep + 1, real_l1_mean, fake_l1_mean
+                        ep, real_l1_mean, fake_l1_mean
                     )
                 )
                 print(' OK')
@@ -676,14 +676,14 @@ class WGAN:
                 print('Saving generator\'s model...', end='')
                 self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
-                        ep + 1, ssim_mean, psnr_mean
+                        ep, ssim_mean, psnr_mean
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-real_l1:{:.4f}-fake_l1:{:.4f}.h5').format(
-                        ep + 1, real_l1_mean, fake_l1_mean
+                        ep, real_l1_mean, fake_l1_mean
                     )
                 )
                 print(' OK')
