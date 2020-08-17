@@ -3,10 +3,10 @@
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, Activation, ELU, LeakyReLU, BatchNormalization
-from tensorflow.keras.optimizers import Optimizer
+# from tensorflow.keras.optimizers import Optimizer
 # from utils.custom_metrics import ssim, psnr
 # from tqdm import notebook
-from typing import Optional, Callable, Tuple  # , Union
+from typing import Optional, Tuple  # , Callable, Union
 
 
 def create_patchgan_critic(input_shape,
@@ -70,27 +70,39 @@ def create_patchgan_critic(input_shape,
 class WGAN(Model):
     def __init__(self,
                  generator: Model,
-                 critic: Model,
-                 g_loss: Callable,
-                 c_loss: Callable,
-                 g_optimizer: Optimizer,
-                 c_optimizer: Optimizer):
+                 critic: Model):
         super(WGAN, self).__init__()
         # Set generator and critic
         self.generator = generator
         self.critic = critic
 
-        # Set loss functions
-        self.g_loss = g_loss
-        self.c_loss = c_loss
-        # Set optimizers
-        self.g_optimizer = g_optimizer
-        self.c_optimizer = c_optimizer
-
         # Set critic_updates, i.e. the times the critic gets trained w.r.t. one training step of the generator
         self.critic_updates = 5
         # Set weight of gradient penalty
         self.gp_weight = 10.0
+
+        # Set optimizers and loss functions as None
+        self.g_optimizer = None
+        self.c_optimizer = None
+        self.g_loss = None
+        self.c_loss = None
+
+    # Override base-class compile method
+    def compile(self,
+                optimizer='rmsprop',
+                loss=None,
+                metrics=None,
+                loss_weights=None,
+                sample_weight_mode=None,
+                weighted_metrics=None,
+                **kwargs):
+        super(WGAN, self).compile()
+        # Set loss functions
+        self.g_loss = kwargs['g_loss']
+        self.c_loss = kwargs['c_loss']
+        # Set optimizers
+        self.g_optimizer = kwargs['g_optimizer']
+        self.c_optimizer = kwargs['c_optimizer']
 
     @tf.function
     def gradient_penalty(self,

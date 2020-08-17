@@ -149,4 +149,9 @@ class DeblurWGan(WGAN):
         g_optimizer = Adam(lr=0.0002, beta_1=0.5, beta_2=0.9)
         c_optimizer = Adam(lr=0.0002, beta_1=0.5, beta_2=0.9)
 
-        super(DeblurWGan, self).__init__(generator, critic, generator_loss, critic_loss, g_optimizer, c_optimizer)
+        # Build model by calling base-class __init__ method and compile it directly
+        super(DeblurWGan, self).__init__(generator, critic)
+        self.compile(g_loss=generator_loss,
+                     c_loss=critic_loss,
+                     g_optimizer=g_optimizer,
+                     c_optimizer=c_optimizer)

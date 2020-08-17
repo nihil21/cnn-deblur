@@ -33,6 +33,7 @@
       <w>relu</w>
       <w>resnet</w>
       <w>resunet</w>
+      <w>rmsprop</w>
       <w>softmax</w>
       <w>ssim</w>
       <w>strd</w>
