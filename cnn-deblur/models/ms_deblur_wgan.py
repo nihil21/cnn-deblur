@@ -5,7 +5,7 @@ from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add,
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from utils.custom_losses import ms_mse
-from utils.custom_metrics import ssim, psnr
+# from utils.custom_metrics import ssim, psnr
 from typing import Tuple, List, Optional
 
 
@@ -200,10 +200,12 @@ class MSDeblurWGAN(WGAN):
         self.g_optimizer.apply_gradients(zip(g_grad, self.generator.trainable_variables))
 
         # Compute metrics
-        ssim_metric = ssim(sharp_pyramid[0],
-                           predicted_pyramid[0])
-        psnr_metric = psnr(sharp_pyramid[0],
-                           predicted_pyramid[0])
+        ssim_metric = tf.image.ssim(sharp_pyramid[0],
+                                    predicted_pyramid[0],
+                                    max_val=2.)
+        psnr_metric = tf.image.psnr(sharp_pyramid[0],
+                                    predicted_pyramid[0],
+                                    max_val=2.)
         real_l1_metric = tf.abs(tf.ones_like(real_logits) - real_logits)
         fake_l1_metric = tf.abs(-tf.ones_like(fake_logits) - fake_logits)
 
@@ -241,10 +243,12 @@ class MSDeblurWGAN(WGAN):
         g_loss = self.g_loss(sharp_pyramid, predicted_pyramid, fake_logits)
 
         # Compute metrics
-        ssim_metric = ssim(sharp_pyramid[0],
-                           predicted_pyramid[0])
-        psnr_metric = psnr(sharp_pyramid[0],
-                           predicted_pyramid[0])
+        ssim_metric = tf.image.ssim(sharp_pyramid[0],
+                                    predicted_pyramid[0],
+                                    max_val=2.)
+        psnr_metric = tf.image.psnr(sharp_pyramid[0],
+                                    predicted_pyramid[0],
+                                    max_val=2.)
         real_l1_metric = tf.abs(tf.ones_like(real_logits) - real_logits)
         fake_l1_metric = tf.abs(-tf.ones_like(fake_logits) - fake_logits)
 
