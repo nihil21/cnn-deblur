@@ -5,7 +5,6 @@ from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add,
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from utils.custom_losses import ms_mse
-# from utils.custom_metrics import ssim, psnr
 from typing import Tuple, List, Optional
 
 

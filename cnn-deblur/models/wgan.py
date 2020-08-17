@@ -1,13 +1,9 @@
 import os
-# import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, Activation, ELU, LeakyReLU, BatchNormalization
 from tensorflow.keras.callbacks import Callback
-# from tensorflow.keras.optimizers import Optimizer
-# from utils.custom_metrics import ssim, psnr
-# from tqdm import notebook
-from typing import Optional, Tuple  # , Callable, Union
+from typing import Optional, Tuple
 
 
 def create_patchgan_critic(input_shape,
