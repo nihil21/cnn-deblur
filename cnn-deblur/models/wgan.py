@@ -167,10 +167,10 @@ class WGAN(Model):
 
         # Compute metrics
         ssim_metric = tf.image.ssim(sharp_batch,
-                                    generated_batch,
+                                    tf.cast(generated_batch, dtype='bfloat16'),
                                     max_val=2.)
         psnr_metric = tf.image.psnr(sharp_batch,
-                                    generated_batch,
+                                    tf.cast(generated_batch, dtype='bfloat16'),
                                     max_val=2.)
         real_l1_metric = tf.abs(tf.ones_like(real_logits) - real_logits)
         fake_l1_metric = tf.abs(-tf.ones_like(fake_logits) - fake_logits)
@@ -224,10 +224,10 @@ class WGAN(Model):
 
         # Compute metrics
         ssim_metric = tf.image.ssim(sharp_batch,
-                                    generated_batch,
+                                    tf.cast(generated_batch, dtype='bfloat16'),
                                     max_val=2.)
         psnr_metric = tf.image.psnr(sharp_batch,
-                                    generated_batch,
+                                    tf.cast(generated_batch, dtype='bfloat16'),
                                     max_val=2.)
         real_l1_metric = tf.abs(tf.ones_like(real_logits) - real_logits)
         fake_l1_metric = tf.abs(-tf.ones_like(fake_logits) - fake_logits)
