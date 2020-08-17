@@ -374,11 +374,11 @@ class MSREDNet30:
                 val_psnr_hist.append(val_psnr_mean)
 
             # Save model every 15 epochs if required
-            if checkpoint_dir is not None and ep % 15 == 0:
+            if checkpoint_dir is not None and (ep + 1) % 15 == 0:
                 print('Saving model...', end='')
                 self.model.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
-                        ep, ssim_mean, psnr_mean
+                        ep + 1, ssim_mean, psnr_mean
                     )
                 )
                 print(' OK')

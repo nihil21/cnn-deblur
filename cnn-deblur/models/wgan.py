@@ -357,7 +357,7 @@ class WGAN:
                 val_fake_l1_hist.append(val_fake_l1_mean)
 
             # Save model every 15 epochs if required
-            if checkpoint_dir is not None and ep % 15 == 0:
+            if checkpoint_dir is not None and (ep + 1) % 15 == 0:
                 print('Saving generator\'s model...', end='')
                 self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
@@ -524,18 +524,18 @@ class WGAN:
                 val_fake_l1_hist.append(val_fake_l1_mean)
 
             # Save model every 15 epochs if required
-            if checkpoint_dir is not None and ep % 15 == 0:
+            if checkpoint_dir is not None and (ep + 1) % 15 == 0:
                 print('Saving generator\'s model...', end='')
                 self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
-                        ep, ssim_mean, psnr_mean
+                        ep + 1, ssim_mean, psnr_mean
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-real_l1:{:.4f}-fake_l1:{:.4f}.h5').format(
-                        ep, real_l1_mean, fake_l1_mean
+                        ep + 1, real_l1_mean, fake_l1_mean
                     )
                 )
                 print(' OK')
@@ -672,18 +672,18 @@ class WGAN:
                 val_fake_l1_hist.append(val_fake_l1_mean)
 
             # Save model every 15 epochs if required
-            if checkpoint_dir is not None and ep % 15 == 0:
+            if checkpoint_dir is not None and (ep + 1) % 15 == 0:
                 print('Saving generator\'s model...', end='')
                 self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
-                        ep, ssim_mean, psnr_mean
+                        ep + 1, ssim_mean, psnr_mean
                     )
                 )
                 print(' OK')
                 print('Saving critic\'s model...', end='')
                 self.critic.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-real_l1:{:.4f}-fake_l1:{:.4f}.h5').format(
-                        ep, real_l1_mean, fake_l1_mean
+                        ep + 1, real_l1_mean, fake_l1_mean
                     )
                 )
                 print(' OK')
