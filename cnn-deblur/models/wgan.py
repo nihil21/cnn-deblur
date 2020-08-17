@@ -1,8 +1,9 @@
-# import os
+import os
 # import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, Activation, ELU, LeakyReLU, BatchNormalization
+from tensorflow.keras.callbacks import Callback
 # from tensorflow.keras.optimizers import Optimizer
 # from utils.custom_metrics import ssim, psnr
 # from tqdm import notebook
@@ -756,3 +757,23 @@ class WGAN(Model):
             c_loss_mean, real_l1_mean, fake_l1_mean
         )
         print(results)"""
+
+
+class WGANMonitor(Callback):
+    def __init__(self,
+                 checkpoint_dir: str,
+                 generator: Model,
+                 critic: Model):
+        super(WGANMonitor, self).__init__()
+        self.checkpoint_dir = checkpoint_dir
+        self.generator = generator
+        self.critic = critic
+
+    def on_epoch_end(self, epoch, logs=None):
+        if epoch % 15:
+            self.generator.save_weights(
+                filepath=os.path.join(self.checkpoint_dir, 'ep:{:03d}-generator.h5').format(epoch)
+            )
+            self.critic.save_weights(
+                filepath=os.path.join(self.checkpoint_dir, 'ep:{:03d}-critic.h5').format(epoch)
+            )
