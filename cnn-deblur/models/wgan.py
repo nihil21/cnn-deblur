@@ -1,9 +1,12 @@
-import os
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, Activation, ELU, LeakyReLU, BatchNormalization
+from tensorflow.keras.optimizers import Optimizer
 from tensorflow.keras.callbacks import Callback
-from typing import Optional, Tuple
+import numpy as np
+import os
+from tqdm import notebook
+from typing import Optional, Tuple, Callable, Union
 
 
 def create_patchgan_critic(input_shape,
@@ -64,11 +67,10 @@ def create_patchgan_critic(input_shape,
     return Model(inputs=in_layer, outputs=out_layer, name='Critic')
 
 
-class WGAN(Model):
+class WGAN:
     def __init__(self,
                  generator: Model,
                  critic: Model):
-        super(WGAN, self).__init__()
         # Set generator and critic
         self.generator = generator
         self.critic = critic
@@ -84,22 +86,17 @@ class WGAN(Model):
         self.g_loss = None
         self.c_loss = None
 
-    # Override base-class compile method
     def compile(self,
-                optimizer='rmsprop',
-                loss=None,
-                metrics=None,
-                loss_weights=None,
-                sample_weight_mode=None,
-                weighted_metrics=None,
-                **kwargs):
-        super(WGAN, self).compile()
+                g_loss: Callable,
+                c_loss: Callable,
+                g_optimizer: Optimizer,
+                c_optimizer: Optimizer):
         # Set loss functions
-        self.g_loss = kwargs['g_loss']
-        self.c_loss = kwargs['c_loss']
+        self.g_loss = g_loss
+        self.c_loss = c_loss
         # Set optimizers
-        self.g_optimizer = kwargs['g_optimizer']
-        self.c_optimizer = kwargs['c_optimizer']
+        self.g_optimizer = g_optimizer
+        self.c_optimizer = c_optimizer
 
     @tf.function
     def gradient_penalty(self,
@@ -239,7 +236,7 @@ class WGAN(Model):
                 'real_l1': tf.reduce_mean(real_l1_metric),
                 'fake_l1': tf.reduce_mean(fake_l1_metric)}
 
-    """def fit(self,
+    def fit(self,
             train_data: Union[tf.data.Dataset, np.ndarray],
             epochs: int,
             steps_per_epoch: int,
@@ -752,7 +749,7 @@ class WGAN(Model):
         results += 'c_loss: {:.4f}\nreal_l1: {:.4f}\nfake_l1: {:.4f}'.format(
             c_loss_mean, real_l1_mean, fake_l1_mean
         )
-        print(results)"""
+        print(results)
 
 
 class WGANMonitor(Callback):
