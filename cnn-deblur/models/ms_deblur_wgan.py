@@ -43,52 +43,6 @@ def res_block(in_layer: Layer,
     return x
 
 
-def encode(in_layer: Layer,
-           num_layers: Optional[int] = 15,
-           filters: Optional[int] = 64,
-           kernel_size: Optional[int] = 3,
-           strides: Optional[int] = 1,
-           padding: Optional[str] = 'same',
-           scale_id: Optional[str] = '') -> List[Layer]:
-    layers = []
-    x = in_layer
-    for i in range(num_layers):
-        x = Conv2D(filters=filters,
-                   kernel_size=kernel_size,
-                   strides=strides,
-                   padding=padding,
-                   name='encode_conv{:d}{:s}'.format(i, scale_id))(x)
-        x = ReLU(name='encode_act{:d}{:s}'.format(i, scale_id))(x)
-        x = BatchNormalization(name='encode_bn{:d}{:s}'.format(i, scale_id))(x)
-        layers.append(x)
-    return layers
-
-
-def decode(res_layers: List[Layer],
-           num_layers: Optional[int] = 15,
-           filters: Optional[int] = 64,
-           kernel_size: Optional[int] = 3,
-           strides: Optional[int] = 1,
-           padding: Optional[str] = 'same',
-           scale_id: Optional[str] = '') -> List[Layer]:
-    layers = []
-    res_layers.reverse()
-    x = res_layers[0]
-    for i in range(num_layers):
-        x = Conv2D(filters=filters,
-                   kernel_size=kernel_size,
-                   strides=strides,
-                   padding=padding,
-                   name='decode_conv{:d}{:s}'.format(i, scale_id))(x)
-        if i % 2 != 0:
-            x = Add(name='decode_skip{:d}{:s}'.format(i, scale_id))([x, res_layers[i]])
-        x = ReLU(name='decode_act{:d}{:s}'.format(i, scale_id))(x)
-        x = BatchNormalization(name='decode_bn{:d}{:s}'.format(i, scale_id))(x)
-        layers.append(x)
-
-    return layers
-
-
 def create_generator(input_shape,
                      use_elu: Optional[bool] = False,
                      num_res_blocks: Optional[int] = 19):
@@ -155,60 +109,6 @@ def create_generator(input_shape,
                         padding='same',
                         activation='tanh',
                         name='out_layer1')(x)
-
-    # Final model
-    generator = Model(inputs=[in_layer1, in_layer2, in_layer3],
-                      outputs=[out_layer1, out_layer2, out_layer3],
-                      name='Generator')
-    return generator
-
-
-def create_generator_v2(input_shape):
-    # Coarsest branch
-    in_layer3 = Input(shape=(input_shape[0] // 4, input_shape[1] // 4, input_shape[2]),
-                      name='in_layer3')
-    encode_layers3 = encode(in_layer3, scale_id='3')
-    decode_layers3 = decode(encode_layers3, scale_id='3')
-    out_layer3 = Conv2DTranspose(filters=3,
-                                 kernel_size=1,
-                                 strides=1,
-                                 padding='same',
-                                 activation='tanh',
-                                 name='out_layer3')(decode_layers3[-1])
-
-    # Middle branch
-    in_layer2 = Input(shape=(input_shape[0] // 2, input_shape[1] // 2, input_shape[2]),
-                      name='in_layer2')
-    up_conv2 = Conv2DTranspose(filters=64,
-                               kernel_size=5,
-                               strides=2,
-                               padding='same')(out_layer3)
-    concat2 = concatenate([in_layer2, up_conv2])
-    encode_layers2 = encode(concat2, scale_id='2')
-    decode_layers2 = decode(encode_layers2, scale_id='2')
-    out_layer2 = Conv2DTranspose(filters=3,
-                                 kernel_size=1,
-                                 strides=1,
-                                 padding='same',
-                                 activation='tanh',
-                                 name='out_layer2')(decode_layers2[-1])
-
-    # Finest branch
-    in_layer1 = Input(shape=input_shape,
-                      name='in_layer1')
-    up_conv1 = Conv2DTranspose(filters=64,
-                               kernel_size=5,
-                               strides=2,
-                               padding='same')(out_layer2)
-    concat1 = concatenate([in_layer1, up_conv1])
-    encode_layers1 = encode(concat1, scale_id='1')
-    decode_layers1 = decode(encode_layers1, scale_id='1')
-    out_layer1 = Conv2DTranspose(filters=3,
-                                 kernel_size=1,
-                                 strides=1,
-                                 padding='same',
-                                 activation='tanh',
-                                 name='out_layer1')(decode_layers1[-1])
 
     # Final model
     generator = Model(inputs=[in_layer1, in_layer2, in_layer3],
@@ -996,20 +896,3 @@ class MSDeblurWGAN(WGAN):
                                         use_elu)
         # Call base-class init method
         super(MSDeblurWGAN, self).__init__(generator, critic)
-
-
-class MSDeblurWGANV2(WGAN):
-    def __init__(self,
-                 input_shape: Tuple[int, int, int],
-                 use_elu: Optional[bool] = False,
-                 num_res_blocks: Optional[int] = 19):
-        # Build generator and critic
-        generator = create_generator_v2(input_shape)
-        critic = create_patchgan_critic(input_shape,
-                                        use_elu)
-        # Call base-class init method
-        super(MSDeblurWGANV2, self).__init__(generator, critic)
-
-
-msdeb = MSDeblurWGANV2((32, 32, 3))
-msdeb.generator.summary()
