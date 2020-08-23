@@ -7,7 +7,6 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tqdm import notebook
 from utils.custom_losses import ms_mse
-from models.rednet import encode, decode
 from typing import Tuple, List, Optional, Union
 
 
@@ -42,6 +41,52 @@ def res_block(in_layer: Layer,
     else:
         x = ReLU(name='res_relu{:s}_2'.format(layer_id))(x)
     return x
+
+
+def encode(in_layer: Layer,
+           num_layers: Optional[int] = 15,
+           filters: Optional[int] = 64,
+           kernel_size: Optional[int] = 3,
+           strides: Optional[int] = 1,
+           padding: Optional[str] = 'same',
+           scale_id: Optional[str] = '') -> List[Layer]:
+    layers = []
+    x = in_layer
+    for i in range(num_layers):
+        x = Conv2D(filters=filters,
+                   kernel_size=kernel_size,
+                   strides=strides,
+                   padding=padding,
+                   name='encode_conv{:d}{:s}'.format(i, scale_id))(x)
+        x = ReLU(name='encode_act{:d}{:s}'.format(i, scale_id))(x)
+        x = BatchNormalization(name='encode_bn{:d}{:s}'.format(i, scale_id))(x)
+        layers.append(x)
+    return layers
+
+
+def decode(res_layers: List[Layer],
+           num_layers: Optional[int] = 15,
+           filters: Optional[int] = 64,
+           kernel_size: Optional[int] = 3,
+           strides: Optional[int] = 1,
+           padding: Optional[str] = 'same',
+           scale_id: Optional[str] = '') -> List[Layer]:
+    layers = []
+    res_layers.reverse()
+    x = res_layers[0]
+    for i in range(num_layers):
+        x = Conv2D(filters=filters,
+                   kernel_size=kernel_size,
+                   strides=strides,
+                   padding=padding,
+                   name='decode_conv{:d}{:s}'.format(i, scale_id))(x)
+        if i % 2 != 0:
+            x = Add(name='decode_skip{:d}{:s}'.format(i, scale_id))([x, res_layers[i]])
+        x = ReLU(name='decode_act{:d}{:s}'.format(i, scale_id))(x)
+        x = BatchNormalization(name='decode_bn{:d}{:s}'.format(i, scale_id))(x)
+        layers.append(x)
+
+    return layers
 
 
 def create_generator(input_shape,
