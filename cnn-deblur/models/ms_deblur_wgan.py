@@ -6,7 +6,7 @@ from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add,
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tqdm import notebook
-from utils.custom_losses import ms_mse
+from utils.custom_losses import ms_logcosh
 from typing import Tuple, List, Optional, Union
 
 
@@ -188,7 +188,7 @@ class WGAN:
                            predicted_pyramid: List[tf.Tensor],
                            fake_logits: tf.Tensor):
             adv_loss = -tf.reduce_mean(fake_logits)
-            content_loss = ms_mse(sharp_pyramid, predicted_pyramid)
+            content_loss = ms_logcosh(sharp_pyramid, predicted_pyramid)
             return content_loss + 1e-4 * adv_loss
 
         def critic_loss(real_logits: tf.Tensor,

@@ -2,7 +2,7 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications import VGG16
-from tensorflow.keras.losses import mse
+from tensorflow.keras.losses import mse, logcosh
 from typing import Optional, List
 
 
@@ -30,5 +30,21 @@ def ms_mse(sharp_pyramid: List[tf.Tensor],
         scale_shape = tf.shape(scale_trueY)[1:]
         norm_factor = tf.cast(tf.reduce_prod(scale_shape), dtype='float32')
         scale_loss = tf.reduce_sum(mse(scale_trueY, scale_predY)) / norm_factor
+        loss += scale_loss
+    return 1./(2. * num_scales) * loss
+
+
+def ms_logcosh(sharp_pyramid: List[tf.Tensor],
+               predicted_pyramid: List[tf.Tensor],
+               num_scales: Optional[int] = 3):
+    # Check input
+    assert len(sharp_pyramid) == num_scales, 'The list \'trueY\' should contain {:d} elements'.format(num_scales)
+    assert len(predicted_pyramid) == num_scales, 'The list \'predY\' should contain {:d} elements'.format(num_scales)
+
+    loss = 0.
+    for scale_trueY, scale_predY in zip(sharp_pyramid, predicted_pyramid):
+        scale_shape = tf.shape(scale_trueY)[1:]
+        norm_factor = tf.cast(tf.reduce_prod(scale_shape), dtype='float32')
+        scale_loss = tf.reduce_sum(logcosh(scale_trueY, scale_predY)) / norm_factor
         loss += scale_loss
     return 1./(2. * num_scales) * loss
