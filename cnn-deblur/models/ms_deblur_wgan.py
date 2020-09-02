@@ -5,8 +5,9 @@ from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add,
                                      LeakyReLU, Activation, BatchNormalization, concatenate)
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.applications.vgg16 import VGG16
 from tqdm import notebook
-from utils.custom_losses import ms_logcosh
+from utils.custom_losses import ms_perceptual
 from typing import Tuple, List, Optional, Union
 
 
@@ -184,11 +185,16 @@ class WGAN:
         self.critic = critic
 
         # Define and set loss functions
+        vgg = VGG16(include_top=False, weights='imagenet', input_shape=(None, None, 3))
+        loss_model = Model(inputs=vgg.input, outputs=vgg.get_layer('block3_conv3').output)
+        loss_model.trainable = False
+
         def generator_loss(sharp_pyramid: List[tf.Tensor],
                            predicted_pyramid: List[tf.Tensor],
                            fake_logits: tf.Tensor):
             adv_loss = -tf.reduce_mean(fake_logits)
-            content_loss = ms_logcosh(sharp_pyramid, predicted_pyramid)
+            # content_loss = ms_mse(sharp_pyramid, predicted_pyramid)
+            content_loss = ms_perceptual(sharp_pyramid, predicted_pyramid, loss_model=loss_model)
             return content_loss + 1e-4 * adv_loss
 
         def critic_loss(real_logits: tf.Tensor,
