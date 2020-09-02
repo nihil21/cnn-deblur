@@ -32,3 +32,20 @@ def ms_mse(sharp_pyramid: List[tf.Tensor],
         scale_loss = tf.reduce_sum(mse(scale_trueY, scale_predY)) / norm_factor
         loss += scale_loss
     return 1./(2. * num_scales) * loss
+
+
+def ms_perceptual(sharp_pyramid: List[tf.Tensor],
+                  predicted_pyramid: List[tf.Tensor],
+                  num_scales: Optional[int] = 3,
+                  loss_model: Optional[Model] = None):
+    # Check input
+    assert len(sharp_pyramid) == num_scales, 'The list \'trueY\' should contain {:d} elements'.format(num_scales)
+    assert len(predicted_pyramid) == num_scales, 'The list \'predY\' should contain {:d} elements'.format(num_scales)
+
+    loss = 0.
+    for scale_trueY, scale_predY in zip(sharp_pyramid, predicted_pyramid):
+        scale_shape = tf.shape(scale_trueY)[1:]
+        norm_factor = tf.cast(tf.reduce_prod(scale_shape), dtype='float32')
+        scale_loss = tf.reduce_sum(perceptual_loss(scale_trueY, scale_predY, loss_model)) / norm_factor
+        loss += scale_loss
+    return 1./(2. * num_scales) * loss
