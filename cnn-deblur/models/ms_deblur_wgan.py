@@ -376,13 +376,14 @@ class WGAN:
             initial_epoch: Optional[int] = 0,
             validation_data: Optional[tf.data.Dataset] = None,
             validation_steps: Optional[int] = None,
-            checkpoint_dir: Optional[str] = None):
+            checkpoint_dir: Optional[str] = None,
+            checkpoint_freq: Optional[int] = 15):
         if isinstance(train_data, tf.data.Dataset):
-            return self.__fit_on_dataset(train_data, epochs, steps_per_epoch,
-                                         initial_epoch, validation_data, validation_steps, checkpoint_dir)
+            return self.__fit_on_dataset(train_data, epochs, steps_per_epoch, initial_epoch,
+                                         validation_data, validation_steps, checkpoint_dir, checkpoint_freq)
         elif isinstance(train_data, Tuple):
-            return self.__fit_on_tensor(train_data, epochs, steps_per_epoch,
-                                        initial_epoch, validation_data, validation_steps, checkpoint_dir)
+            return self.__fit_on_tensor(train_data, epochs, steps_per_epoch, initial_epoch,
+                                        validation_data, validation_steps, checkpoint_dir, checkpoint_freq)
 
     def __fit_on_dataset(self,
                          train_data: tf.data.Dataset,
@@ -391,7 +392,8 @@ class WGAN:
                          initial_epoch: Optional[int] = 0,
                          validation_data: Optional[tf.data.Dataset] = None,
                          validation_steps: Optional[int] = None,
-                         checkpoint_dir: Optional[str] = None):
+                         checkpoint_dir: Optional[str] = None,
+                         checkpoint_freq: Optional[int] = 15):
         # Set up lists that will contain training history
         g_loss_hist = []
         ssim_hist = []
@@ -501,7 +503,7 @@ class WGAN:
                 val_fake_l1_hist.append(val_fake_l1_mean)
 
             # Save model every 15 epochs if required
-            if checkpoint_dir is not None and (ep + 1) % 15 == 0:
+            if checkpoint_dir is not None and (ep + 1) % checkpoint_freq == 0:
                 print('Saving generator\'s model...', end='')
                 self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
@@ -538,7 +540,8 @@ class WGAN:
                         initial_epoch: Optional[int] = 0,
                         validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None,
                         validation_steps: Optional[int] = None,
-                        checkpoint_dir: Optional[str] = None):
+                        checkpoint_dir: Optional[str] = None,
+                        checkpoint_freq: Optional[int] = 15):
         batch_size = train_data[0].shape[0]
         val_batch_size = validation_data[0].shape[0] \
             if validation_data is not None and validation_steps is not None \
@@ -668,7 +671,7 @@ class WGAN:
                 val_fake_l1_hist.append(val_fake_l1_mean)
 
             # Save model every 15 epochs if required
-            if checkpoint_dir is not None and (ep + 1) % 15 == 0:
+            if checkpoint_dir is not None and (ep + 1) % checkpoint_freq == 0:
                 print('Saving generator\'s model...', end='')
                 self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
@@ -706,7 +709,8 @@ class WGAN:
                         initial_epoch: Optional[int] = 0,
                         validation_data: Optional[tf.data.Dataset] = None,
                         validation_steps: Optional[int] = None,
-                        checkpoint_dir: Optional[str] = None):
+                        checkpoint_dir: Optional[str] = None,
+                        checkpoint_freq: Optional[int] = 15):
         # Set up lists that will contain training history
         g_loss_hist = []
         ssim_hist = []
@@ -816,7 +820,7 @@ class WGAN:
                 val_fake_l1_hist.append(val_fake_l1_mean)
 
             # Save model every 15 epochs if required
-            if checkpoint_dir is not None and (ep + 1) % 15 == 0:
+            if checkpoint_dir is not None and (ep + 1) % checkpoint_freq == 0:
                 print('Saving generator\'s model...', end='')
                 self.generator.save_weights(
                     filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
