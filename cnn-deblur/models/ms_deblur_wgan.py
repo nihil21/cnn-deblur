@@ -118,7 +118,8 @@ def create_generator(input_shape,
 
 
 def create_patchgan_critic(input_shape,
-                           use_elu: Optional[bool] = False):
+                           use_elu: Optional[bool] = False,
+                           use_sigmoid: Optional[bool] = False):
     in_layer = Input(input_shape)
     # Block 1
     x = Conv2D(filters=64,
@@ -165,12 +166,13 @@ def create_patchgan_critic(input_shape,
     else:
         x = LeakyReLU(name='lrelu4')(x)
     # Block 5
-    x = Conv2D(filters=1,
-               kernel_size=4,
-               strides=1,
-               padding='same',
-               name='conv5')(x)
-    out_layer = Activation('sigmoid')(x)
+    out_layer = Conv2D(filters=1,
+                       kernel_size=4,
+                       strides=1,
+                       padding='same',
+                       name='conv5')(x)
+    if use_sigmoid:
+        out_layer = Activation('sigmoid')(x)
 
     return Model(inputs=in_layer, outputs=out_layer, name='Critic')
 
@@ -887,12 +889,14 @@ class MSDeblurWGAN(WGAN):
     def __init__(self,
                  input_shape: Tuple[int, int, int],
                  use_elu: Optional[bool] = False,
+                 use_sigmoid: Optional[bool] = False,
                  num_res_blocks: Optional[int] = 19):
         # Build generator and critic
         generator = create_generator(input_shape,
                                      use_elu,
                                      num_res_blocks)
         critic = create_patchgan_critic(input_shape,
-                                        use_elu)
+                                        use_elu,
+                                        use_sigmoid)
         # Call base-class init method
         super(MSDeblurWGAN, self).__init__(generator, critic)
