@@ -1,8 +1,8 @@
 import os
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU,
-                                     LeakyReLU, Activation, BatchNormalization, concatenate)
+from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU, LeakyReLU,
+                                     Activation, BatchNormalization, LayerNormalization, concatenate)
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tqdm import notebook
@@ -119,7 +119,8 @@ def create_generator(input_shape,
 
 def create_patchgan_critic(input_shape,
                            use_elu: Optional[bool] = False,
-                           use_sigmoid: Optional[bool] = False):
+                           use_sigmoid: Optional[bool] = False,
+                           use_bn: Optional[bool] = False):
     in_layer = Input(input_shape)
     # Block 1
     x = Conv2D(filters=64,
@@ -127,7 +128,10 @@ def create_patchgan_critic(input_shape,
                strides=2,
                padding='same',
                name='conv1')(in_layer)
-    x = BatchNormalization(name='bn1')(x)
+    if use_bn:
+        x = BatchNormalization(name='bn1')(x)
+    else:
+        x = LayerNormalization(name='ln1')(x)
     if use_elu:
         x = ELU(name='elu1')(x)
     else:
@@ -138,7 +142,10 @@ def create_patchgan_critic(input_shape,
                strides=2,
                padding='same',
                name='conv2')(x)
-    x = BatchNormalization(name='bn2')(x)
+    if use_bn:
+        x = BatchNormalization(name='bn2')(x)
+    else:
+        x = LayerNormalization(name='ln2')(x)
     if use_elu:
         x = ELU(name='elu2')(x)
     else:
@@ -149,7 +156,10 @@ def create_patchgan_critic(input_shape,
                strides=2,
                padding='same',
                name='conv3')(x)
-    x = BatchNormalization(name='bn3')(x)
+    if use_bn:
+        x = BatchNormalization(name='bn3')(x)
+    else:
+        x = LayerNormalization(name='ln3')(x)
     if use_elu:
         x = ELU(name='elu3')(x)
     else:
@@ -160,7 +170,10 @@ def create_patchgan_critic(input_shape,
                strides=1,
                padding='same',
                name='conv4')(x)
-    x = BatchNormalization(name='bn4')(x)
+    if use_bn:
+        x = BatchNormalization(name='bn4')(x)
+    else:
+        x = LayerNormalization(name='ln4')(x)
     if use_elu:
         x = ELU(name='elu4')(x)
     else:
@@ -894,6 +907,7 @@ class MSDeblurWGAN(WGAN):
                  input_shape: Tuple[int, int, int],
                  use_elu: Optional[bool] = False,
                  use_sigmoid: Optional[bool] = False,
+                 use_bn: Optional[bool] = False,
                  num_res_blocks: Optional[int] = 19):
         # Build generator and critic
         generator = create_generator(input_shape,
@@ -901,6 +915,7 @@ class MSDeblurWGAN(WGAN):
                                      num_res_blocks)
         critic = create_patchgan_critic(input_shape,
                                         use_elu,
-                                        use_sigmoid)
+                                        use_sigmoid,
+                                        use_bn)
         # Call base-class init method
         super(MSDeblurWGAN, self).__init__(generator, critic)
