@@ -2,7 +2,8 @@
 """
 cnn-deblur
 
-This project aims at developing a Deep Neural Network able to deblur images, as part of the **Deep Learning** cours of the **Master in Artificial Intelligence** (*Alma Mater Studiorum*).
+This project aims at developing a Deep Neural Network able to deblur images, as part of the **Deep Learning** cours of
+the **Master in Artificial Intelligence** (*Alma Mater Studiorum*).
 This DNN should be able to correct both gaussian and motion blur, by training on Cifar10 and REDS datasets.
 
 Authors:
@@ -54,7 +55,7 @@ def main():
     print('=' * 50)
     print('Preprocessing Cifar10 dataset...')
     # Preprocess Cifar10 dataset
-    (trainX, trainY), (testX, testY), (valX, valY) = cifar_dataset.load_image_dataset(normalize=True)
+    (trainX, trainY), (testX, testY), (valX, valY) = cifar_dataset.load_image_dataset()
 
     print('Training set size: {0:d}'.format(trainX.shape[0]))
     print('Validation set size: {0:d}'.format(valX.shape[0]))

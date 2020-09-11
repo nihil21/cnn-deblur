@@ -26,11 +26,12 @@ def load_data(batch_size: int,
                                  zero_mean=zero_mean)
 
 
-def load_image_dataset(do_val_split: Optional[bool] = True, normalize: Optional[bool] = False):
+def load_image_dataset(val_ratio: Optional[float] = 0.125, normalization: Optional[int] = 1):
     """Function that loads Cifar10 dataset and produces a training and test set in which the predictors are randomly
     Gaussian blurred images and the targets are the clear version of such images.
-        :param do_val_split: boolean indicating whether the validation split must be performed or not (default is True)
-        :param normalize: boolean indicating whether the pixel values should be normalized between 0 and 1 (optional)
+        :param val_ratio: boolean indicating the ratio of the validation split (if zero, the validation split
+        is not performed)
+        :param normalization: integer indicating the normalization type: 0 -> none, 1 -> [0, 1] (default), 2 -> [-1, 1]
 
         :return train: tuple containing predictor and target images of the train set
         :return test: tuple containing predictor and target images of the test set"""
@@ -40,11 +41,11 @@ def load_image_dataset(do_val_split: Optional[bool] = True, normalize: Optional[
 
     # Set random state to ensure reproducible results and blur the dataset
     rnd = np.random.RandomState(seed=42)
-    (trainX, trainY), (testX, testY) = blur_dataset(train_set, test_set, normalize, rnd)
+    (trainX, trainY), (testX, testY) = blur_dataset(train_set, test_set, normalization, rnd)
 
     # Reserve some samples for validation, if specified
-    if do_val_split:
-        trainX, valX, trainY, valY = train_test_split(trainX, trainY, random_state=rnd)
+    if val_ratio != 0:
+        trainX, valX, trainY, valY = train_test_split(trainX, trainY, test_size=val_ratio, random_state=rnd)
         return (trainX, trainY), (testX, testY), (valX, valY)
     else:
         return (trainX, trainY), (testX, testY)
@@ -52,12 +53,12 @@ def load_image_dataset(do_val_split: Optional[bool] = True, normalize: Optional[
 
 def blur_dataset(train_set: np.ndarray,
                  test_set: np.ndarray,
-                 normalize: Optional[bool] = False,
+                 normalization: Optional[int] = 1,
                  rnd: Optional[np.random.RandomState] = None):
     """Function which concurrently blurs a training and a test datasets by applying random Gaussian noise
         :param train_set: NumPy array representing the training set (clean images)
         :param test_set: NumPy array representing the test set (clean images)
-        :param normalize: boolean flag which determines whether the pixel values will be normalized between 0 and 1
+        :param normalization: integer indicating the normalization type: 0 -> none, 1 -> [0, 1] (default), 2 -> [-1, 1]
         :param rnd: random state to ensure reproducible results (optional)
 
         :returns the training set divided in predictor and target images
@@ -110,10 +111,15 @@ def blur_dataset(train_set: np.ndarray,
     print('Time elapsed: {0:.2f} s'.format(time.time() - start_time))
 
     # Normalize if required
-    if normalize:
-        trainX = trainX.astype(np.float) / 255
-        trainY = trainY.astype(np.float) / 255
-        testX = testX.astype(np.float) / 255
-        testY = testY.astype(np.float) / 255
+    if normalization == 1:
+        trainX = trainX / 255.
+        trainY = trainY / 255.
+        testX = testX / 255.
+        testY = testY / 255.
+    elif normalization == 2:
+        trainX = 2. * (trainX / 255.) - 1.
+        trainY = 2 * (trainY / 255.) - 1.
+        testX = 2 * (testX / 255.) - 1.
+        testY = 2 * (testY / 255.) - 1.
 
     return (trainX, trainY), (testX, testY)
