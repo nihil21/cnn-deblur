@@ -180,7 +180,6 @@ class REDNet30WGAN(Model):
                    train_batch: Tuple[tf.Tensor, tf.Tensor]):
         (blurred_batch, sharp_batch) = train_batch
         batch_size = tf.shape(blurred_batch)[0]
-        print(batch_size)
         c_losses = []
         # Train the critic multiple times according to critic_updates (by default, 5)
         for _ in range(self.critic_updates):
