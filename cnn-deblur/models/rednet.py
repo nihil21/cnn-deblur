@@ -134,11 +134,11 @@ class REDNet30WGAN(WGAN):
         self.gp_weight = 10.0
 
         # Define and set loss functions
-        def generator_loss(sharp_pyramid: tf.Tensor,
-                           predicted_pyramid: tf.Tensor,
+        def generator_loss(sharp_batch: tf.Tensor,
+                           predicted_batch: tf.Tensor,
                            fake_logits: tf.Tensor):
             adv_loss = -tf.reduce_mean(fake_logits)
-            content_loss = logcosh(sharp_pyramid, predicted_pyramid)
+            content_loss = tf.reduce_mean(logcosh(sharp_batch, predicted_batch))
             return content_loss + 1e-4 * adv_loss
 
         def critic_loss(real_logits: tf.Tensor,
