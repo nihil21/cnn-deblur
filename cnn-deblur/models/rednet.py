@@ -217,13 +217,59 @@ class REDNet30WGAN(Model):
 
         # Compute metrics
         ssim_metric = tf.image.ssim(sharp_batch,
-                                    predicted_batch,
+                                    tf.cast(predicted_batch, dtype='bfloat16'),
                                     max_val=2.)
         psnr_metric = tf.image.psnr(sharp_batch,
-                                    predicted_batch,
+                                    tf.cast(predicted_batch, dtype='bfloat16'),
                                     max_val=2.)
 
         return {'g_loss': g_loss,
                 'ssim': tf.reduce_mean(ssim_metric),
                 'psnr': tf.reduce_mean(psnr_metric),
                 'c_loss': tf.reduce_mean(c_losses)}
+
+    @tf.function
+    def distributed_train_step(self,
+                               train_batch: tf.data.Dataset,
+                               strategy: Optional[tf.distribute.Strategy] = None):
+        per_replica_results = strategy.run(self.train_step, args=(train_batch,))
+        reduced_g_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
+                                         per_replica_results['g_loss'], axis=None)
+        reduced_ssim = strategy.reduce(tf.distribute.ReduceOp.MEAN,
+                                       per_replica_results['ssim'], axis=None)
+        reduced_psnr = strategy.reduce(tf.distribute.ReduceOp.MEAN,
+                                       per_replica_results['psnr'], axis=None)
+        reduced_c_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
+                                         per_replica_results['c_loss'], axis=None)
+        return {'g_loss': reduced_g_loss,
+                'ssim': reduced_ssim,
+                'psnr': reduced_psnr,
+                'c_loss': reduced_c_loss}
+
+    @tf.function
+    def test_step(self,
+                  val_batch: Tuple[tf.Tensor, tf.Tensor]):
+        (blurred_batch, sharp_batch) = val_batch
+
+        # Generate fake inputs
+        predicted_batch = self.generator(blurred_batch, training=False)
+        # Get logits for both fake and real images
+        fake_logits = self.critic(sharp_batch, training=False)
+        real_logits = self.critic(predicted_batch, training=False)
+        # Calculate critic's loss
+        c_loss = self.c_loss(real_logits, fake_logits)
+        # Calculate generator's loss
+        g_loss = self.g_loss(sharp_batch, predicted_batch, fake_logits)
+
+        # Compute metrics
+        ssim_metric = tf.image.ssim(sharp_batch,
+                                    tf.cast(predicted_batch, dtype='bfloat16'),
+                                    max_val=2.)
+        psnr_metric = tf.image.psnr(sharp_batch,
+                                    tf.cast(predicted_batch, dtype='bfloat16'),
+                                    max_val=2.)
+
+        return {'g_loss': g_loss,
+                'ssim': tf.reduce_mean(ssim_metric),
+                'psnr': tf.reduce_mean(psnr_metric),
+                'c_loss': c_loss}
