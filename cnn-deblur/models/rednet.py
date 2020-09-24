@@ -2,8 +2,8 @@ from models.conv_net import ConvNet
 from models.wgan import WGAN, create_patchgan_critic
 import tensorflow as tf
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU,
-                                     BatchNormalization, Activation)
+from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU, Lambda, Concatenate,
+                                     BatchNormalization, Activation, Reshape)
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import logcosh
 from typing import Tuple, List, Optional
@@ -15,7 +15,8 @@ def encode(in_layer: Layer,
            kernel_size: Optional[int] = 3,
            strides: Optional[int] = 1,
            padding: Optional[str] = 'same',
-           use_elu: Optional[bool] = True) -> List[Layer]:
+           use_elu: Optional[bool] = True,
+           bn_before_act: Optional[bool] = False) -> List[Layer]:
     layers = []
     x = in_layer
     for i in range(num_layers):
@@ -24,11 +25,18 @@ def encode(in_layer: Layer,
                    strides=strides,
                    padding=padding,
                    name='encode_conv{:d}'.format(i))(x)
-        if use_elu:
-            x = ELU(name='encode_act{:d}'.format(i))(x)
+        if bn_before_act:
+            x = BatchNormalization(name='encode_bn{:d}'.format(i))(x)
+            if use_elu:
+                x = ELU(name='encode_act{:d}'.format(i))(x)
+            else:
+                x = ReLU(name='encode_act{:d}'.format(i))(x)
         else:
-            x = ReLU(name='encode_act{:d}'.format(i))(x)
-        x = BatchNormalization(name='encode_bn{:d}'.format(i))(x)
+            if use_elu:
+                x = ELU(name='encode_act{:d}'.format(i))(x)
+            else:
+                x = ReLU(name='encode_act{:d}'.format(i))(x)
+            x = BatchNormalization(name='encode_bn{:d}'.format(i))(x)
         layers.append(x)
     return layers
 
@@ -39,7 +47,8 @@ def decode(res_layers: List[Layer],
            kernel_size: Optional[int] = 3,
            strides: Optional[int] = 1,
            padding: Optional[str] = 'same',
-           use_elu: Optional[bool] = True) -> List[Layer]:
+           use_elu: Optional[bool] = True,
+           bn_before_act: Optional[bool] = False) -> List[Layer]:
     layers = []
     res_layers.reverse()
     x = res_layers[0]
@@ -51,11 +60,18 @@ def decode(res_layers: List[Layer],
                    name='decode_conv{:d}'.format(i))(x)
         if i % 2 != 0:
             x = Add(name='decode_skip{:d}'.format(i))([x, res_layers[i]])
-        if use_elu:
-            x = ELU(name='decode_act{:d}'.format(i))(x)
+        if bn_before_act:
+            x = BatchNormalization(name='decode_bn{:d}'.format(i))(x)
+            if use_elu:
+                x = ELU(name='decode_act{:d}'.format(i))(x)
+            else:
+                x = ReLU(name='decode_act{:d}'.format(i))(x)
         else:
-            x = ReLU(name='decode_act{:d}'.format(i))(x)
-        x = BatchNormalization(name='decode_bn{:d}'.format(i))(x)
+            if use_elu:
+                x = ELU(name='decode_act{:d}'.format(i))(x)
+            else:
+                x = ReLU(name='decode_act{:d}'.format(i))(x)
+            x = BatchNormalization(name='decode_bn{:d}'.format(i))(x)
         layers.append(x)
 
     return layers
@@ -116,6 +132,75 @@ class REDNet30(ConvNet):
         output = ELU(name='output_elu')(output)
 
         self.model = Model(inputs=visible, outputs=output)
+
+
+class REDNet30V2(ConvNet):
+    def __init__(self, input_shape: Tuple[int, int, int]):
+        super(REDNet30V2, self).__init__()
+        in_layer = Input(input_shape)
+
+        # Encoder for single channel
+        def single_channel_enc(name: str, in_layer_s: Layer):
+            x = Conv2D(64,
+                       kernel_size=7,
+                       strides=2,
+                       padding='same',
+                       name=f'{name}_enc_conv0')(in_layer_s)
+            x = BatchNormalization(name=f'{name}_enc_bn0')(x)
+            x = ELU(name=f'{name}_enc_act0')(x)
+            layers = [x]
+            for i in range(1, 15):
+                x = Conv2D(64,
+                           kernel_size=3,
+                           strides=1,
+                           padding='same',
+                           name=f'{name}_enc_conv{i}')(x)
+                x = BatchNormalization(name=f'{name}_enc_bn{i}')(x)
+                x = ELU(name=f'{name}_enc_act{i}')(x)
+                layers.append(x)
+            return layers
+
+        # Decoder for single channel
+        def single_channel_dec(name: str, layers: List[Layer]):
+            layers.reverse()
+            x = Conv2D(64,
+                       kernel_size=3,
+                       strides=1,
+                       padding='same',
+                       name=f'{name}_dec_conv0')(layers[0])
+            x = BatchNormalization(name=f'{name}_dec_bn0')(x)
+            x = ELU(name=f'{name}_dec_act0')(x)
+
+            for i in range(1, 15):
+                x = Conv2D(64,
+                           kernel_size=3,
+                           strides=1,
+                           padding='same',
+                           name=f'{name}_dec_conv{i}')(x)
+                x = BatchNormalization(name=f'{name}_dec_bn{i}')(x)
+                x = ELU(name=f'{name}_dec_act{i}')(x)
+                if i % 2 != 0:
+                    x = Add(name=f'{name}_skip_{i-1}')([x, layers[i]])
+            return x
+
+        # Encoder of red channel
+        in_layer_red = Reshape((input_shape[0], input_shape[1], 1))(Lambda(lambda x: x[:, :, :, 0])(in_layer))
+        layers_enc_red = single_channel_enc('red', in_layer_red)
+        out_layer_red = single_channel_dec('red', layers_enc_red)
+        # Encoder of green channel
+        in_layer_green = Reshape((input_shape[0], input_shape[1], 1))(Lambda(lambda x: x[:, :, :, 1])(in_layer))
+        layers_enc_green = single_channel_enc('green', in_layer_green)
+        out_layer_green = single_channel_dec('green', layers_enc_green)
+        # Encoder of blue channel
+        in_layer_blue = Reshape((input_shape[0], input_shape[1], 1))(Lambda(lambda x: x[:, :, :, 2])(in_layer))
+        layers_enc_blue = single_channel_enc('blue', in_layer_blue)
+        out_layer_blue = single_channel_dec('blue', layers_enc_blue)
+        # Merged output
+        out_layer = Concatenate()([out_layer_red, out_layer_green, out_layer_blue])
+
+        # Backpropagation is applied to every channel
+        self.model = Model(inputs=in_layer,
+                           outputs=out_layer)  # [out_layer_red, out_layer_green, out_layer_blue]
 
 
 class REDNet30WGAN(WGAN):
