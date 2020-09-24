@@ -152,7 +152,6 @@ class REDNet30V2(ConvNet):
             for i in range(1, 15):
                 x = Conv2D(64,
                            kernel_size=3,
-                           strides=1,
                            padding='same',
                            name=f'{name}_enc_conv{i}')(x)
                 x = BatchNormalization(name=f'{name}_enc_bn{i}')(x)
@@ -163,24 +162,24 @@ class REDNet30V2(ConvNet):
         # Decoder for single channel
         def single_channel_dec(name: str, layers: List[Layer]):
             layers.reverse()
-            x = Conv2D(64,
-                       kernel_size=3,
-                       strides=1,
-                       padding='same',
-                       name=f'{name}_dec_conv0')(layers[0])
-            x = BatchNormalization(name=f'{name}_dec_bn0')(x)
-            x = ELU(name=f'{name}_dec_act0')(x)
-
-            for i in range(1, 15):
-                x = Conv2D(64,
-                           kernel_size=3,
-                           strides=1,
-                           padding='same',
-                           name=f'{name}_dec_conv{i}')(x)
+            x = layers[0]
+            for i in range(15):
+                x = Conv2DTranspose(64,
+                                    kernel_size=3,
+                                    padding='same',
+                                    name=f'{name}_dec_conv{i}')(x)
                 x = BatchNormalization(name=f'{name}_dec_bn{i}')(x)
                 x = ELU(name=f'{name}_dec_act{i}')(x)
                 if i % 2 != 0:
                     x = Add(name=f'{name}_skip_{i-1}')([x, layers[i]])
+            x = Conv2DTranspose(1,
+                                kernel_size=3,
+                                strides=2,
+                                padding='same',
+                                name=f'{name}_dec_conv16')(x)
+            x = BatchNormalization(name=f'{name}_dec_bn16')(x)
+            x = ELU(name=f'{name}_dec_act16')(x)
+
             return x
 
         # Encoder of red channel
