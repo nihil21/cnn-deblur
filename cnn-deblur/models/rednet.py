@@ -2,7 +2,8 @@ from models.conv_net import ConvNet
 from models.wgan import WGAN, create_patchgan_critic
 import tensorflow as tf
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, BatchNormalization, Activation
+from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU,
+                                     BatchNormalization, Activation)
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import logcosh
 from typing import Tuple, List, Optional
@@ -13,7 +14,8 @@ def encode(in_layer: Layer,
            filters: Optional[int] = 64,
            kernel_size: Optional[int] = 3,
            strides: Optional[int] = 1,
-           padding: Optional[str] = 'same') -> List[Layer]:
+           padding: Optional[str] = 'same',
+           use_elu: Optional[bool] = True) -> List[Layer]:
     layers = []
     x = in_layer
     for i in range(num_layers):
@@ -22,7 +24,10 @@ def encode(in_layer: Layer,
                    strides=strides,
                    padding=padding,
                    name='encode_conv{:d}'.format(i))(x)
-        x = ELU(name='encode_act{:d}'.format(i))(x)
+        if use_elu:
+            x = ELU(name='encode_act{:d}'.format(i))(x)
+        else:
+            x = ReLU(name='encode_act{:d}'.format(i))(x)
         x = BatchNormalization(name='encode_bn{:d}'.format(i))(x)
         layers.append(x)
     return layers
@@ -33,7 +38,8 @@ def decode(res_layers: List[Layer],
            filters: Optional[int] = 64,
            kernel_size: Optional[int] = 3,
            strides: Optional[int] = 1,
-           padding: Optional[str] = 'same') -> List[Layer]:
+           padding: Optional[str] = 'same',
+           use_elu: Optional[bool] = True) -> List[Layer]:
     layers = []
     res_layers.reverse()
     x = res_layers[0]
@@ -45,7 +51,10 @@ def decode(res_layers: List[Layer],
                    name='decode_conv{:d}'.format(i))(x)
         if i % 2 != 0:
             x = Add(name='decode_skip{:d}'.format(i))([x, res_layers[i]])
-        x = ELU(name='decode_act{:d}'.format(i))(x)
+        if use_elu:
+            x = ELU(name='decode_act{:d}'.format(i))(x)
+        else:
+            x = ReLU(name='decode_act{:d}'.format(i))(x)
         x = BatchNormalization(name='decode_bn{:d}'.format(i))(x)
         layers.append(x)
 
@@ -113,9 +122,9 @@ class REDNet30WGAN(WGAN):
     def __init__(self, input_shape: Tuple[int, int, int]):
         # ENCODER
         visible = Input(input_shape)
-        encode_layers = encode(visible)
+        encode_layers = encode(visible, use_elu=False)
         # DECODER
-        decode_layers = decode(encode_layers)
+        decode_layers = decode(encode_layers, use_elu=False)
         output = Conv2DTranspose(filters=3,
                                  kernel_size=1,
                                  strides=1,
