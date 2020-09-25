@@ -2,7 +2,7 @@ from models.conv_net import ConvNet
 from models.wgan import WGAN, create_patchgan_critic
 import tensorflow as tf
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU, Lambda, Concatenate,
+from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU, Lambda,
                                      BatchNormalization, Activation, Reshape)
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import logcosh
@@ -134,9 +134,10 @@ class REDNet30(ConvNet):
         self.model = Model(inputs=visible, outputs=output)
 
 
-class REDNet30V2(ConvNet):
-    def __init__(self, input_shape: Tuple[int, int, int]):
-        super(REDNet30V2, self).__init__()
+class REDNetV2(ConvNet):
+    def __init__(self, input_shape: Tuple[int, int, int],
+                 num_layers: Optional[int] = 15):
+        super(REDNetV2, self).__init__()
         in_layer = Input(input_shape)
 
         # Encoder for single channel
@@ -149,7 +150,7 @@ class REDNet30V2(ConvNet):
             x = BatchNormalization(name=f'{name}_enc_bn0')(x)
             x = ELU(name=f'{name}_enc_act0')(x)
             layers = [x]
-            for i in range(1, 15):
+            for i in range(1, num_layers):
                 x = Conv2D(64,
                            kernel_size=3,
                            padding='same',
@@ -163,7 +164,7 @@ class REDNet30V2(ConvNet):
         def single_channel_dec(name: str, layers: List[Layer]):
             layers.reverse()
             x = layers[0]
-            for i in range(15):
+            for i in range(num_layers - 1):
                 x = Conv2DTranspose(64,
                                     kernel_size=3,
                                     padding='same',
@@ -194,12 +195,10 @@ class REDNet30V2(ConvNet):
         in_layer_blue = Reshape((input_shape[0], input_shape[1], 1))(Lambda(lambda x: x[:, :, :, 2])(in_layer))
         layers_enc_blue = single_channel_enc('blue', in_layer_blue)
         out_layer_blue = single_channel_dec('blue', layers_enc_blue)
-        # Merged output
-        out_layer = Concatenate()([out_layer_red, out_layer_green, out_layer_blue])
 
         # Backpropagation is applied to every channel
         self.model = Model(inputs=in_layer,
-                           outputs=out_layer)  # [out_layer_red, out_layer_green, out_layer_blue]
+                           outputs=[out_layer_red, out_layer_green, out_layer_blue])
 
 
 class REDNet30WGAN(WGAN):
