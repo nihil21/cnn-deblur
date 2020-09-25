@@ -211,6 +211,9 @@ class REDNetV2(Model):
                 **kwargs):
         super(REDNetV2, self).compile()
 
+    def call(self, inputs, training=None, mask=None):
+        return self.model(inputs)
+
     @tf.function
     def train_step(self, train_batch):
         (blurred_batch, sharp_batch) = train_batch
