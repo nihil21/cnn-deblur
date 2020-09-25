@@ -7,6 +7,7 @@ from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add,
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import logcosh
 from typing import Tuple, List, Optional
+from utils.custom_metrics import ssim, psnr
 
 
 def encode(in_layer: Layer,
@@ -134,7 +135,7 @@ class REDNet30(ConvNet):
         self.model = Model(inputs=visible, outputs=output)
 
 
-class REDNetV2(ConvNet):
+class REDNetV2(Model):
     def __init__(self, input_shape: Tuple[int, int, int],
                  num_layers: Optional[int] = 15):
         super(REDNetV2, self).__init__()
@@ -199,6 +200,35 @@ class REDNetV2(ConvNet):
         # Backpropagation is applied to every channel
         self.model = Model(inputs=in_layer,
                            outputs=[out_layer_red, out_layer_green, out_layer_blue])
+
+    def compile(self,
+                optimizer='rmsprop',
+                loss=None,
+                metrics=None,
+                loss_weights=None,
+                sample_weight_mode=None,
+                weighted_metrics=None,
+                **kwargs):
+        super(REDNetV2, self).compile()
+
+    @tf.function
+    def train_step(self, train_batch):
+        (blurred_batch, sharp_batch) = train_batch
+        sharp_channels = tf.split(sharp_batch, num_or_size_splits=3, axis=3)
+        with tf.GradientTape() as tape:
+            restored = self.model(blurred_batch, training=True)
+            loss_red = self.loss(sharp_channels[0], restored[0])
+            loss_green = self.loss(sharp_channels[1], restored[1])
+            loss_blue = self.loss(sharp_channels[2], restored[2])
+            loss_value = tf.reduce_mean(loss_red, loss_blue, loss_green)
+        grads = tape.gradient(loss_value, self.model.trainable_weights)
+        self.optimizer.apply_gradients(zip(grads, self.model.trainable_weights))
+        merged = tf.concat(restored, axis=3)
+        ssim_metric = ssim(sharp_batch, merged)
+        psnr_metric = psnr(sharp_batch, merged)
+        return {'loss': loss_value,
+                'ssim': ssim_metric,
+                'psnr': psnr_metric}
 
 
 class REDNet30WGAN(WGAN):
