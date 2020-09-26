@@ -7,7 +7,7 @@ from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add,
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import logcosh
 from typing import Tuple, List, Optional
-from utils.custom_metrics import ssim, psnr
+# from utils.custom_metrics import ssim, psnr
 
 
 def encode(in_layer: Layer,
@@ -135,7 +135,7 @@ class REDNet30(ConvNet):
         self.model = Model(inputs=visible, outputs=output)
 
 
-class REDNetV2(Model):
+class REDNetV2(ConvNet):
     def __init__(self, input_shape: Tuple[int, int, int],
                  num_layers: Optional[int] = 15):
         super(REDNetV2, self).__init__()
@@ -201,7 +201,7 @@ class REDNetV2(Model):
         self.model = Model(inputs=in_layer,
                            outputs=[out_layer_red, out_layer_green, out_layer_blue])
 
-    def compile(self,
+    """def compile(self,
                 optimizer='rmsprop',
                 loss=None,
                 metrics=None,
@@ -231,7 +231,7 @@ class REDNetV2(Model):
         psnr_metric = psnr(sharp_batch, merged)
         return {'loss': loss_value,
                 'ssim': ssim_metric,
-                'psnr': psnr_metric}
+                'psnr': psnr_metric}"""
 
 
 class REDNet30WGAN(WGAN):
