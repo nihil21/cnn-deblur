@@ -141,7 +141,9 @@ class REDNet30(ConvNet):
 class REDNetV2:
     def __init__(self, input_shape: Tuple[int, int, int],
                  num_layers: Optional[int] = 15,
-                 learning_rate: Optional[float] = 1e-4):
+                 learning_rate: Optional[float] = 1e-4,
+                 decay: Optional[bool] = False,
+                 epochs: Optional[int] = None):
         in_layer = Input(input_shape)
 
         # Encoder for single channel
@@ -204,7 +206,10 @@ class REDNetV2:
         self.model = Model(inputs=in_layer,
                            outputs=[out_layer_red, out_layer_green, out_layer_blue])
 
-        self.optimizer = Adam(lr=learning_rate)
+        if decay and epochs is not None:
+            self.optimizer = Adam(lr=learning_rate, decay=learning_rate / epochs)
+        else:
+            self.optimizer = Adam(lr=learning_rate)
         self.loss = logcosh
 
     @tf.function
