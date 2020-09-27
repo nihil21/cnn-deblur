@@ -10,11 +10,16 @@ def load_data(batch_size: int,
               val_size: int,
               seed: Optional[int] = 42,
               repeat: Optional[bool] = True,
-              zero_mean: Optional[bool] = False):
+              zero_mean: Optional[bool] = False,
+              low_res: Optional[bool] = False):
+    if low_res:
+        res = (144, 256)
+    else:
+        res = (288, 512)
     return load_dataset_from_gcs(project_id='cnn-deblur',
                                  bucket_name='cnn-d3blur-buck3t',
                                  prefix='REDS',
-                                 res=(288, 512),
+                                 res=res,
                                  val_size=val_size,
                                  batch_size=batch_size,
                                  epochs=epochs,
