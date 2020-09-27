@@ -1,10 +1,11 @@
 from models.rednet import REDNetV2
+from tensorflow.keras.utils import plot_model
 from datasets import cifar_dataset
 import tensorflow as tf
 
-rednet = REDNetV2((32, 32, 3),  num_layers=2)
-rednet.build((None, 32, 32, 3))
-rednet.summary()
+rednet = REDNetV2((32, 32, 3),  num_layers=10)
+rednet.model.summary()
+plot_model(rednet.model, to_file='test.png', show_shapes=True)
 # rednet.plot_model('test.png')
 
 train, _, _ = cifar_dataset.load_image_dataset()
