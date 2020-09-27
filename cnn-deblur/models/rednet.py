@@ -216,7 +216,7 @@ class REDNetV2:
             loss_red = self.loss(sharp_channels[0], restored[0])
             loss_green = self.loss(sharp_channels[1], restored[1])
             loss_blue = self.loss(sharp_channels[2], restored[2])
-            loss_value = tf.reduce_mean(loss_red, loss_blue, loss_green)
+            loss_value = tf.reduce_mean([loss_red, loss_blue, loss_green])
         grads = tape.gradient(loss_value, self.model.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_weights))
         merged = tf.concat(restored, axis=3)
@@ -225,10 +225,10 @@ class REDNetV2:
         mse_metric = mse(sharp_batch, merged)
         mae_metric = mae(sharp_batch, merged)
         return {'loss': loss_value,
-                'ssim': ssim_metric,
-                'psnr': psnr_metric,
-                'mse': mse_metric,
-                'mae': mae_metric}
+                'ssim': tf.reduce_mean(ssim_metric),
+                'psnr': tf.reduce_mean(psnr_metric),
+                'mse': tf.reduce_mean(mse_metric),
+                'mae': tf.reduce_mean(mae_metric)}
 
     @tf.function
     def distributed_train_step(self,
@@ -262,7 +262,7 @@ class REDNetV2:
         loss_red = self.loss(sharp_channels[0], restored[0])
         loss_green = self.loss(sharp_channels[1], restored[1])
         loss_blue = self.loss(sharp_channels[2], restored[2])
-        loss_value = tf.reduce_mean(loss_red, loss_blue, loss_green)
+        loss_value = tf.reduce_mean([loss_red, loss_blue, loss_green])
 
         # Compute metrics
         merged = tf.concat(restored, axis=3)
@@ -271,10 +271,10 @@ class REDNetV2:
         mse_metric = mse(sharp_batch, merged)
         mae_metric = mae(sharp_batch, merged)
         return {'loss': loss_value,
-                'ssim': ssim_metric,
-                'psnr': psnr_metric,
-                'mse': mse_metric,
-                'mae': mae_metric}
+                'ssim': tf.reduce_mean(ssim_metric),
+                'psnr': tf.reduce_mean(psnr_metric),
+                'mse': tf.reduce_mean(mse_metric),
+                'mae': tf.reduce_mean(mae_metric)}
 
     def distributed_fit(self,
                         train_data: tf.data.Dataset,
