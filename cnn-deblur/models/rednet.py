@@ -150,17 +150,17 @@ class REDNetV2:
                        kernel_size=7,
                        strides=2,
                        padding='same',
-                       name=f'{name}_enc_conv0')(in_layer_s)
-            x = BatchNormalization(name=f'{name}_enc_bn0')(x)
-            x = ELU(name=f'{name}_enc_act0')(x)
+                       name=f'{name}_enc_conv1')(in_layer_s)
+            x = ELU(name=f'{name}_enc_act1')(x)
+            x = BatchNormalization(name=f'{name}_enc_bn1')(x)
             layers = [x]
-            for i in range(1, num_layers):
+            for i in range(2, num_layers + 1):
                 x = Conv2D(64,
                            kernel_size=3,
                            padding='same',
                            name=f'{name}_enc_conv{i}')(x)
-                x = BatchNormalization(name=f'{name}_enc_bn{i}')(x)
                 x = ELU(name=f'{name}_enc_act{i}')(x)
+                x = BatchNormalization(name=f'{name}_enc_bn{i}')(x)
                 layers.append(x)
             return layers
 
@@ -168,22 +168,22 @@ class REDNetV2:
         def single_channel_dec(name: str, layers: List[Layer]):
             layers.reverse()
             x = layers[0]
-            for i in range(num_layers - 1):
+            for i in range(1, num_layers):
                 x = Conv2DTranspose(64,
                                     kernel_size=3,
                                     padding='same',
                                     name=f'{name}_dec_conv{i}')(x)
-                x = BatchNormalization(name=f'{name}_dec_bn{i}')(x)
                 x = ELU(name=f'{name}_dec_act{i}')(x)
+                x = BatchNormalization(name=f'{name}_dec_bn{i}')(x)
                 if i % 2 != 0:
-                    x = Add(name=f'{name}_skip_{i-1}')([x, layers[i]])
+                    x = Add(name=f'{name}_skip_{i - 1}')([x, layers[i]])
             x = Conv2DTranspose(1,
                                 kernel_size=3,
                                 strides=2,
                                 padding='same',
-                                name=f'{name}_dec_conv14')(x)
-            x = BatchNormalization(name=f'{name}_dec_bn14')(x)
-            x = ELU(name=f'{name}_dec_act14')(x)
+                                name=f'{name}_dec_conv{num_layers}')(x)
+            x = ELU(name=f'{name}_dec_act{num_layers}')(x)
+            x = BatchNormalization(name=f'{name}_dec_bn{num_layers}')(x)
 
             return x
 
@@ -431,6 +431,11 @@ class REDNetV2:
             loss_mean, ssim_mean, psnr_mean, mse_mean, mae_mean
         )
         print(results)
+
+    def predict(self,
+                blurred_batch: tf.Tensor) -> tf.Tensor:
+        restored = self.model(blurred_batch, training=False)
+        return tf.cast(tf.concat(restored, axis=3), dtype='bfloat16')
 
 
 class REDNet30WGAN(WGAN):
