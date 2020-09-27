@@ -333,7 +333,7 @@ class REDNetV2:
             mae_mean = tf.reduce_mean(mae_metrics)
 
             # Display training results
-            train_results = 'loss: {} - ssim: {:.4f} - psnr: {:.4f} - mse: {} - mae: {}'.format(
+            train_results = 'loss: {:.7f} - ssim: {:.4f} - psnr: {:.3f} - mse: {:.6f} - mae: {:.5f}'.format(
                 loss_mean, ssim_mean, psnr_mean, mse_mean, mae_mean
             )
             print(train_results)
@@ -371,9 +371,10 @@ class REDNetV2:
                 val_mae_mean = tf.reduce_mean(val_mae_metrics)
 
                 # Display validation results
-                val_results = 'val_loss: {} - val_ssim: {:.4f} - val_psnr: {:.4f} - val_mse: {} - val_mae : {}'.format(
-                    val_loss_mean, val_ssim_mean, val_psnr_mean, val_mse_mean, val_mae_mean
-                )
+                val_results = 'val_loss: {:.7f} - val_ssim: {:.4f} - val_psnr: {:.3f} - ' \
+                              'val_mse: {:.6f} - val_mae : {:.5f}'.format(
+                                    val_loss_mean, val_ssim_mean, val_psnr_mean, val_mse_mean, val_mae_mean
+                              )
                 print(val_results)
 
                 # Save results in training history
