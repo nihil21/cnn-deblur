@@ -64,13 +64,14 @@ def load_dataset_from_gcs(project_id: str,
     test_data = test_data.map(_parse_image_fn,
                               num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-    if use_patches:
-        trainval_data = extract_patches_from_dataset(trainval_data)
-
     # Shuffle once and perform train-validation split
     trainval_data = trainval_data.shuffle(buffer_size=50, seed=seed, reshuffle_each_iteration=False)
     train_data = trainval_data.skip(val_size)
     val_data = trainval_data.take(val_size)
+
+    if use_patches:
+        train_data = extract_patches_from_dataset(train_data)
+        val_data = extract_patches_from_dataset(val_data)
 
     # Cache training and validation sets
     train_data = train_data.cache()
