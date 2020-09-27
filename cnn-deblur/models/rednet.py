@@ -219,7 +219,7 @@ class REDNetV2:
             loss_value = tf.reduce_mean([loss_red, loss_blue, loss_green])
         grads = tape.gradient(loss_value, self.model.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_weights))
-        merged = tf.concat(restored, axis=3)
+        merged = tf.cast(tf.concat(restored, axis=3), dtype='bfloat16')
         ssim_metric = ssim(sharp_batch, merged)
         psnr_metric = psnr(sharp_batch, merged)
         mse_metric = mse(sharp_batch, merged)
@@ -265,7 +265,7 @@ class REDNetV2:
         loss_value = tf.reduce_mean([loss_red, loss_blue, loss_green])
 
         # Compute metrics
-        merged = tf.concat(restored, axis=3)
+        merged = tf.cast(tf.concat(restored, axis=3), dtype='bfloat16')
         ssim_metric = ssim(sharp_batch, merged)
         psnr_metric = psnr(sharp_batch, merged)
         mse_metric = mse(sharp_batch, merged)
