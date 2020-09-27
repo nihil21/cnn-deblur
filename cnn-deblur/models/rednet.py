@@ -371,8 +371,8 @@ class REDNetV2:
                 # val_mae_mean = tf.reduce_mean(val_mae_metrics)
 
                 # Display validation results
-                val_results = 'val_loss: {:.7f} - val_ssim: {:.4f} - val_psnr: {:.3f} - '.format(
-                    # 'val_mse: {:.6f} - val_mae : {:.5f}'
+                val_results = 'val_loss: {:.7f} - val_ssim: {:.4f} - val_psnr: {:.3f}'.format(
+                    # - 'val_mse: {:.6f} - val_mae : {:.5f}'
                     val_loss_mean, val_ssim_mean, val_psnr_mean  # , val_mse_mean, val_mae_mean
                 )
                 print(val_results)
