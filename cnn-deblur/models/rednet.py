@@ -324,8 +324,8 @@ class REDNetV2:
             loss_mean = np.mean(losses)
             ssim_mean = np.mean(ssim_metrics)
             psnr_mean = np.mean(psnr_metrics)
-            mse_mean = np.mean(mse)
-            mae_mean = np.mean(mae)
+            mse_mean = np.mean(mse_metrics)
+            mae_mean = np.mean(mae_metrics)
 
             # Display training results
             train_results = 'loss: {} - ssim: {:.4f} - psnr: {:.4f} - mse: {} - mae: {}'.format(
