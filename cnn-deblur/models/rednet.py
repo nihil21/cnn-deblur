@@ -7,7 +7,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU, Lambda,
                                      BatchNormalization, Activation, Reshape)
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.losses import logcosh, mse, mae
+from tensorflow.keras.losses import logcosh  # , mse, mae
 from typing import Tuple, List, Optional
 from utils.custom_metrics import ssim, psnr
 from tqdm import auto
@@ -227,13 +227,13 @@ class REDNetV2:
         merged = tf.cast(tf.concat(restored, axis=3), dtype='bfloat16')
         ssim_metric = ssim(sharp_batch, merged)
         psnr_metric = psnr(sharp_batch, merged)
-        mse_metric = mse(sharp_batch, merged)
-        mae_metric = mae(sharp_batch, merged)
+        # mse_metric = mse(sharp_batch, merged)
+        # mae_metric = mae(sharp_batch, merged)
+        # 'mse': tf.reduce_mean(mse_metric),
+        # 'mae': tf.reduce_mean(mae_metric)}
         return {'loss': loss_value,
                 'ssim': tf.reduce_mean(ssim_metric),
-                'psnr': tf.reduce_mean(psnr_metric),
-                'mse': tf.reduce_mean(mse_metric),
-                'mae': tf.reduce_mean(mae_metric)}
+                'psnr': tf.reduce_mean(psnr_metric)}
 
     @tf.function
     def distributed_train_step(self,
@@ -246,15 +246,15 @@ class REDNetV2:
                                        per_replica_results['ssim'], axis=None)
         reduced_psnr = strategy.reduce(tf.distribute.ReduceOp.MEAN,
                                        per_replica_results['psnr'], axis=None)
-        reduced_mse = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                      per_replica_results['mse'], axis=None)
-        reduced_mae = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                      per_replica_results['mae'], axis=None)
+        # reduced_mse = strategy.reduce(tf.distribute.ReduceOp.MEAN,
+        #                               per_replica_results['mse'], axis=None)
+        # reduced_mae = strategy.reduce(tf.distribute.ReduceOp.MEAN,
+        #                               per_replica_results['mae'], axis=None)
+        # 'mse': reduced_mse,
+        # 'mae': reduced_mae}
         return {'loss': reduced_loss,
                 'ssim': reduced_ssim,
-                'psnr': reduced_psnr,
-                'mse': reduced_mse,
-                'mae': reduced_mae}
+                'psnr': reduced_psnr}
 
     @tf.function
     def test_step(self,
@@ -273,13 +273,13 @@ class REDNetV2:
         merged = tf.cast(tf.concat(restored, axis=3), dtype='bfloat16')
         ssim_metric = ssim(sharp_batch, merged)
         psnr_metric = psnr(sharp_batch, merged)
-        mse_metric = mse(sharp_batch, merged)
-        mae_metric = mae(sharp_batch, merged)
+        # mse_metric = mse(sharp_batch, merged)
+        # mae_metric = mae(sharp_batch, merged)
+        # 'mse': tf.reduce_mean(mse_metric),
+        # 'mae': tf.reduce_mean(mae_metric)}
         return {'loss': loss_value,
                 'ssim': tf.reduce_mean(ssim_metric),
-                'psnr': tf.reduce_mean(psnr_metric),
-                'mse': tf.reduce_mean(mse_metric),
-                'mae': tf.reduce_mean(mae_metric)}
+                'psnr': tf.reduce_mean(psnr_metric)}
 
     def distributed_fit(self,
                         train_data: tf.data.Dataset,
@@ -295,13 +295,13 @@ class REDNetV2:
         loss_hist = []
         ssim_hist = []
         psnr_hist = []
-        mse_hist = []
-        mae_hist = []
+        # mse_hist = []
+        # mae_hist = []
         val_loss_hist = []
         val_ssim_hist = []
         val_psnr_hist = []
-        val_mse_hist = []
-        val_mae_hist = []
+        # val_mse_hist = []
+        # val_mae_hist = []
         for ep in auto.tqdm(range(initial_epoch, epochs)):
             print('=' * 50)
             print('Epoch {:d}/{:d}'.format(ep + 1, epochs))
@@ -310,8 +310,8 @@ class REDNetV2:
             losses = []
             ssim_metrics = []
             psnr_metrics = []
-            mse_metrics = []
-            mae_metrics = []
+            # mse_metrics = []
+            # mae_metrics = []
 
             # Perform training
             for batch in auto.tqdm(train_data, total=steps_per_epoch):
@@ -322,19 +322,19 @@ class REDNetV2:
                 losses.append(step_result['loss'])
                 ssim_metrics.append(step_result['ssim'])
                 psnr_metrics.append(step_result['psnr'])
-                mse_metrics.append(step_result['mse'])
-                mae_metrics.append(step_result['mae'])
+                # mse_metrics.append(step_result['mse'])
+                # mae_metrics.append(step_result['mae'])
 
             # Compute mean losses and metrics
             loss_mean = np.mean(losses)
             ssim_mean = np.mean(ssim_metrics)
             psnr_mean = np.mean(psnr_metrics)
-            mse_mean = tf.reduce_mean(mse_metrics)
-            mae_mean = tf.reduce_mean(mae_metrics)
+            # mse_mean = tf.reduce_mean(mse_metrics)
+            # mae_mean = tf.reduce_mean(mae_metrics)
 
             # Display training results
-            train_results = 'loss: {:.7f} - ssim: {:.4f} - psnr: {:.3f} - mse: {:.6f} - mae: {:.5f}'.format(
-                loss_mean, ssim_mean, psnr_mean, mse_mean, mae_mean
+            train_results = 'loss: {:.7f} - ssim: {:.4f} - psnr: {:.3f}'.format(  # - mse: {:.6f} - mae: {:.5f}
+                loss_mean, ssim_mean, psnr_mean  # , mse_mean, mae_mean
             )
             print(train_results)
 
@@ -342,16 +342,16 @@ class REDNetV2:
             loss_hist.append(loss_mean)
             ssim_hist.append(ssim_mean)
             psnr_hist.append(psnr_mean)
-            mse_hist.append(mse_mean)
-            mae_hist.append(mae_mean)
+            # mse_hist.append(mse_mean)
+            # mae_hist.append(mae_mean)
 
             # Perform validation if required
             if validation_data is not None and validation_steps is not None:
                 val_losses = []
                 val_ssim_metrics = []
                 val_psnr_metrics = []
-                val_mse_metrics = []
-                val_mae_metrics = []
+                # val_mse_metrics = []
+                # val_mae_metrics = []
                 for val_batch in auto.tqdm(validation_data, total=validation_steps):
                     # Perform eval step
                     step_result = self.test_step(val_batch)
@@ -360,29 +360,29 @@ class REDNetV2:
                     val_losses.append(step_result['loss'])
                     val_ssim_metrics.append(step_result['ssim'])
                     val_psnr_metrics.append(step_result['psnr'])
-                    val_mse_metrics.append(step_result['mse'])
-                    val_mae_metrics.append(step_result['mae'])
+                    # val_mse_metrics.append(step_result['mse'])
+                    # val_mae_metrics.append(step_result['mae'])
 
                 # Compute mean losses and metrics
                 val_loss_mean = np.mean(val_losses)
                 val_ssim_mean = np.mean(val_ssim_metrics)
                 val_psnr_mean = np.mean(val_psnr_metrics)
-                val_mse_mean = tf.reduce_mean(val_mse_metrics)
-                val_mae_mean = tf.reduce_mean(val_mae_metrics)
+                # val_mse_mean = tf.reduce_mean(val_mse_metrics)
+                # val_mae_mean = tf.reduce_mean(val_mae_metrics)
 
                 # Display validation results
-                val_results = 'val_loss: {:.7f} - val_ssim: {:.4f} - val_psnr: {:.3f} - ' \
-                              'val_mse: {:.6f} - val_mae : {:.5f}'.format(
-                                    val_loss_mean, val_ssim_mean, val_psnr_mean, val_mse_mean, val_mae_mean
-                              )
+                val_results = 'val_loss: {:.7f} - val_ssim: {:.4f} - val_psnr: {:.3f} - '.format(
+                    # 'val_mse: {:.6f} - val_mae : {:.5f}'
+                    val_loss_mean, val_ssim_mean, val_psnr_mean  # , val_mse_mean, val_mae_mean
+                )
                 print(val_results)
 
                 # Save results in training history
                 val_loss_hist.append(val_loss_mean)
                 val_ssim_hist.append(val_ssim_mean)
                 val_psnr_hist.append(val_psnr_mean)
-                val_mse_hist.append(val_mse_mean)
-                val_mae_hist.append(val_mae_mean)
+                # val_mse_hist.append(val_mse_mean)
+                # val_mae_hist.append(val_mae_mean)
 
             # Save model every 15 epochs if required
             if checkpoint_dir is not None and (ep + 1) % checkpoint_freq == 0:
@@ -395,16 +395,16 @@ class REDNetV2:
                 print(' OK')
 
         # Return history
+        # 'val_mse': val_mse_hist,
+        # 'val_mae': val_mae_hist}
         return {'loss': loss_hist,
                 'ssim': ssim_hist,
                 'psnr': psnr_hist,
-                'mse': mse_hist,
-                'mae': mae_hist,
+                # 'mse': mse_hist,
+                # 'mae': mae_hist,
                 'val_loss': val_loss_hist,
                 'val_ssim': val_ssim_hist,
-                'val_psnr': val_psnr_hist,
-                'val_mse': val_mse_hist,
-                'val_mae': val_mae_hist}
+                'val_psnr': val_psnr_hist}
 
     def evaluate(self,
                  test_data: tf.data.Dataset,
@@ -412,8 +412,8 @@ class REDNetV2:
         losses = []
         ssim_metrics = []
         psnr_metrics = []
-        mse_metrics = []
-        mae_metrics = []
+        # mse_metrics = []
+        # mae_metrics = []
         for batch in auto.tqdm(test_data, total=steps):
             # Perform test step
             step_result = self.test_step(batch)
@@ -422,19 +422,19 @@ class REDNetV2:
             losses.append(step_result['loss'])
             ssim_metrics.append(step_result['ssim'])
             psnr_metrics.append(step_result['psnr'])
-            mse_metrics.append(step_result['mse'])
-            mae_metrics.append(step_result['mae'])
+            # mse_metrics.append(step_result['mse'])
+            # mae_metrics.append(step_result['mae'])
 
         # Compute mean losses and metrics
         loss_mean = np.mean(losses)
         ssim_mean = np.mean(ssim_metrics)
         psnr_mean = np.mean(psnr_metrics)
-        mse_mean = np.mean(mse_metrics)
-        mae_mean = np.mean(mae_metrics)
+        # mse_mean = np.mean(mse_metrics)
+        # mae_mean = np.mean(mae_metrics)
 
         # Display validation results
-        results = 'loss: {:.4f}\nssim: {:.4f}\npsnr: {:.4f}\nmse: {}\nmae: {}'.format(
-            loss_mean, ssim_mean, psnr_mean, mse_mean, mae_mean
+        results = 'loss: {:.4f}\nssim: {:.4f}\npsnr: {:.4f}'.format(  # \nmse: {}\nmae: {}
+            loss_mean, ssim_mean, psnr_mean  # , mse_mean, mae_mean
         )
         print(results)
 
