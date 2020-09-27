@@ -324,8 +324,8 @@ class REDNetV2:
             loss_mean = np.mean(losses)
             ssim_mean = np.mean(ssim_metrics)
             psnr_mean = np.mean(psnr_metrics)
-            mse_mean = np.mean(mse_metrics)
-            mae_mean = np.mean(mae_metrics)
+            mse_mean = tf.reduce_mean(mse_metrics)
+            mae_mean = tf.reduce_mean(mae_metrics)
 
             # Display training results
             train_results = 'loss: {} - ssim: {:.4f} - psnr: {:.4f} - mse: {} - mae: {}'.format(
@@ -362,8 +362,8 @@ class REDNetV2:
                 val_loss_mean = np.mean(val_losses)
                 val_ssim_mean = np.mean(val_ssim_metrics)
                 val_psnr_mean = np.mean(val_psnr_metrics)
-                val_mse_mean = np.mean(val_mse_metrics)
-                val_mae_mean = np.mean(val_mae_metrics)
+                val_mse_mean = tf.reduce_mean(val_mse_metrics)
+                val_mae_mean = tf.reduce_mean(val_mae_metrics)
 
                 # Display validation results
                 val_results = 'val_loss: {} - val_ssim: {:.4f} - val_psnr: {:.4f} - val_mse: {} - val_mae : {}'.format(
