@@ -1,8 +1,8 @@
 from models.wgan import WGAN, create_patchgan_critic
 import tensorflow as tf
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU,
-                                     BatchNormalization, concatenate)
+from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU, Lambda,
+                                     BatchNormalization, Concatenate)
 from tensorflow.keras.optimizers import Adam
 from utils.custom_losses import ms_logcosh
 from typing import Tuple, Optional, List
@@ -34,19 +34,23 @@ def res_block(in_layer: Layer,
         x = BatchNormalization(name='res_bn{:s}_2'.format(layer_id))(x)
     # Skip connection
     x = Add(name='res_add{:s}'.format(layer_id))([x, in_layer])
-    if use_elu:
-        x = ELU(name='res_elu{:s}_2'.format(layer_id))(x)
-    else:
-        x = ReLU(name='res_relu{:s}_2'.format(layer_id))(x)
+    # if use_elu:
+    #     x = ELU(name='res_elu{:s}_2'.format(layer_id))(x)
+    # else:
+    #     x = ReLU(name='res_relu{:s}_2'.format(layer_id))(x)
     return x
 
 
 def create_generator(input_shape,
                      use_elu: Optional[bool] = False,
                      num_res_blocks: Optional[int] = 19):
+    height = input_shape[0]
+    width = input_shape[1]
+    in_layer1 = Input(shape=input_shape)
     # Coarsest branch
-    in_layer3 = Input(shape=(input_shape[0] // 4, input_shape[1] // 4, input_shape[2]),
-                      name='in_layer3')
+    in_layer3 = Lambda(lambda t: tf.image.resize(t, size=(height // 4, width // 4)))(in_layer1)
+    # in_layer3 = Input(shape=(input_shape[0] // 4, input_shape[1] // 4, input_shape[2]),
+    #                   name='in_layer3')
     conv3 = Conv2D(filters=64,
                    kernel_size=5,
                    padding='same',
@@ -63,13 +67,14 @@ def create_generator(input_shape,
                         name='out_layer_3')(x)
 
     # Middle branch
-    in_layer2 = Input(shape=(input_shape[0] // 2, input_shape[1] // 2, input_shape[2]),
-                      name='in_layer2')
-    up_conv2 = Conv2DTranspose(filters=64,
+    in_layer2 = Lambda(lambda t: tf.image.resize(t, size=(height // 2, width // 2)))(in_layer1)
+    # in_layer2 = Input(shape=(input_shape[0] // 2, input_shape[1] // 2, input_shape[2]),
+    #                   name='in_layer2')
+    up_conv2 = Conv2DTranspose(filters=61,
                                kernel_size=5,
                                strides=2,
                                padding='same')(out_layer3)
-    concat2 = concatenate([in_layer2, up_conv2])
+    concat2 = Concatenate(axis=3)([in_layer2, up_conv2])
     conv2 = Conv2D(filters=64,
                    kernel_size=5,
                    padding='same',
@@ -86,13 +91,11 @@ def create_generator(input_shape,
                         name='out_layer2')(x)
 
     # Finest branch
-    in_layer1 = Input(shape=input_shape,
-                      name='in_layer1')
-    up_conv1 = Conv2DTranspose(filters=64,
+    up_conv1 = Conv2DTranspose(filters=61,
                                kernel_size=5,
                                strides=2,
                                padding='same')(out_layer2)
-    concat1 = concatenate([in_layer1, up_conv1])
+    concat1 = Concatenate(axis=3)([in_layer1, up_conv1])
     conv1 = Conv2D(filters=64,
                    kernel_size=5,
                    padding='same',
@@ -109,7 +112,7 @@ def create_generator(input_shape,
                         name='out_layer1')(x)
 
     # Final model
-    generator = Model(inputs=[in_layer1, in_layer2, in_layer3],
+    generator = Model(inputs=in_layer1,
                       outputs=[out_layer1, out_layer2, out_layer3],
                       name='Generator')
     return generator
@@ -164,13 +167,13 @@ class MSDeblurWGAN(WGAN):
         height = tf.shape(train_batch[0])[1]
         width = tf.shape(train_batch[0])[2]
         # Prepare Gaussian pyramid
-        blurred_batch1 = train_batch[0]
+        blurred_batch = train_batch[0]
         sharp_batch1 = train_batch[1]
-        blurred_batch2 = tf.image.resize(train_batch[0], size=(height // 2, width // 2))
+        # blurred_batch2 = tf.image.resize(train_batch[0], size=(height // 2, width // 2))
         sharp_batch2 = tf.image.resize(train_batch[1], size=(height // 2, width // 2))
-        blurred_batch3 = tf.image.resize(train_batch[0], size=(height // 4, width // 4))
+        # blurred_batch3 = tf.image.resize(train_batch[0], size=(height // 4, width // 4))
         sharp_batch3 = tf.image.resize(train_batch[1], size=(height // 4, width // 4))
-        blurred_pyramid = [blurred_batch1, blurred_batch2, blurred_batch3]
+        # blurred_pyramid = [blurred_batch1, blurred_batch2, blurred_batch3]
         sharp_pyramid = [sharp_batch1, sharp_batch2, sharp_batch3]
 
         c_losses = []
@@ -178,7 +181,7 @@ class MSDeblurWGAN(WGAN):
         for _ in range(self.critic_updates):
             with tf.GradientTape() as c_tape:
                 # Make predictions
-                predicted_pyramid = self.generator(blurred_pyramid, training=True)
+                predicted_pyramid = self.generator(blurred_batch, training=True)
                 # Get logits for both fake and real images (only original scale)
                 fake_logits = self.critic(predicted_pyramid[0], training=True)
                 real_logits = self.critic(sharp_pyramid[0], training=True)
@@ -199,7 +202,7 @@ class MSDeblurWGAN(WGAN):
         # Train the generator
         with tf.GradientTape() as g_tape:
             # Make predictions
-            predicted_pyramid = self.generator(blurred_pyramid, training=True)
+            predicted_pyramid = self.generator(blurred_batch, training=True)
             # Get logits for fake images (only original scale)
             fake_logits = self.critic(predicted_pyramid[0], training=True)
             # Calculate generator's loss
@@ -228,17 +231,17 @@ class MSDeblurWGAN(WGAN):
         height = tf.shape(val_batch[0])[1]
         width = tf.shape(val_batch[0])[2]
         # Prepare Gaussian pyramid
-        blurred_batch1 = val_batch[0]
+        blurred_batch = val_batch[0]
         sharp_batch1 = val_batch[1]
-        blurred_batch2 = tf.image.resize(val_batch[0], size=(height // 2, width // 2))
+        # blurred_batch2 = tf.image.resize(val_batch[0], size=(height // 2, width // 2))
         sharp_batch2 = tf.image.resize(val_batch[1], size=(height // 2, width // 2))
-        blurred_batch3 = tf.image.resize(val_batch[0], size=(height // 4, width // 4))
+        # blurred_batch3 = tf.image.resize(val_batch[0], size=(height // 4, width // 4))
         sharp_batch3 = tf.image.resize(val_batch[1], size=(height // 4, width // 4))
-        blurred_pyramid = [blurred_batch1, blurred_batch2, blurred_batch3]
+        # blurred_pyramid = [blurred_batch1, blurred_batch2, blurred_batch3]
         sharp_pyramid = [sharp_batch1, sharp_batch2, sharp_batch3]
 
         # Generate fake inputs
-        predicted_pyramid = self.generator(blurred_pyramid, training=False)
+        predicted_pyramid = self.generator(blurred_batch, training=False)
         # Get logits for both fake and real images
         fake_logits = self.critic(sharp_pyramid, training=False)
         real_logits = self.critic(predicted_pyramid, training=False)
