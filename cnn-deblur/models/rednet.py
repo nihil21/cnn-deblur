@@ -445,12 +445,14 @@ class REDNetV2:
 
 
 class REDNet30WGAN(WGAN):
-    def __init__(self, input_shape: Tuple[int, int, int]):
+    def __init__(self,
+                 input_shape: Tuple[int, int, int],
+                 use_elu: Optional[bool] = False):
         # ENCODER
         visible = Input(input_shape)
-        encode_layers = encode(visible, use_elu=False)
+        encode_layers = encode(visible, use_elu=use_elu)
         # DECODER
-        decode_layers = decode(encode_layers, use_elu=False)
+        decode_layers = decode(encode_layers, use_elu=use_elu)
         output = Conv2DTranspose(filters=3,
                                  kernel_size=1,
                                  strides=1,
