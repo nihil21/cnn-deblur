@@ -1,6 +1,6 @@
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.utils import plot_model
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam, Nadam
 from utils.custom_metrics import *
 from tensorflow.keras.losses import MeanSquaredError, MeanAbsoluteError, LogCosh
 from typing import List, Optional
@@ -14,7 +14,8 @@ class ConvNet:
 
     def compile(self,
                 lr: Optional[float] = 1e-4,
-                loss: Optional[str] = 'mse'):
+                loss: Optional[str] = 'mse',
+                use_nesterov: Optional[bool] = False):
 
         loss_dict = dict({
             'mse': MeanSquaredError(),
@@ -28,7 +29,12 @@ class ConvNet:
                        'mae',
                        'accuracy']
 
-        self.model.compile(Adam(learning_rate=lr),
+        if use_nesterov:
+            optimizer = Nadam(learning_rate=lr)
+        else:
+            optimizer = Adam(learning_rate=lr)
+
+        self.model.compile(optimizer,
                            loss=loss_dict[loss],
                            metrics=metric_list)
 

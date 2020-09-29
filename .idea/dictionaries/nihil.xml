@@ -24,6 +24,7 @@
       <w>maxpool</w>
       <w>msred</w>
       <w>multiscale</w>
+      <w>nesterov</w>
       <w>orlandi</w>
       <w>patchgan</w>
       <w>pinardi</w>
