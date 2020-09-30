@@ -13,7 +13,8 @@ def res_block(in_layer: Layer,
               filters: Optional[int] = 64,
               kernels: Optional[int] = 5,
               use_batchnorm: Optional[bool] = True,
-              use_elu: Optional[bool] = False):
+              use_elu: Optional[bool] = False,
+              last_act: Optional[bool] = False):
     # Block 1
     x = Conv2D(filters=filters,
                kernel_size=kernels,
@@ -34,15 +35,17 @@ def res_block(in_layer: Layer,
         x = BatchNormalization(name='res_bn{:s}_2'.format(layer_id))(x)
     # Skip connection
     x = Add(name='res_add{:s}'.format(layer_id))([x, in_layer])
-    # if use_elu:
-    #     x = ELU(name='res_elu{:s}_2'.format(layer_id))(x)
-    # else:
-    #     x = ReLU(name='res_relu{:s}_2'.format(layer_id))(x)
+    if last_act:
+        if use_elu:
+            x = ELU(name='res_elu{:s}_2'.format(layer_id))(x)
+        else:
+            x = ReLU(name='res_relu{:s}_2'.format(layer_id))(x)
     return x
 
 
 def create_generator(input_shape,
                      use_elu: Optional[bool] = False,
+                     last_act: Optional[bool] = False,
                      num_res_blocks: Optional[int] = 19):
     height = input_shape[0]
     width = input_shape[1]
@@ -59,7 +62,8 @@ def create_generator(input_shape,
     for i in range(num_res_blocks):
         x = res_block(in_layer=x,
                       layer_id='3_{:d}'.format(i),
-                      use_elu=use_elu)
+                      use_elu=use_elu,
+                      last_act=last_act)
     out_layer3 = Conv2D(filters=3,
                         kernel_size=5,
                         padding='same',
@@ -83,6 +87,7 @@ def create_generator(input_shape,
     for i in range(num_res_blocks):
         x = res_block(in_layer=x,
                       layer_id='2_{:d}'.format(i),
+                      last_act=last_act,
                       use_elu=use_elu)
     out_layer2 = Conv2D(filters=3,
                         kernel_size=5,
@@ -104,6 +109,7 @@ def create_generator(input_shape,
     for i in range(num_res_blocks):
         x = res_block(in_layer=x,
                       layer_id='1_{:d}'.format(i),
+                      last_act=last_act,
                       use_elu=use_elu)
     out_layer1 = Conv2D(filters=3,
                         kernel_size=5,
@@ -124,10 +130,12 @@ class MSDeblurWGAN(WGAN):
                  use_elu: Optional[bool] = False,
                  use_sigmoid: Optional[bool] = False,
                  use_bn: Optional[bool] = False,
+                 last_act: Optional[bool] = False,
                  num_res_blocks: Optional[int] = 19):
         # Build generator and critic
         generator = create_generator(input_shape,
                                      use_elu,
+                                     last_act,
                                      num_res_blocks)
         critic = create_patchgan_critic(input_shape,
                                         use_elu,

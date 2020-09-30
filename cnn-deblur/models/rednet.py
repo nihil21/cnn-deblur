@@ -1,16 +1,12 @@
 from models.conv_net import ConvNet
 from models.wgan import WGAN, create_patchgan_critic
-import os
-import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU, Lambda,
-                                     BatchNormalization, Activation, Reshape)
+from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU,
+                                     BatchNormalization, Activation)
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.losses import logcosh  # , mse, mae
+from tensorflow.keras.losses import logcosh
 from typing import Tuple, List, Optional
-from utils.custom_metrics import ssim, psnr
-from tqdm import auto
 
 
 def encode(in_layer: Layer,
@@ -120,13 +116,17 @@ class REDNet20(ConvNet):
 
 
 class REDNet30(ConvNet):
-    def __init__(self, input_shape: Tuple[int, int, int]):
+    def __init__(self,
+                 input_shape: Tuple[int, int, int],
+                 bn_before_act: Optional[bool] = False):
         super(REDNet30, self).__init__()
         # ENCODER
         visible = Input(input_shape)
-        encode_layers = encode(visible)
+        encode_layers = encode(visible,
+                               bn_before_act=bn_before_act)
         # DECODER
-        decode_layers = decode(encode_layers)
+        decode_layers = decode(encode_layers,
+                               bn_before_act=bn_before_act)
         output = Conv2DTranspose(filters=3,
                                  kernel_size=1,
                                  strides=1,
@@ -136,312 +136,6 @@ class REDNet30(ConvNet):
         output = ELU(name='output_elu')(output)
 
         self.model = Model(inputs=visible, outputs=output)
-
-
-class REDNetV2:
-    def __init__(self, input_shape: Tuple[int, int, int],
-                 num_layers: Optional[int] = 15,
-                 learning_rate: Optional[float] = 1e-4,
-                 decay: Optional[bool] = False,
-                 epochs: Optional[int] = None):
-        in_layer = Input(input_shape)
-
-        # Encoder for single channel
-        def single_channel_enc(name: str, in_layer_s: Layer):
-            # x = Conv2D(64,
-            #            kernel_size=7,
-            #            strides=2,
-            #            padding='same',
-            #            name=f'{name}_enc_conv1')(in_layer_s)
-            # x = ELU(name=f'{name}_enc_act1')(x)
-            # x = BatchNormalization(name=f'{name}_enc_bn1')(x)
-            x = in_layer_s
-            layers = [x]
-            for i in range(1, num_layers + 1):
-                x = Conv2D(64,
-                           kernel_size=3,
-                           padding='same',
-                           name=f'{name}_enc_conv{i}')(x)
-                x = ELU(name=f'{name}_enc_act{i}')(x)
-                x = BatchNormalization(name=f'{name}_enc_bn{i}')(x)
-                layers.append(x)
-            return layers
-
-        # Decoder for single channel
-        def single_channel_dec(name: str, layers: List[Layer]):
-            layers.reverse()
-            x = layers[0]
-            for i in range(1, num_layers):
-                x = Conv2D(64,
-                           kernel_size=3,
-                           padding='same',
-                           name=f'{name}_dec_conv{i}')(x)
-                x = ELU(name=f'{name}_dec_act{i}')(x)
-                x = BatchNormalization(name=f'{name}_dec_bn{i}')(x)
-                if i % 2 != 0:
-                    x = Add(name=f'{name}_skip_{i - 1}')([x, layers[i]])
-            x = Conv2D(1,
-                       kernel_size=3,
-                       padding='same',
-                       name=f'{name}_dec_conv{num_layers}')(x)
-            x = ELU(name=f'{name}_dec_act{num_layers}')(x)
-            x = BatchNormalization(name=f'{name}_dec_bn{num_layers}')(x)
-
-            return x
-
-        # Encoder of red channel
-        in_layer_red = Reshape((input_shape[0], input_shape[1], 1))(Lambda(lambda x: x[:, :, :, 0])(in_layer))
-        layers_enc_red = single_channel_enc('red', in_layer_red)
-        out_layer_red = single_channel_dec('red', layers_enc_red)
-        # Encoder of green channel
-        in_layer_green = Reshape((input_shape[0], input_shape[1], 1))(Lambda(lambda x: x[:, :, :, 1])(in_layer))
-        layers_enc_green = single_channel_enc('green', in_layer_green)
-        out_layer_green = single_channel_dec('green', layers_enc_green)
-        # Encoder of blue channel
-        in_layer_blue = Reshape((input_shape[0], input_shape[1], 1))(Lambda(lambda x: x[:, :, :, 2])(in_layer))
-        layers_enc_blue = single_channel_enc('blue', in_layer_blue)
-        out_layer_blue = single_channel_dec('blue', layers_enc_blue)
-
-        # Backpropagation is applied to every channel
-        self.model = Model(inputs=in_layer,
-                           outputs=[out_layer_red, out_layer_green, out_layer_blue])
-
-        if decay and epochs is not None:
-            self.optimizer = Adam(lr=learning_rate, decay=learning_rate / epochs)
-        else:
-            self.optimizer = Adam(lr=learning_rate)
-        self.loss = logcosh
-
-    @tf.function
-    def train_step(self, train_batch):
-        (blurred_batch, sharp_batch) = train_batch
-        sharp_channels = tf.split(sharp_batch, num_or_size_splits=3, axis=3)
-        with tf.GradientTape() as tape:
-            restored = self.model(blurred_batch, training=True)
-            loss_red = self.loss(sharp_channels[0], restored[0])
-            loss_green = self.loss(sharp_channels[1], restored[1])
-            loss_blue = self.loss(sharp_channels[2], restored[2])
-            loss_value = tf.reduce_mean([loss_red, loss_blue, loss_green])
-        grads = tape.gradient(loss_value, self.model.trainable_weights)
-        self.optimizer.apply_gradients(zip(grads, self.model.trainable_weights))
-        merged = tf.cast(tf.concat(restored, axis=3), dtype='bfloat16')
-        ssim_metric = ssim(sharp_batch, merged)
-        psnr_metric = psnr(sharp_batch, merged)
-        # mse_metric = mse(sharp_batch, merged)
-        # mae_metric = mae(sharp_batch, merged)
-        # 'mse': tf.reduce_mean(mse_metric),
-        # 'mae': tf.reduce_mean(mae_metric)}
-        return {'loss': loss_value,
-                'ssim': tf.reduce_mean(ssim_metric),
-                'psnr': tf.reduce_mean(psnr_metric)}
-
-    @tf.function
-    def distributed_train_step(self,
-                               train_batch: tf.data.Dataset,
-                               strategy: Optional[tf.distribute.Strategy] = None):
-        per_replica_results = strategy.run(self.train_step, args=(train_batch,))
-        reduced_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                       per_replica_results['loss'], axis=None)
-        reduced_ssim = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                       per_replica_results['ssim'], axis=None)
-        reduced_psnr = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                       per_replica_results['psnr'], axis=None)
-        # reduced_mse = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-        #                               per_replica_results['mse'], axis=None)
-        # reduced_mae = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-        #                               per_replica_results['mae'], axis=None)
-        # 'mse': reduced_mse,
-        # 'mae': reduced_mae}
-        return {'loss': reduced_loss,
-                'ssim': reduced_ssim,
-                'psnr': reduced_psnr}
-
-    @tf.function
-    def test_step(self,
-                  val_batch: Tuple[tf.Tensor, tf.Tensor]):
-        (blurred_batch, sharp_batch) = val_batch
-
-        # Restore images and calculate loss
-        sharp_channels = tf.split(sharp_batch, num_or_size_splits=3, axis=3)
-        restored = self.model(blurred_batch, training=False)
-        loss_red = self.loss(sharp_channels[0], restored[0])
-        loss_green = self.loss(sharp_channels[1], restored[1])
-        loss_blue = self.loss(sharp_channels[2], restored[2])
-        loss_value = tf.reduce_mean([loss_red, loss_blue, loss_green])
-
-        # Compute metrics
-        merged = tf.cast(tf.concat(restored, axis=3), dtype='bfloat16')
-        ssim_metric = ssim(sharp_batch, merged)
-        psnr_metric = psnr(sharp_batch, merged)
-        # mse_metric = mse(sharp_batch, merged)
-        # mae_metric = mae(sharp_batch, merged)
-        # 'mse': tf.reduce_mean(mse_metric),
-        # 'mae': tf.reduce_mean(mae_metric)}
-        return {'loss': loss_value,
-                'ssim': tf.reduce_mean(ssim_metric),
-                'psnr': tf.reduce_mean(psnr_metric)}
-
-    def distributed_fit(self,
-                        train_data: tf.data.Dataset,
-                        epochs: int,
-                        steps_per_epoch: int,
-                        strategy: tf.distribute.Strategy,
-                        initial_epoch: Optional[int] = 0,
-                        validation_data: Optional[tf.data.Dataset] = None,
-                        validation_steps: Optional[int] = None,
-                        checkpoint_dir: Optional[str] = None,
-                        checkpoint_freq: Optional[int] = 15):
-        # Set up lists that will contain training history
-        loss_hist = []
-        ssim_hist = []
-        psnr_hist = []
-        # mse_hist = []
-        # mae_hist = []
-        val_loss_hist = []
-        val_ssim_hist = []
-        val_psnr_hist = []
-        # val_mse_hist = []
-        # val_mae_hist = []
-        for ep in auto.tqdm(range(initial_epoch, epochs)):
-            print('=' * 50)
-            print('Epoch {:d}/{:d}'.format(ep + 1, epochs))
-
-            # Set up lists that will contain losses and metrics for each epoch
-            losses = []
-            ssim_metrics = []
-            psnr_metrics = []
-            # mse_metrics = []
-            # mae_metrics = []
-
-            # Perform training
-            for batch in auto.tqdm(train_data, total=steps_per_epoch):
-                # Perform train step
-                step_result = self.distributed_train_step(batch, strategy)
-
-                # Collect results
-                losses.append(step_result['loss'])
-                ssim_metrics.append(step_result['ssim'])
-                psnr_metrics.append(step_result['psnr'])
-                # mse_metrics.append(step_result['mse'])
-                # mae_metrics.append(step_result['mae'])
-
-            # Compute mean losses and metrics
-            loss_mean = np.mean(losses)
-            ssim_mean = np.mean(ssim_metrics)
-            psnr_mean = np.mean(psnr_metrics)
-            # mse_mean = tf.reduce_mean(mse_metrics)
-            # mae_mean = tf.reduce_mean(mae_metrics)
-
-            # Display training results
-            train_results = 'loss: {:.7f} - ssim: {:.4f} - psnr: {:.3f}'.format(  # - mse: {:.6f} - mae: {:.5f}
-                loss_mean, ssim_mean, psnr_mean  # , mse_mean, mae_mean
-            )
-            print(train_results)
-
-            # Save results in training history
-            loss_hist.append(loss_mean)
-            ssim_hist.append(ssim_mean)
-            psnr_hist.append(psnr_mean)
-            # mse_hist.append(mse_mean)
-            # mae_hist.append(mae_mean)
-
-            # Perform validation if required
-            if validation_data is not None and validation_steps is not None:
-                val_losses = []
-                val_ssim_metrics = []
-                val_psnr_metrics = []
-                # val_mse_metrics = []
-                # val_mae_metrics = []
-                for val_batch in auto.tqdm(validation_data, total=validation_steps):
-                    # Perform eval step
-                    step_result = self.test_step(val_batch)
-
-                    # Collect results
-                    val_losses.append(step_result['loss'])
-                    val_ssim_metrics.append(step_result['ssim'])
-                    val_psnr_metrics.append(step_result['psnr'])
-                    # val_mse_metrics.append(step_result['mse'])
-                    # val_mae_metrics.append(step_result['mae'])
-
-                # Compute mean losses and metrics
-                val_loss_mean = np.mean(val_losses)
-                val_ssim_mean = np.mean(val_ssim_metrics)
-                val_psnr_mean = np.mean(val_psnr_metrics)
-                # val_mse_mean = tf.reduce_mean(val_mse_metrics)
-                # val_mae_mean = tf.reduce_mean(val_mae_metrics)
-
-                # Display validation results
-                val_results = 'val_loss: {:.7f} - val_ssim: {:.4f} - val_psnr: {:.3f}'.format(
-                    # - 'val_mse: {:.6f} - val_mae : {:.5f}'
-                    val_loss_mean, val_ssim_mean, val_psnr_mean  # , val_mse_mean, val_mae_mean
-                )
-                print(val_results)
-
-                # Save results in training history
-                val_loss_hist.append(val_loss_mean)
-                val_ssim_hist.append(val_ssim_mean)
-                val_psnr_hist.append(val_psnr_mean)
-                # val_mse_hist.append(val_mse_mean)
-                # val_mae_hist.append(val_mae_mean)
-
-            # Save model every 15 epochs if required
-            if checkpoint_dir is not None and (ep + 1) % checkpoint_freq == 0:
-                print('Saving model...', end='')
-                self.model.save_weights(
-                    filepath=os.path.join(checkpoint_dir, 'ep:{:03d}-ssim:{:.4f}-psnr:{:.4f}.h5').format(
-                        ep + 1, ssim_mean, psnr_mean
-                    )
-                )
-                print(' OK')
-
-        # Return history
-        # 'val_mse': val_mse_hist,
-        # 'val_mae': val_mae_hist}
-        return {'loss': loss_hist,
-                'ssim': ssim_hist,
-                'psnr': psnr_hist,
-                # 'mse': mse_hist,
-                # 'mae': mae_hist,
-                'val_loss': val_loss_hist,
-                'val_ssim': val_ssim_hist,
-                'val_psnr': val_psnr_hist}
-
-    def evaluate(self,
-                 test_data: tf.data.Dataset,
-                 steps: int):
-        losses = []
-        ssim_metrics = []
-        psnr_metrics = []
-        # mse_metrics = []
-        # mae_metrics = []
-        for batch in auto.tqdm(test_data, total=steps):
-            # Perform test step
-            step_result = self.test_step(batch)
-
-            # Collect results
-            losses.append(step_result['loss'])
-            ssim_metrics.append(step_result['ssim'])
-            psnr_metrics.append(step_result['psnr'])
-            # mse_metrics.append(step_result['mse'])
-            # mae_metrics.append(step_result['mae'])
-
-        # Compute mean losses and metrics
-        loss_mean = np.mean(losses)
-        ssim_mean = np.mean(ssim_metrics)
-        psnr_mean = np.mean(psnr_metrics)
-        # mse_mean = np.mean(mse_metrics)
-        # mae_mean = np.mean(mae_metrics)
-
-        # Display validation results
-        results = 'loss: {:.4f}\nssim: {:.4f}\npsnr: {:.4f}'.format(  # \nmse: {}\nmae: {}
-            loss_mean, ssim_mean, psnr_mean  # , mse_mean, mae_mean
-        )
-        print(results)
-
-    def predict(self,
-                blurred_batch: tf.Tensor) -> tf.Tensor:
-        restored = self.model(blurred_batch, training=False)
-        return tf.cast(tf.concat(restored, axis=3), dtype='bfloat16')
 
 
 class REDNet30WGAN(WGAN):
