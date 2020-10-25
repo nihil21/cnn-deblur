@@ -1,9 +1,9 @@
 # cnn-deblur
-ResNet implementation to deblur images from Cifar10 and REDS datasets.
+In this project we investigate Deep Neural Models to tackle image deblurring from Cifar10 and REDS datasets.
 
 ## Approaches:
-- Fully Convolutional Neural Network with Residual Connections
-- DeblurGAN
+- Convolutional AutoEncoders
+- Wasserstein Generative Adversarial Networks with Gradient Penalty
 
 ## Authors:
 - Mattia Orlandi
