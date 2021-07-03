@@ -1,7 +1,7 @@
 from tensorflow.keras.models import Model
 from models.conv_net import ConvNet
 from tensorflow.keras.layers import Input, Layer, Conv2D, BatchNormalization, Activation, Subtract, concatenate
-from typing import Tuple
+import typing
 
 
 def ConvBRNRelu(kernel: int,
@@ -33,7 +33,7 @@ def ConvBRNRelu(kernel: int,
 
 class BRDNet(ConvNet):
 
-    def __init__(self, input_shape: Tuple[int, int, int]):
+    def __init__(self, input_shape: typing.Tuple[int, int, int]):
         super().__init__()
 
         self.visible = Input(shape=input_shape)  # 240x320x3

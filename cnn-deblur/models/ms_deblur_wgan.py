@@ -5,16 +5,16 @@ from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add,
                                      BatchNormalization, Concatenate)
 from tensorflow.keras.optimizers import Adam
 from utils.custom_losses import ms_logcosh
-from typing import Tuple, Optional, List
+import typing
 
 
 def res_block(in_layer: Layer,
               layer_id: str,
-              filters: Optional[int] = 64,
-              kernels: Optional[int] = 5,
-              use_batchnorm: Optional[bool] = True,
-              use_elu: Optional[bool] = False,
-              last_act: Optional[bool] = False):
+              filters: int = 64,
+              kernels: int = 5,
+              use_batchnorm: bool = True,
+              use_elu: bool = False,
+              last_act: bool = False):
     # Block 1
     x = Conv2D(filters=filters,
                kernel_size=kernels,
@@ -44,9 +44,9 @@ def res_block(in_layer: Layer,
 
 
 def create_generator(input_shape,
-                     use_elu: Optional[bool] = False,
-                     last_act: Optional[bool] = False,
-                     num_res_blocks: Optional[int] = 19):
+                     use_elu: bool = False,
+                     last_act: bool = False,
+                     num_res_blocks: int = 19):
     height = input_shape[0]
     width = input_shape[1]
     in_layer1 = Input(shape=input_shape)
@@ -126,12 +126,12 @@ def create_generator(input_shape,
 
 class MSDeblurWGAN(WGAN):
     def __init__(self,
-                 input_shape: Tuple[int, int, int],
-                 use_elu: Optional[bool] = False,
-                 use_sigmoid: Optional[bool] = False,
-                 use_bn: Optional[bool] = False,
-                 last_act: Optional[bool] = False,
-                 num_res_blocks: Optional[int] = 19):
+                 input_shape: typing.Tuple[int, int, int],
+                 use_elu: bool = False,
+                 use_sigmoid: bool = False,
+                 use_bn: bool = False,
+                 last_act: bool = False,
+                 num_res_blocks: int = 19):
         # Build generator and critic
         generator = create_generator(input_shape,
                                      use_elu,
@@ -143,8 +143,8 @@ class MSDeblurWGAN(WGAN):
                                         use_bn)
 
         # Define and set loss functions
-        def generator_loss(sharp_pyramid: List[tf.Tensor],
-                           predicted_pyramid: List[tf.Tensor],
+        def generator_loss(sharp_pyramid: typing.List[tf.Tensor],
+                           predicted_pyramid: typing.List[tf.Tensor],
                            fake_logits: tf.Tensor):
             adv_loss = -tf.reduce_mean(fake_logits)
             content_loss = ms_logcosh(sharp_pyramid, predicted_pyramid)
@@ -169,7 +169,7 @@ class MSDeblurWGAN(WGAN):
     # Override train_step and test_step in order to account for pyramids instead of single-scale images
     @tf.function
     def train_step(self,
-                   train_batch: Tuple[tf.Tensor, tf.Tensor]):
+                   train_batch: typing.Tuple[tf.Tensor, tf.Tensor]):
         # Determine batch size, height and width
         batch_size = tf.shape(train_batch[0])[0]
         height = tf.shape(train_batch[0])[1]
@@ -234,7 +234,7 @@ class MSDeblurWGAN(WGAN):
 
     @tf.function
     def test_step(self,
-                  val_batch: Tuple[tf.Tensor, tf.Tensor]):
+                  val_batch: typing.Tuple[tf.Tensor, tf.Tensor]):
         # Determine height and width
         height = tf.shape(val_batch[0])[1]
         width = tf.shape(val_batch[0])[2]

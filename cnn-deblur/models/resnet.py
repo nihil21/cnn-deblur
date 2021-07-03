@@ -2,12 +2,12 @@ from models.conv_net import ConvNet
 from tensorflow.keras.layers import (Input, AveragePooling2D, Flatten, Dense, Dropout, Reshape, Layer,
                                      Conv2D, Conv2DTranspose, BatchNormalization, Activation, Add)
 from tensorflow.keras.models import Model
-from typing import Tuple, List
+import typing
 
 
-def ResConv(kernels: List[int],
-            depths: List[int],
-            strides: List[int],
+def ResConv(kernels: typing.List[int],
+            depths: typing.List[int],
+            strides: typing.List[int],
             in_layer: Layer,
             layer_idx: int):
     x = in_layer
@@ -37,9 +37,9 @@ def ResConv(kernels: List[int],
     return x
 
 
-def ResConvTranspose(kernels: List[int],
-                     depths: List[int],
-                     strides: List[int],
+def ResConvTranspose(kernels: typing.List[int],
+                     depths: typing.List[int],
+                     strides: typing.List[int],
                      in_layer: Layer,
                      layer_idx: int):
     x = in_layer
@@ -71,7 +71,7 @@ def ResConvTranspose(kernels: List[int],
 
 class ResNet16(ConvNet):
 
-    def __init__(self, input_shape: Tuple[int, int, int]):
+    def __init__(self, input_shape: typing.Tuple[int, int, int]):
         super().__init__()
         # ENCODER
         visible = Input(shape=input_shape)
@@ -130,7 +130,7 @@ class ResNet16(ConvNet):
 
 class ResNet16Dense(ConvNet):
 
-    def __init__(self, input_shape: Tuple[int, int, int]):
+    def __init__(self, input_shape: typing.Tuple[int, int, int]):
         super().__init__()
         # ENCODER
         visible = Input(shape=input_shape)
@@ -177,7 +177,7 @@ class ResNet16Dense(ConvNet):
 
 class ResNet20(ConvNet):
 
-    def __init__(self, input_shape: Tuple[int, int, int]):
+    def __init__(self, input_shape: typing.Tuple[int, int, int]):
         super().__init__()
         # ENCODER
         visible = Input(shape=input_shape)

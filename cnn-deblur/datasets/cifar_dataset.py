@@ -5,15 +5,15 @@ from datasets.dataset_utils import load_dataset_from_gcs
 from sklearn.model_selection import train_test_split
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
-from typing import Optional
+import typing
 
 
 def load_data(batch_size: int,
               epochs: int,
               val_size: int,
-              seed: Optional[int] = 42,
-              repeat: Optional[bool] = True,
-              zero_mean: Optional[bool] = False):
+              seed: int = 42,
+              repeat: bool = True,
+              zero_mean: bool = False):
     return load_dataset_from_gcs(project_id='cnn-deblur',
                                  bucket_name='cnn-d3blur-buck3t',
                                  prefix='cifar10',
@@ -26,7 +26,7 @@ def load_data(batch_size: int,
                                  zero_mean=zero_mean)
 
 
-def load_image_dataset(val_ratio: Optional[float] = 0.125, normalization: Optional[int] = 1):
+def load_image_dataset(val_ratio: float = 0.125, normalization: int = 1):
     """Function that loads Cifar10 dataset and produces a training and test set in which the predictors are randomly
     Gaussian blurred images and the targets are the clear version of such images.
         :param val_ratio: boolean indicating the ratio of the validation split (if zero, the validation split
@@ -53,8 +53,8 @@ def load_image_dataset(val_ratio: Optional[float] = 0.125, normalization: Option
 
 def blur_dataset(train_set: np.ndarray,
                  test_set: np.ndarray,
-                 normalization: Optional[int] = 1,
-                 rnd: Optional[np.random.RandomState] = None):
+                 normalization: int = 1,
+                 rnd: typing.Optional[np.random.RandomState] = None):
     """Function which concurrently blurs a training and a test datasets by applying random Gaussian noise
         :param train_set: NumPy array representing the training set (clean images)
         :param test_set: NumPy array representing the test set (clean images)

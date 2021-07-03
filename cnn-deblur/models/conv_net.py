@@ -3,7 +3,7 @@ from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import Adam, Nadam
 from utils.custom_metrics import *
 from tensorflow.keras.losses import MeanSquaredError, MeanAbsoluteError, LogCosh
-from typing import List, Optional
+import typing
 
 
 class ConvNet:
@@ -13,9 +13,9 @@ class ConvNet:
         self.model = None
 
     def compile(self,
-                lr: Optional[float] = 1e-4,
-                loss: Optional[str] = 'mse',
-                use_nesterov: Optional[bool] = False):
+                lr: float = 1e-4,
+                loss: str = 'mse',
+                use_nesterov: bool = False):
 
         loss_dict = dict({
             'mse': MeanSquaredError(),
@@ -39,15 +39,15 @@ class ConvNet:
                            metrics=metric_list)
 
     def fit(self,
-            x: Optional = None,
-            y: Optional = None,
-            batch_size: Optional[int] = 32,
-            epochs: Optional[int] = 1,
-            steps_per_epoch: Optional[int] = None,
-            validation_data: Optional = None,
-            validation_steps: Optional[int] = None,
-            initial_epoch: Optional[int] = 0,
-            callbacks: Optional[List[Callback]] = None):
+            x: typing.Optional = None,
+            y: typing.Optional = None,
+            batch_size: int = 32,
+            epochs: int = 1,
+            steps_per_epoch: typing.Optional[int] = None,
+            validation_data: typing.Optional = None,
+            validation_steps: typing.Optional[int] = None,
+            initial_epoch: int = 0,
+            callbacks: typing.Optional[typing.List[Callback]] = None):
         if y is not None:
             return self.model.fit(x, y,
                                   batch_size=batch_size,
@@ -66,10 +66,10 @@ class ConvNet:
                                   callbacks=callbacks)
 
     def evaluate(self,
-                 x: Optional = None,
-                 y: Optional = None,
-                 batch_size: Optional[int] = None,
-                 steps: Optional[int] = None):
+                 x: typing.Optional = None,
+                 y: typing.Optional = None,
+                 batch_size: typing.Optional[int] = None,
+                 steps: typing.Optional[int] = None):
         if y is not None:
             return self.model.evaluate(x, y, batch_size=batch_size, steps=steps)
         else:

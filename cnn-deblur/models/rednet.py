@@ -6,17 +6,17 @@ from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add,
                                      BatchNormalization, Activation)
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import logcosh
-from typing import Tuple, List, Optional
+import typing
 
 
 def encode(in_layer: Layer,
-           num_layers: Optional[int] = 15,
-           filters: Optional[int] = 64,
-           kernel_size: Optional[int] = 3,
-           strides: Optional[int] = 1,
-           padding: Optional[str] = 'same',
-           use_elu: Optional[bool] = True,
-           bn_before_act: Optional[bool] = False) -> List[Layer]:
+           num_layers: int = 15,
+           filters: int = 64,
+           kernel_size: int = 3,
+           strides: int = 1,
+           padding: str = 'same',
+           use_elu: bool = True,
+           bn_before_act: bool = False) -> typing.List[Layer]:
     layers = []
     x = in_layer
     for i in range(num_layers):
@@ -41,14 +41,14 @@ def encode(in_layer: Layer,
     return layers
 
 
-def decode(res_layers: List[Layer],
-           num_layers: Optional[int] = 15,
-           filters: Optional[int] = 64,
-           kernel_size: Optional[int] = 3,
-           strides: Optional[int] = 1,
-           padding: Optional[str] = 'same',
-           use_elu: Optional[bool] = True,
-           bn_before_act: Optional[bool] = False) -> List[Layer]:
+def decode(res_layers: typing.List[Layer],
+           num_layers: int = 15,
+           filters: int = 64,
+           kernel_size: int = 3,
+           strides: int = 1,
+           padding: str = 'same',
+           use_elu: bool = True,
+           bn_before_act: bool = False) -> typing.List[Layer]:
     layers = []
     res_layers.reverse()
     x = res_layers[0]
@@ -78,7 +78,7 @@ def decode(res_layers: List[Layer],
 
 
 class REDNet10(ConvNet):
-    def __init__(self, input_shape: Tuple[int, int, int]):
+    def __init__(self, input_shape: typing.Tuple[int, int, int]):
         super(REDNet10, self).__init__()
         # ENCODER
         visible = Input(input_shape)
@@ -97,7 +97,7 @@ class REDNet10(ConvNet):
 
 
 class REDNet20(ConvNet):
-    def __init__(self, input_shape: Tuple[int, int, int]):
+    def __init__(self, input_shape: typing.Tuple[int, int, int]):
         super(REDNet20, self).__init__()
         # ENCODER
         visible = Input(input_shape)
@@ -117,8 +117,8 @@ class REDNet20(ConvNet):
 
 class REDNet30(ConvNet):
     def __init__(self,
-                 input_shape: Tuple[int, int, int],
-                 bn_before_act: Optional[bool] = False):
+                 input_shape: typing.Tuple[int, int, int],
+                 bn_before_act: bool = False):
         super(REDNet30, self).__init__()
         # ENCODER
         visible = Input(input_shape)
@@ -140,8 +140,8 @@ class REDNet30(ConvNet):
 
 class REDNet30WGAN(WGAN):
     def __init__(self,
-                 input_shape: Tuple[int, int, int],
-                 use_elu: Optional[bool] = False):
+                 input_shape: typing.Tuple[int, int, int],
+                 use_elu: bool = False):
         # ENCODER
         visible = Input(input_shape)
         encode_layers = encode(visible, use_elu=use_elu)

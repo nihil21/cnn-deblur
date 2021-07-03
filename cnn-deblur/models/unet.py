@@ -1,14 +1,14 @@
 from tensorflow.keras import Model
 from models.conv_net import ConvNet
 from tensorflow.keras.layers import (Input, MaxPooling2D, Layer, Conv2D, Conv2DTranspose, concatenate)
-from typing import Tuple, List, Optional
+import typing
 
 
-def UConvDown(kernels: List[int],
-              filters_num: List[int],
+def UConvDown(kernels: typing.List[int],
+              filters_num: typing.List[int],
               in_layer: Layer,
               layer_idx: int,
-              middle: Optional[bool] = True):
+              middle: bool = True):
     # If the block is not at the input of the network, apply max pooling
     if middle:
         x = MaxPooling2D(pool_size=2, strides=2, name='pool{0:d}'.format(layer_idx))(in_layer)
@@ -25,8 +25,8 @@ def UConvDown(kernels: List[int],
     return x
 
 
-def UConvUp(kernels: List[int],
-            filters_num: List[int],
+def UConvUp(kernels: typing.List[int],
+            filters_num: typing.List[int],
             in_layer: Layer,
             concat_layer: Layer,
             layer_idx: int):
@@ -53,7 +53,7 @@ def UConvUp(kernels: List[int],
 
 class UNet16(ConvNet):
 
-    def __init__(self, input_shape: Tuple[int, int, int]):
+    def __init__(self, input_shape: typing.Tuple[int, int, int]):
         super().__init__()
 
         # ENCODER
@@ -107,7 +107,7 @@ class UNet16(ConvNet):
 
 class UNet20(ConvNet):
 
-    def __init__(self, input_shape: Tuple[int, int, int]):
+    def __init__(self, input_shape: typing.Tuple[int, int, int]):
         super().__init__()
 
         # ENCODER

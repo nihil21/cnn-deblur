@@ -2,16 +2,15 @@ import tensorflow as tf
 import os
 from glob import glob
 from datasets.dataset_utils import load_dataset_from_gcs
-from typing import Optional
 
 
 def load_data(batch_size: int,
               epochs: int,
               val_size: int,
-              seed: Optional[int] = 42,
-              repeat: Optional[bool] = True,
-              zero_mean: Optional[bool] = False,
-              low_res: Optional[bool] = False):
+              seed: int = 42,
+              repeat: bool = True,
+              zero_mean: bool = False,
+              low_res: bool = False):
     if low_res:
         res = (144, 256)
     else:

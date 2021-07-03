@@ -5,13 +5,13 @@ from tensorflow.keras.layers import Input, Conv2D, ELU, LeakyReLU, Activation, B
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Optimizer
 from tqdm import notebook
-from typing import Tuple, Optional, Union, Callable
+import typing
 
 
 def create_patchgan_critic(input_shape,
-                           use_elu: Optional[bool] = False,
-                           use_sigmoid: Optional[bool] = False,
-                           use_bn: Optional[bool] = False):
+                           use_elu: bool = False,
+                           use_sigmoid: bool = False,
+                           use_bn: bool = False):
     in_layer = Input(input_shape)
     # Block 1
     x = Conv2D(filters=64,
@@ -85,8 +85,8 @@ class WGAN:
     def __init__(self,
                  generator: Model,
                  critic: Model,
-                 generator_loss: Callable,
-                 critic_loss: Callable,
+                 generator_loss: typing.Callable,
+                 critic_loss: typing.Callable,
                  generator_optimizer: Optimizer,
                  critic_optimizer: Optimizer):
         # Set generator's and critic's models
@@ -129,7 +129,7 @@ class WGAN:
     # Override train_step and test_step in order to account for pyramids instead of single-scale images
     @tf.function
     def train_step(self,
-                   train_batch: Tuple[tf.Tensor, tf.Tensor]):
+                   train_batch: typing.Tuple[tf.Tensor, tf.Tensor]):
         (blurred_batch, sharp_batch) = train_batch
         batch_size = tf.shape(blurred_batch)[0]
         c_losses = []
@@ -183,7 +183,7 @@ class WGAN:
     @tf.function
     def distributed_train_step(self,
                                train_batch: tf.data.Dataset,
-                               strategy: Optional[tf.distribute.Strategy] = None):
+                               strategy: typing.Optional[tf.distribute.Strategy] = None):
         per_replica_results = strategy.run(self.train_step, args=(train_batch,))
         reduced_g_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
                                          per_replica_results['g_loss'], axis=None)
@@ -200,7 +200,7 @@ class WGAN:
 
     @tf.function
     def test_step(self,
-                  val_batch: Tuple[tf.Tensor, tf.Tensor]):
+                  val_batch: typing.Tuple[tf.Tensor, tf.Tensor]):
         (blurred_batch, sharp_batch) = val_batch
 
         # Generate fake inputs
@@ -229,7 +229,7 @@ class WGAN:
     @tf.function
     def distributed_train_step(self,
                                train_batch: tf.data.Dataset,
-                               strategy: Optional[tf.distribute.Strategy] = None):
+                               strategy: typing.Optional[tf.distribute.Strategy] = None):
         per_replica_results = strategy.run(self.train_step, args=(train_batch,))
         reduced_g_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
                                          per_replica_results['g_loss'], axis=None)
@@ -245,18 +245,18 @@ class WGAN:
                 'c_loss': reduced_c_loss}
 
     def fit(self,
-            train_data: Union[tf.data.Dataset, np.ndarray],
+            train_data: typing.Union[tf.data.Dataset, np.ndarray],
             epochs: int,
             steps_per_epoch: int,
-            initial_epoch: Optional[int] = 0,
-            validation_data: Optional[tf.data.Dataset] = None,
-            validation_steps: Optional[int] = None,
-            checkpoint_dir: Optional[str] = None,
-            checkpoint_freq: Optional[int] = 15):
+            initial_epoch: int = 0,
+            validation_data: typing.Optional[tf.data.Dataset] = None,
+            validation_steps: typing.Optional[int] = None,
+            checkpoint_dir: typing.Optional[str] = None,
+            checkpoint_freq: int = 15):
         if isinstance(train_data, tf.data.Dataset):
             return self.__fit_on_dataset(train_data, epochs, steps_per_epoch, initial_epoch,
                                          validation_data, validation_steps, checkpoint_dir, checkpoint_freq)
-        elif isinstance(train_data, Tuple):
+        elif isinstance(train_data, typing.Tuple):
             return self.__fit_on_tensor(train_data, epochs, steps_per_epoch, initial_epoch,
                                         validation_data, validation_steps, checkpoint_dir, checkpoint_freq)
 
@@ -264,11 +264,11 @@ class WGAN:
                          train_data: tf.data.Dataset,
                          epochs: int,
                          steps_per_epoch: int,
-                         initial_epoch: Optional[int] = 0,
-                         validation_data: Optional[tf.data.Dataset] = None,
-                         validation_steps: Optional[int] = None,
-                         checkpoint_dir: Optional[str] = None,
-                         checkpoint_freq: Optional[int] = 15):
+                         initial_epoch: int = 0,
+                         validation_data: typing.Optional[tf.data.Dataset] = None,
+                         validation_steps: typing.Optional[int] = None,
+                         checkpoint_dir: typing.Optional[str] = None,
+                         checkpoint_freq: int = 15):
         # Set up lists that will contain training history
         g_loss_hist = []
         ssim_hist = []
@@ -385,14 +385,14 @@ class WGAN:
                 'val_c_loss': val_c_loss_hist}
 
     def __fit_on_tensor(self,
-                        train_data: Tuple[np.ndarray, np.ndarray],
+                        train_data: typing.Tuple[np.ndarray, np.ndarray],
                         epochs: int,
                         steps_per_epoch: int,
-                        initial_epoch: Optional[int] = 0,
-                        validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None,
-                        validation_steps: Optional[int] = None,
-                        checkpoint_dir: Optional[str] = None,
-                        checkpoint_freq: Optional[int] = 15):
+                        initial_epoch: int = 0,
+                        validation_data: typing.Optional[typing.Tuple[np.ndarray, np.ndarray]] = None,
+                        validation_steps: typing.Optional[int] = None,
+                        checkpoint_dir: typing.Optional[str] = None,
+                        checkpoint_freq: int = 15):
         batch_size = train_data[0].shape[0]
         val_batch_size = validation_data[0].shape[0] \
             if validation_data is not None and validation_steps is not None \

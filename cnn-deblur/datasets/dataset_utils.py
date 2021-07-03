@@ -1,20 +1,20 @@
 import tensorflow as tf
 from google.cloud import storage
 import os
-from typing import Tuple, Optional
+import typing
 
 
 def load_dataset_from_gcs(project_id: str,
                           bucket_name: str,
                           prefix: str,
-                          res: Tuple[int, int],
+                          res: typing.Tuple[int, int],
                           val_size: int,
                           batch_size: int,
                           epochs: int,
-                          seed: Optional[int] = 42,
-                          use_patches: Optional[bool] = False,
-                          repeat: Optional[bool] = True,
-                          zero_mean: Optional[bool] = False):
+                          seed: int = 42,
+                          use_patches: bool = False,
+                          repeat: bool = True,
+                          zero_mean: bool = False):
     # Shuffle buffer size
     BUF = 50
 
@@ -152,7 +152,7 @@ def extract_patches(image):
     return patches
 
 
-def reconstruct_image(image_patches, patch_size: Tuple[int, int]):
+def reconstruct_image(image_patches, patch_size: typing.Tuple[int, int]):
     restored_image = []
     for i in range(0, patch_size[0]):
         row = []

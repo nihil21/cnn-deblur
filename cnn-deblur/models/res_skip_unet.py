@@ -1,15 +1,15 @@
 from tensorflow.keras.models import Model
 from models.conv_net import ConvNet
 from tensorflow.keras.layers import Input, Layer, Conv2D, Conv2DTranspose, BatchNormalization, Activation, Add
-from typing import Tuple, List, Optional
+import typing
 
 
-def ResSkipUDown(kernels: List[int],
-                 filters_num: List[int],
-                 strides: List[int],
+def ResSkipUDown(kernels: typing.List[int],
+                 filters_num: typing.List[int],
+                 strides: typing.List[int],
                  in_layer: Layer,
                  layer_idx: int,
-                 is_initial: Optional[bool] = False):
+                 is_initial: bool = False):
     x = in_layer
 
     n = 0
@@ -31,12 +31,12 @@ def ResSkipUDown(kernels: List[int],
     return x
 
 
-def ResSkipUUp(kernels: List[int],
-               filters_num: List[int],
-               strides: List[int],
+def ResSkipUUp(kernels: typing.List[int],
+               filters_num: typing.List[int],
+               strides: typing.List[int],
                in_layer: Layer,
                layer_idx: int,
-               res_layer: Optional[bool] = None):
+               res_layer: typing.Optional[bool] = None):
     if res_layer is not None:
         # Residual connection
         x = Add()([in_layer, res_layer])
@@ -62,7 +62,7 @@ def ResSkipUUp(kernels: List[int],
 
 class ResSkipUNet(ConvNet):
 
-    def __init__(self, input_shape: Tuple[int, int, int]):
+    def __init__(self, input_shape: typing.Tuple[int, int, int]):
         super().__init__()
 
         # ENCODER
