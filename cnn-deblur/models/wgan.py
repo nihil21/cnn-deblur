@@ -533,11 +533,11 @@ class WGAN:
                         epochs: int,
                         steps_per_epoch: int,
                         strategy: tf.distribute.Strategy,
-                        initial_epoch: Optional[int] = 0,
-                        validation_data: Optional[tf.data.Dataset] = None,
-                        validation_steps: Optional[int] = None,
-                        checkpoint_dir: Optional[str] = None,
-                        checkpoint_freq: Optional[int] = 15):
+                        initial_epoch: typing.Optional[int] = 0,
+                        validation_data: typing.Optional[tf.data.Dataset] = None,
+                        validation_steps: typing.Optional[int] = None,
+                        checkpoint_dir: typing.Optional[str] = None,
+                        checkpoint_freq: typing.Optional[int] = 15):
         # Set up lists that will contain training history
         g_loss_hist = []
         ssim_hist = []
