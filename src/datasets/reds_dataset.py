@@ -1,44 +1,57 @@
-import tensorflow as tf
 import os
 from glob import glob
-from datasets.dataset_utils import load_dataset_from_gcs
+
+import tensorflow as tf
+from .dataset_utils import load_dataset_from_gcs
 
 
-def load_data(batch_size: int,
-              epochs: int,
-              val_size: int,
-              seed: int = 42,
-              repeat: bool = True,
-              zero_mean: bool = False,
-              low_res: bool = False):
+def load_data(
+        batch_size: int,
+        epochs: int,
+        val_size: int,
+        seed: int = 42,
+        repeat: bool = True,
+        zero_mean: bool = False,
+        low_res: bool = False
+):
     if low_res:
         res = (144, 256)
     else:
         res = (288, 512)
-    return load_dataset_from_gcs(project_id='cnn-deblur',
-                                 bucket_name='cnn-d3blur-buck3t',
-                                 prefix='REDS',
-                                 res=res,
-                                 val_size=val_size,
-                                 batch_size=batch_size,
-                                 epochs=epochs,
-                                 seed=seed,
-                                 use_patches=True,
-                                 repeat=repeat,
-                                 zero_mean=zero_mean)
+    return load_dataset_from_gcs(
+        project_id='cnn-deblur',
+        bucket_name='cnn-d3blur-buck3t',
+        prefix='REDS',
+        res=res,
+        val_size=val_size,
+        batch_size=batch_size,
+        epochs=epochs,
+        seed=seed,
+        use_patches=True,
+        repeat=repeat,
+        zero_mean=zero_mean
+    )
 
 
-def load_image_dataset(dataset_root,
-                       val_size,
-                       new_res,
-                       batch_size,
-                       epochs,
-                       seed):
+def load_image_dataset(
+        dataset_root,
+        val_size,
+        new_res,
+        batch_size,
+        epochs,
+        seed
+):
     # Training and validation sets
-    blur = tf.data.Dataset.list_files(os.path.join(dataset_root,
-                                                   'train', 'train_blur', '*', '*'), shuffle=True, seed=seed)
-    sharp = tf.data.Dataset.list_files(os.path.join(dataset_root,
-                                                    'train', 'train_sharp', '*', '*'), shuffle=True, seed=seed)
+    blur = tf.data.Dataset.list_files(
+        os.path.join(dataset_root, 'train', 'train_blur', '*', '*'),
+        shuffle=True,
+        seed=seed
+    )
+    sharp = tf.data.Dataset.list_files(
+        os.path.join(dataset_root, 'train', 'train_sharp', '*', '*'),
+        shuffle=True,
+        seed=seed
+    )
 
     # Define function to load images and map it
     def _load_image(filename):
@@ -48,29 +61,39 @@ def load_image_dataset(dataset_root,
 
         return image
 
-    blur = blur.map(lambda filename: _load_image(filename),
-                    num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    sharp = sharp.map(lambda filename: _load_image(filename),
-                      num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    blur = blur.map(
+        lambda filename: _load_image(filename),
+        num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
+    sharp = sharp.map(
+        lambda filename: _load_image(filename),
+        num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
 
     # Define function to resize images and map it
     def _resize_image(image, new_height, new_width):
         return tf.image.resize(image, [new_height, new_width])
 
-    blur = blur.map(lambda image: _resize_image(image, new_res[0], new_res[1]),
-                    num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    sharp = sharp.map(lambda image: _resize_image(image, new_res[0], new_res[1]),
-                      num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    blur = blur.map(
+        lambda image: _resize_image(image, new_res[0], new_res[1]),
+        num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
+    sharp = sharp.map(
+        lambda image: _resize_image(image, new_res[0], new_res[1]),
+        num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
 
     def _extract_patches(img):
         img = tf.reshape(img, (1, 720, 1280, 3))
         # from the single image extract the 12 patches
         # with input shape 720x1280 each patch has shape 240x320
-        patches = tf.image.extract_patches(images=img,
-                                           sizes=[1, 240, 320, 1],
-                                           strides=[1, 240, 320, 1],
-                                           rates=[1, 1, 1, 1],
-                                           padding='VALID')
+        patches = tf.image.extract_patches(
+            images=img,
+            sizes=[1, 240, 320, 1],
+            strides=[1, 240, 320, 1],
+            rates=[1, 1, 1, 1],
+            padding='VALID'
+        )
 
         patches = tf.reshape(patches, (12, 240, 320, 3))
 
@@ -102,8 +125,10 @@ def load_image_dataset(dataset_root,
 
         return image_blur, image_sharp
 
-    train_augmented = train.map(_random_flip,
-                                num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    train_augmented = train.map(
+        _random_flip,
+        num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
 
     train_augmented = train_augmented.shuffle(buffer_size=50, seed=seed, reshuffle_each_iteration=True)
 
@@ -120,10 +145,14 @@ def load_image_dataset(dataset_root,
     validation.prefetch(tf.data.experimental.AUTOTUNE)
 
     # Test set
-    blur_test = tf.data.Dataset.list_files(os.path.join(dataset_root,
-                                                        'val', 'val_blur', '*', '*'), shuffle=False)
-    sharp_test = tf.data.Dataset.list_files(os.path.join(dataset_root,
-                                                         'val', 'val_sharp', '*', '*'), shuffle=False)
+    blur_test = tf.data.Dataset.list_files(
+        os.path.join(dataset_root, 'val', 'val_blur', '*', '*'),
+        shuffle=False
+    )
+    sharp_test = tf.data.Dataset.list_files(
+        os.path.join(dataset_root, 'val', 'val_sharp', '*', '*'),
+        shuffle=False
+    )
 
     blur_test = blur_test.map(lambda filename: _load_image(filename))
     sharp_test = sharp_test.map(lambda filename: _load_image(filename))
@@ -139,21 +168,27 @@ def load_image_dataset(dataset_root,
     return train_augmented, test, validation
 
 
-def load_tfrecord_dataset(dataset_root,
-                          val_size,
-                          new_res,
-                          batch_size,
-                          epochs,
-                          seed):
+def load_tfrecord_dataset(
+        dataset_root,
+        val_size,
+        new_res,
+        batch_size,
+        epochs,
+        seed
+):
     BUF = 50
 
     # Load .tfrecords files
     tf_trainval = glob(os.path.join(dataset_root, 'train', '*.tfrecords'))
-    trainval_data = tf.data.TFRecordDataset(filenames=tf_trainval,
-                                            num_parallel_reads=tf.data.experimental.AUTOTUNE)
+    trainval_data = tf.data.TFRecordDataset(
+        filenames=tf_trainval,
+        num_parallel_reads=tf.data.experimental.AUTOTUNE
+    )
     tf_test = glob(os.path.join(dataset_root, 'test', '*.tfrecords'))
-    test_data = tf.data.TFRecordDataset(filenames=tf_test,
-                                        num_parallel_reads=tf.data.experimental.AUTOTUNE)
+    test_data = tf.data.TFRecordDataset(
+        filenames=tf_test,
+        num_parallel_reads=tf.data.experimental.AUTOTUNE
+    )
 
     image_features_dict = {
         'blur': tf.io.FixedLenFeature([], tf.string),
@@ -187,11 +222,13 @@ def load_tfrecord_dataset(dataset_root,
         image = tf.reshape(image, (1, 720, 1280, 3))
         # from the single image extract the 4 patches
         # with input shape 720x1280 each patch has shape 240x320
-        patches = tf.image.extract_patches(images=image,
-                                           sizes=[1, 240, 320, 1],
-                                           strides=[1, 240, 320, 1],
-                                           rates=[1, 1, 1, 1],
-                                           padding='VALID')
+        patches = tf.image.extract_patches(
+            images=image,
+            sizes=[1, 240, 320, 1],
+            strides=[1, 240, 320, 1],
+            rates=[1, 1, 1, 1],
+            padding='VALID'
+        )
 
         patches = tf.reshape(patches, (12, 240, 320, 3))
 

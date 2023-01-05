@@ -17,7 +17,7 @@ import numpy as np
 import os
 import glob
 import matplotlib.pyplot as plt
-from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow import keras
 from models.resnet import ResNet16, ResNet16Dense, ResNet20
 from models.unet import UNet16, UNet20
 from models.res_unet import ResUNet16
@@ -48,7 +48,13 @@ def main():
         dataset_root = '/home/uni/dataset/'
 
     filepath = '/home/uni/weights/reds/ep:{epoch:03d}-val_loss:{val_loss:.3f}.hdf5'
-    checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
+    checkpoint = keras.callbacks.ModelCheckpoint(
+        filepath,
+        monitor='val_loss',
+        verbose=1,
+        save_best_only=True,
+        mode='min'
+    )
     callbacks_list = [checkpoint]
 
     print('=' * 50)

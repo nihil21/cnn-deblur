@@ -1,20 +1,23 @@
-import tensorflow as tf
-from google.cloud import storage
 import os
 import typing
 
+import tensorflow as tf
+from google.cloud import storage
 
-def load_dataset_from_gcs(project_id: str,
-                          bucket_name: str,
-                          prefix: str,
-                          res: typing.Tuple[int, int],
-                          val_size: int,
-                          batch_size: int,
-                          epochs: int,
-                          seed: int = 42,
-                          use_patches: bool = False,
-                          repeat: bool = True,
-                          zero_mean: bool = False):
+
+def load_dataset_from_gcs(
+        project_id: str,
+        bucket_name: str,
+        prefix: str,
+        res: typing.Tuple[int, int],
+        val_size: int,
+        batch_size: int,
+        epochs: int,
+        seed: int = 42,
+        use_patches: bool = False,
+        repeat: bool = True,
+        zero_mean: bool = False
+):
     # Shuffle buffer size
     BUF = 50
 
@@ -23,14 +26,22 @@ def load_dataset_from_gcs(project_id: str,
     bucket = client.bucket(bucket_name)
 
     # Load .tfrecords files
-    tf_trainval = [os.path.join('gs://{0:s}'.format(bucket_name), f.name) for f
-                   in bucket.list_blobs(prefix='{0:s}/train'.format(prefix))]
-    trainval_data = tf.data.TFRecordDataset(filenames=tf_trainval,
-                                            num_parallel_reads=tf.data.experimental.AUTOTUNE)
-    tf_test = [os.path.join('gs://{0:s}'.format(bucket_name), f.name) for f
-               in bucket.list_blobs(prefix='{0:s}/test'.format(prefix))]
-    test_data = tf.data.TFRecordDataset(filenames=tf_test,
-                                        num_parallel_reads=tf.data.experimental.AUTOTUNE)
+    tf_trainval = [
+        os.path.join('gs://{0:s}'.format(bucket_name), f.name)
+        for f in bucket.list_blobs(prefix='{0:s}/train'.format(prefix))
+    ]
+    trainval_data = tf.data.TFRecordDataset(
+        filenames=tf_trainval,
+        num_parallel_reads=tf.data.experimental.AUTOTUNE
+    )
+    tf_test = [
+        os.path.join('gs://{0:s}'.format(bucket_name), f.name)
+        for f in bucket.list_blobs(prefix='{0:s}/test'.format(prefix))
+    ]
+    test_data = tf.data.TFRecordDataset(
+        filenames=tf_test,
+        num_parallel_reads=tf.data.experimental.AUTOTUNE
+    )
 
     image_features_dict = {
         'blur': tf.io.FixedLenFeature([], tf.string),
@@ -59,10 +70,14 @@ def load_dataset_from_gcs(project_id: str,
         return blur_img, sharp_img
 
     # Map parsing function
-    trainval_data = trainval_data.map(_parse_image_fn,
-                                      num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    test_data = test_data.map(_parse_image_fn,
-                              num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    trainval_data = trainval_data.map(
+        _parse_image_fn,
+        num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
+    test_data = test_data.map(
+        _parse_image_fn,
+        num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
 
     # Shuffle once and perform train-validation split
     trainval_data = trainval_data.shuffle(buffer_size=50, seed=seed, reshuffle_each_iteration=False)
@@ -141,11 +156,13 @@ def extract_patches(image):
     res = image.shape[0:2]
     # From the single image extract 12 patches (3x4)
     # e.g. with input shape 288x512 each patch has shape 96x128
-    patches = tf.image.extract_patches(images=tf.expand_dims(image, 0),
-                                       sizes=[1, res[0] // 3, res[1] // 4, 1],
-                                       strides=[1, res[0] // 3, res[1] // 4, 1],
-                                       rates=[1, 1, 1, 1],
-                                       padding='VALID')
+    patches = tf.image.extract_patches(
+        images=tf.expand_dims(image, 0),
+        sizes=[1, res[0] // 3, res[1] // 4, 1],
+        strides=[1, res[0] // 3, res[1] // 4, 1],
+        rates=[1, 1, 1, 1],
+        padding='VALID'
+    )
 
     patches = tf.reshape(patches, (12, res[0] // 3, res[1] // 4, 3))
 

@@ -1,9 +1,8 @@
-from tensorflow.keras.callbacks import Callback
-from tensorflow.keras.utils import plot_model
-from tensorflow.keras.optimizers import Adam, Nadam
-from utils.custom_metrics import *
-from tensorflow.keras.losses import MeanSquaredError, MeanAbsoluteError, LogCosh
 import typing
+
+from tensorflow import keras
+
+from ..utils.custom_metrics import *
 
 
 class ConvNet:
@@ -12,33 +11,40 @@ class ConvNet:
     def __init__(self):
         self.model = None
 
-    def compile(self,
-                lr: float = 1e-4,
-                loss: str = 'mse',
-                use_nesterov: bool = False):
+    def compile(
+            self,
+            lr: float = 1e-4,
+            loss: str = 'mse',
+            use_nesterov: bool = False
+    ):
 
         loss_dict = dict({
-            'mse': MeanSquaredError(),
-            'mae': MeanAbsoluteError(),
-            'logcosh': LogCosh()
+            'mse': keras.losses.MeanSquaredError(),
+            'mae': keras.losses.MeanAbsoluteError(),
+            'logcosh': keras.losses.LogCosh()
         })
 
-        metric_list = [ssim,
-                       psnr,
-                       'mse',
-                       'mae',
-                       'accuracy']
+        metric_list = [
+            ssim,
+            psnr,
+            'mse',
+            'mae',
+            'accuracy'
+        ]
 
         if use_nesterov:
-            optimizer = Nadam(learning_rate=lr)
+            optimizer = keras.optimizers.Nadam(learning_rate=lr)
         else:
-            optimizer = Adam(learning_rate=lr)
+            optimizer = keras.optimizers.Adam(learning_rate=lr)
 
-        self.model.compile(optimizer,
-                           loss=loss_dict[loss],
-                           metrics=metric_list)
+        self.model.compile(
+            optimizer,
+            loss=loss_dict[loss],
+            metrics=metric_list
+        )
 
-    def fit(self,
+    def fit(
+            self,
             x: typing.Optional = None,
             y: typing.Optional = None,
             batch_size: int = 32,
@@ -47,29 +53,37 @@ class ConvNet:
             validation_data: typing.Optional = None,
             validation_steps: typing.Optional[int] = None,
             initial_epoch: int = 0,
-            callbacks: typing.Optional[typing.List[Callback]] = None):
+            callbacks: typing.Optional[typing.List[keras.callbacks.Callback]] = None
+    ):
         if y is not None:
-            return self.model.fit(x, y,
-                                  batch_size=batch_size,
-                                  epochs=epochs,
-                                  steps_per_epoch=steps_per_epoch,
-                                  validation_data=validation_data,
-                                  initial_epoch=initial_epoch,
-                                  callbacks=callbacks)
+            return self.model.fit(
+                x,
+                y,
+                batch_size=batch_size,
+                epochs=epochs,
+                steps_per_epoch=steps_per_epoch,
+                validation_data=validation_data,
+                initial_epoch=initial_epoch,
+                callbacks=callbacks
+            )
         else:
-            return self.model.fit(x,
-                                  epochs=epochs,
-                                  steps_per_epoch=steps_per_epoch,
-                                  validation_data=validation_data,
-                                  validation_steps=validation_steps,
-                                  initial_epoch=initial_epoch,
-                                  callbacks=callbacks)
+            return self.model.fit(
+                x,
+                epochs=epochs,
+                steps_per_epoch=steps_per_epoch,
+                validation_data=validation_data,
+                validation_steps=validation_steps,
+                initial_epoch=initial_epoch,
+                callbacks=callbacks
+            )
 
-    def evaluate(self,
-                 x: typing.Optional = None,
-                 y: typing.Optional = None,
-                 batch_size: typing.Optional[int] = None,
-                 steps: typing.Optional[int] = None):
+    def evaluate(
+            self,
+            x: typing.Optional = None,
+            y: typing.Optional = None,
+            batch_size: typing.Optional[int] = None,
+            steps: typing.Optional[int] = None
+    ):
         if y is not None:
             return self.model.evaluate(x, y, batch_size=batch_size, steps=steps)
         else:
@@ -82,4 +96,4 @@ class ConvNet:
         self.model.summary()
 
     def plot_model(self, path):
-        plot_model(self.model, to_file=path, show_shapes=True)
+        keras.utils.plot_model(self.model, to_file=path, show_shapes=True)

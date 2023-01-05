@@ -1,8 +1,9 @@
-import tensorflow as tf
-from glob import glob
-import os
 import argparse
+import os
 import time
+from glob import glob
+
+import tensorflow as tf
 from tqdm import tqdm
 
 

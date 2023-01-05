@@ -5,11 +5,13 @@ def _extract_patches(img):
     img = tf.reshape(img, (1, 720, 1280, 3))
     # from the single image extract the 12 patches
     # with input shape 720x1280 each patch has shape 240x320
-    patches = tf.image.extract_patches(images=img,
-                                       sizes=[1, 240, 320, 1],
-                                       strides=[1, 240, 320, 1],
-                                       rates=[1, 1, 1, 1],
-                                       padding='VALID')
+    patches = tf.image.extract_patches(
+        images=img,
+        sizes=[1, 240, 320, 1],
+        strides=[1, 240, 320, 1],
+        rates=[1, 1, 1, 1],
+        padding='VALID'
+    )
 
     patches = tf.reshape(patches, (12, 240, 320, 3))
 

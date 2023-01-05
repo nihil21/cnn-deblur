@@ -1,16 +1,18 @@
-from tensorflow.keras.models import Model
-from models.conv_net import ConvNet
-from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, BatchNormalization,
-                                     Activation, Add, concatenate)
 import typing
 
+from tensorflow import keras
 
-def ResUDown(kernels: typing.List[int],
-             filters_num: typing.List[int],
-             strides: typing.List[int],
-             in_layer: Layer,
-             layer_idx: int,
-             is_initial: bool = False):
+from .conv_net import ConvNet
+
+
+def ResUDown(
+        kernels: typing.List[int],
+        filters_num: typing.List[int],
+        strides: typing.List[int],
+        in_layer: keras.layers.Layer,
+        layer_idx: int,
+        is_initial: bool = False
+):
     x = in_layer
 
     n = 0
@@ -20,72 +22,84 @@ def ResUDown(kernels: typing.List[int],
 
         # If the block is the initial one, skip batch normalization and ReLU
         if not (is_initial and n == 0):
-            x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
-            x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
-        x = Conv2D(fltr,
-                   kernel_size=krnl,
-                   padding='same',
-                   strides=strd,
-                   name='conv{0:d}_{1:d}'.format(layer_idx, n))(x)
+            x = keras.layers.BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
+            x = keras.layers.Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
+        x = keras.layers.Conv2D(
+            fltr,
+            kernel_size=krnl,
+            padding='same',
+            strides=strd,
+            name='conv{0:d}_{1:d}'.format(layer_idx, n)
+        )(x)
         n += 1
 
     # Residual connection
-    res_layer = Conv2D(filters_num[0],
-                       kernel_size=1,
-                       padding='same',
-                       strides=strides[0],
-                       name='res_conv{0:d}'.format(layer_idx))(in_layer)
-    x = Add()([x, res_layer])
+    res_layer = keras.layers.Conv2D(
+        filters_num[0],
+        kernel_size=1,
+        padding='same',
+        strides=strides[0],
+        name='res_conv{0:d}'.format(layer_idx)
+    )(in_layer)
+    x = keras.layers.Add()([x, res_layer])
 
     return x
 
 
-def ResUUp(kernels: typing.List[int],
-           filters_num: typing.List[int],
-           strides: typing.List[int],
-           in_layer: Layer,
-           concat_layer: Layer,
-           layer_idx: int):
+def ResUUp(
+        kernels: typing.List[int],
+        filters_num: typing.List[int],
+        strides: typing.List[int],
+        in_layer: keras.layers.Layer,
+        concat_layer: keras.layers.Layer,
+        layer_idx: int
+):
     # Upsampling by transposed convolution
-    x = Conv2DTranspose(filters_num[0],
-                        kernel_size=3,
-                        strides=2,
-                        activation='relu',
-                        padding='same',
-                        name='upsamp{0:d}'.format(layer_idx))(in_layer)
+    x = keras.layers.Conv2DTranspose(
+        filters_num[0],
+        kernel_size=3,
+        strides=2,
+        activation='relu',
+        padding='same',
+        name='upsamp{0:d}'.format(layer_idx)
+    )(in_layer)
     # Concatenation
-    x = concatenate([concat_layer, x])
+    x = keras.layers.concatenate([concat_layer, x])
     # Residual layer
-    res_layer = Conv2DTranspose(filters_num[0],
-                                kernel_size=1,
-                                strides=1,
-                                activation='relu',
-                                padding='same',
-                                name='res_upsamp{0:d}'.format(layer_idx))(x)
+    res_layer = keras.layers.Conv2DTranspose(
+        filters_num[0],
+        kernel_size=1,
+        strides=1,
+        activation='relu',
+        padding='same',
+        name='res_upsamp{0:d}'.format(layer_idx)
+    )(x)
 
     n = 0
     for krnl, fltr, strd in zip(kernels, filters_num, strides):
         # Update the suffix of layer's name
         layer_suffix = '{0:d}_{1:d}'.format(layer_idx, n)
 
-        x = BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
-        x = Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
-        x = Conv2D(fltr,
-                   kernel_size=krnl,
-                   padding='same',
-                   strides=strd,
-                   name='conv{0:d}_{1:d}'.format(layer_idx, n))(x)
+        x = keras.layers.BatchNormalization(name='bn{0:s}'.format(layer_suffix))(x)
+        x = keras.layers.Activation('relu', name='relu{0:s}'.format(layer_suffix))(x)
+        x = keras.layers.Conv2D(
+            fltr,
+            kernel_size=krnl,
+            padding='same',
+            strides=strd,
+            name='conv{0:d}_{1:d}'.format(layer_idx, n)
+        )(x)
         n += 1
 
     # Residual connection
-    x = Add()([x, res_layer])
+    x = keras.layers.Add()([x, res_layer])
 
     return x
 
 
-def ResUOut(in_layer: Layer):
-    x = Conv2D(3, kernel_size=1, strides=1, padding='same', name='conv_out')(in_layer)
-    return Activation('sigmoid', name='sigmoid')(x)
+def ResUOut(in_layer: keras.layers.Layer):
+    x = keras.layers.Conv2D(3, kernel_size=1, strides=1, padding='same', name='conv_out')(in_layer)
+    return keras.layers.Activation('sigmoid', name='sigmoid')(x)
 
 
 class ResUNet16(ConvNet):
@@ -94,7 +108,7 @@ class ResUNet16(ConvNet):
         super().__init__()
 
         # ENCODER
-        visible = Input(shape=input_shape)   # 512x288x3
+        visible = keras.layers.Input(shape=input_shape)   # 512x288x3
 
         conv1 = ResUDown(kernels=[3, 3],
                          filters_num=[64, 64],
@@ -145,4 +159,4 @@ class ResUNet16(ConvNet):
 
         output = ResUOut(conv7)
 
-        self.model = Model(inputs=visible, outputs=output)
+        self.model = keras.models.Model(inputs=visible, outputs=output)

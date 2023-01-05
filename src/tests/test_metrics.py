@@ -1,10 +1,11 @@
-import tensorflow as tf
-from utils.custom_metrics import ssim, psnr
-from datasets import cifar_dataset
 import matplotlib.pyplot as plt
+import tensorflow as tf
+
+from ..datasets import cifar_dataset
+from ..utils.custom_metrics import ssim, psnr
 
 
-train_data, _, _ = cifar_dataset.load_image_dataset(normalize=True)
+train_data, _, _ = cifar_dataset.load_image_dataset(normalization=True)
 img1 = tf.convert_to_tensor(train_data[1][0], dtype=tf.float32)
 img2 = tf.convert_to_tensor(train_data[1][0], dtype=tf.float32)
 

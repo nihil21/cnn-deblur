@@ -1,14 +1,13 @@
-from models.wgan import WGAN, create_patchgan_critic
-import tensorflow as tf
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (Input, Layer, Conv2D, Conv2DTranspose, Add, ELU, ReLU, Lambda,
-                                     BatchNormalization, Concatenate)
-from tensorflow.keras.optimizers import Adam
-from utils.custom_losses import ms_logcosh
 import typing
 
+import tensorflow as tf
+from tensorflow import keras
 
-def res_block(in_layer: Layer,
+from ..utils.custom_losses import ms_logcosh
+from .wgan import WGAN, create_patchgan_critic
+
+
+def res_block(in_layer: keras.layers.Layer,
               layer_id: str,
               filters: int = 64,
               kernels: int = 5,
@@ -16,160 +15,204 @@ def res_block(in_layer: Layer,
               use_elu: bool = False,
               last_act: bool = False):
     # Block 1
-    x = Conv2D(filters=filters,
-               kernel_size=kernels,
-               padding='same',
-               name='res_conv{:s}_1'.format(layer_id))(in_layer)
+    x = keras.layers.Conv2D(
+        filters=filters,
+        kernel_size=kernels,
+        padding='same',
+        name='res_conv{:s}_1'.format(layer_id)
+    )(in_layer)
     if use_batchnorm:
-        x = BatchNormalization(name='res_bn{:s}_1'.format(layer_id))(x)
+        x = keras.layers.BatchNormalization(name='res_bn{:s}_1'.format(layer_id))(x)
     if use_elu:
-        x = ELU(name='res_elu{:s}_1'.format(layer_id))(x)
+        x = keras.layers.ELU(name='res_elu{:s}_1'.format(layer_id))(x)
     else:
-        x = ReLU(name='res_relu{:s}_1'.format(layer_id))(x)
+        x = keras.layers.ReLU(name='res_relu{:s}_1'.format(layer_id))(x)
     # Block 2
-    x = Conv2D(filters=filters,
-               kernel_size=kernels,
-               padding='same',
-               name='res_conv{:s}_2'.format(layer_id))(x)
+    x = keras.layers.Conv2D(
+        filters=filters,
+        kernel_size=kernels,
+        padding='same',
+        name='res_conv{:s}_2'.format(layer_id)
+    )(x)
     if use_batchnorm:
-        x = BatchNormalization(name='res_bn{:s}_2'.format(layer_id))(x)
+        x = keras.layers.BatchNormalization(name='res_bn{:s}_2'.format(layer_id))(x)
     # Skip connection
-    x = Add(name='res_add{:s}'.format(layer_id))([x, in_layer])
+    x = keras.layers.Add(name='res_add{:s}'.format(layer_id))([x, in_layer])
     if last_act:
         if use_elu:
-            x = ELU(name='res_elu{:s}_2'.format(layer_id))(x)
+            x = keras.layers.ELU(name='res_elu{:s}_2'.format(layer_id))(x)
         else:
-            x = ReLU(name='res_relu{:s}_2'.format(layer_id))(x)
+            x = keras.layers.ReLU(name='res_relu{:s}_2'.format(layer_id))(x)
     return x
 
 
-def create_generator(input_shape,
-                     use_elu: bool = False,
-                     last_act: bool = False,
-                     num_res_blocks: int = 19):
+def create_generator(
+        input_shape,
+        use_elu: bool = False,
+        last_act: bool = False,
+        num_res_blocks: int = 19
+):
     height = input_shape[0]
     width = input_shape[1]
-    in_layer1 = Input(shape=input_shape)
+    in_layer1 = keras.layers.Input(shape=input_shape)
     # Coarsest branch
-    in_layer3 = Lambda(lambda t: tf.image.resize(t, size=(height // 4, width // 4)))(in_layer1)
+    in_layer3 = keras.layers.Lambda(lambda t: tf.image.resize(t, size=(height // 4, width // 4)))(in_layer1)
     # in_layer3 = Input(shape=(input_shape[0] // 4, input_shape[1] // 4, input_shape[2]),
     #                   name='in_layer3')
-    conv3 = Conv2D(filters=64,
-                   kernel_size=5,
-                   padding='same',
-                   name='conv3')(in_layer3)
+    conv3 = keras.layers.Conv2D(
+        filters=64,
+        kernel_size=5,
+        padding='same',
+        name='conv3'
+    )(in_layer3)
     x = conv3
     for i in range(num_res_blocks):
-        x = res_block(in_layer=x,
-                      layer_id='3_{:d}'.format(i),
-                      use_elu=use_elu,
-                      last_act=last_act)
-    out_layer3 = Conv2D(filters=3,
-                        kernel_size=5,
-                        padding='same',
-                        activation='tanh',
-                        name='out_layer_3')(x)
+        x = res_block(
+            in_layer=x,
+            layer_id='3_{:d}'.format(i),
+            use_elu=use_elu,
+            last_act=last_act
+        )
+    out_layer3 = keras.layers.Conv2D(
+        filters=3,
+        kernel_size=5,
+        padding='same',
+        activation='tanh',
+        name='out_layer_3'
+    )(x)
 
     # Middle branch
-    in_layer2 = Lambda(lambda t: tf.image.resize(t, size=(height // 2, width // 2)))(in_layer1)
+    in_layer2 = keras.layers.Lambda(lambda t: tf.image.resize(t, size=(height // 2, width // 2)))(in_layer1)
     # in_layer2 = Input(shape=(input_shape[0] // 2, input_shape[1] // 2, input_shape[2]),
     #                   name='in_layer2')
-    up_conv2 = Conv2DTranspose(filters=61,
-                               kernel_size=5,
-                               strides=2,
-                               padding='same')(out_layer3)
-    concat2 = Concatenate(axis=3)([in_layer2, up_conv2])
-    conv2 = Conv2D(filters=64,
-                   kernel_size=5,
-                   padding='same',
-                   name='conv2')(concat2)
+    up_conv2 = keras.layers.Conv2DTranspose(
+        filters=61,
+        kernel_size=5,
+        strides=2,
+        padding='same'
+    )(out_layer3)
+    concat2 = keras.layers.Concatenate(axis=3)([in_layer2, up_conv2])
+    conv2 = keras.layers.Conv2D(
+        filters=64,
+        kernel_size=5,
+        padding='same',
+        name='conv2'
+    )(concat2)
     x = conv2
     for i in range(num_res_blocks):
-        x = res_block(in_layer=x,
-                      layer_id='2_{:d}'.format(i),
-                      last_act=last_act,
-                      use_elu=use_elu)
-    out_layer2 = Conv2D(filters=3,
-                        kernel_size=5,
-                        padding='same',
-                        activation='tanh',
-                        name='out_layer2')(x)
+        x = res_block(
+            in_layer=x,
+            layer_id='2_{:d}'.format(i),
+            last_act=last_act,
+            use_elu=use_elu
+        )
+    out_layer2 = keras.layers.Conv2D(
+        filters=3,
+        kernel_size=5,
+        padding='same',
+        activation='tanh',
+        name='out_layer2'
+    )(x)
 
     # Finest branch
-    up_conv1 = Conv2DTranspose(filters=61,
-                               kernel_size=5,
-                               strides=2,
-                               padding='same')(out_layer2)
-    concat1 = Concatenate(axis=3)([in_layer1, up_conv1])
-    conv1 = Conv2D(filters=64,
-                   kernel_size=5,
-                   padding='same',
-                   name='conv1')(concat1)
+    up_conv1 = keras.layers.Conv2DTranspose(
+        filters=61,
+        kernel_size=5,
+        strides=2,
+        padding='same'
+    )(out_layer2)
+    concat1 = keras.layers.Concatenate(axis=3)([in_layer1, up_conv1])
+    conv1 = keras.layers.Conv2D(
+        filters=64,
+        kernel_size=5,
+        padding='same',
+        name='conv1'
+    )(concat1)
     x = conv1
     for i in range(num_res_blocks):
-        x = res_block(in_layer=x,
-                      layer_id='1_{:d}'.format(i),
-                      last_act=last_act,
-                      use_elu=use_elu)
-    out_layer1 = Conv2D(filters=3,
-                        kernel_size=5,
-                        padding='same',
-                        activation='tanh',
-                        name='out_layer1')(x)
+        x = res_block(
+            in_layer=x,
+            layer_id='1_{:d}'.format(i),
+            last_act=last_act,
+            use_elu=use_elu
+        )
+    out_layer1 = keras.layers.Conv2D(
+        filters=3,
+        kernel_size=5,
+        padding='same',
+        activation='tanh',
+        name='out_layer1'
+    )(x)
 
     # Final model
-    generator = Model(inputs=in_layer1,
-                      outputs=[out_layer1, out_layer2, out_layer3],
-                      name='Generator')
+    generator = keras.models.Model(
+        inputs=in_layer1,
+        outputs=[out_layer1, out_layer2, out_layer3],
+        name='Generator'
+    )
     return generator
 
 
 class MSDeblurWGAN(WGAN):
-    def __init__(self,
-                 input_shape: typing.Tuple[int, int, int],
-                 use_elu: bool = False,
-                 use_sigmoid: bool = False,
-                 use_bn: bool = False,
-                 last_act: bool = False,
-                 num_res_blocks: int = 19):
+    def __init__(
+            self,
+            input_shape: typing.Tuple[int, int, int],
+            use_elu: bool = False,
+            use_sigmoid: bool = False,
+            use_bn: bool = False,
+            last_act: bool = False,
+            num_res_blocks: int = 19
+    ):
         # Build generator and critic
-        generator = create_generator(input_shape,
-                                     use_elu,
-                                     last_act,
-                                     num_res_blocks)
-        critic = create_patchgan_critic(input_shape,
-                                        use_elu,
-                                        use_sigmoid,
-                                        use_bn)
+        generator = create_generator(
+            input_shape,
+            use_elu,
+            last_act,
+            num_res_blocks
+        )
+        critic = create_patchgan_critic(
+            input_shape,
+            use_elu,
+            use_sigmoid,
+            use_bn
+        )
 
         # Define and set loss functions
-        def generator_loss(sharp_pyramid: typing.List[tf.Tensor],
-                           predicted_pyramid: typing.List[tf.Tensor],
-                           fake_logits: tf.Tensor):
+        def generator_loss(
+                sharp_pyramid: typing.List[tf.Tensor],
+                predicted_pyramid: typing.List[tf.Tensor],
+                fake_logits: tf.Tensor
+        ):
             adv_loss = -tf.reduce_mean(fake_logits)
             content_loss = ms_logcosh(sharp_pyramid, predicted_pyramid)
             return content_loss + 1e-4 * adv_loss
 
-        def critic_loss(real_logits: tf.Tensor,
-                        fake_logits: tf.Tensor):
+        def critic_loss(
+                real_logits: tf.Tensor,
+                fake_logits: tf.Tensor
+        ):
             return tf.reduce_mean(fake_logits) - tf.reduce_mean(real_logits)
 
         # Set optimizers as Adam with given learning_rate
-        g_optimizer = Adam(lr=0.0002, beta_1=0.5, beta_2=0.9)
-        c_optimizer = Adam(lr=0.0002, beta_1=0.5, beta_2=0.9)
+        g_optimizer = keras.optimizers.Adam(lr=0.0002, beta_1=0.5, beta_2=0.9)
+        c_optimizer = keras.optimizers.Adam(lr=0.0002, beta_1=0.5, beta_2=0.9)
 
         # Call base-class init method
-        super(MSDeblurWGAN, self).__init__(generator,
-                                           critic,
-                                           generator_loss,
-                                           critic_loss,
-                                           g_optimizer,
-                                           c_optimizer)
+        super(MSDeblurWGAN, self).__init__(
+            generator,
+            critic,
+            generator_loss,
+            critic_loss,
+            g_optimizer,
+            c_optimizer
+        )
 
     # Override train_step and test_step in order to account for pyramids instead of single-scale images
     @tf.function
-    def train_step(self,
-                   train_batch: typing.Tuple[tf.Tensor, tf.Tensor]):
+    def train_step(
+            self,
+            train_batch: typing.Tuple[tf.Tensor, tf.Tensor]
+    ):
         # Determine batch size, height and width
         batch_size = tf.shape(train_batch[0])[0]
         height = tf.shape(train_batch[0])[1]
@@ -196,9 +239,11 @@ class MSDeblurWGAN(WGAN):
                 # Calculate critic's loss
                 c_loss = self.c_loss(real_logits, fake_logits)
                 # Calculate gradient penalty
-                gp = self.gradient_penalty(batch_size,
-                                           real_imgs=tf.cast(sharp_pyramid[0], dtype='float32'),
-                                           fake_imgs=predicted_pyramid[0])
+                gp = self.gradient_penalty(
+                    batch_size,
+                    real_imgs=tf.cast(sharp_pyramid[0], dtype='float32'),
+                    fake_imgs=predicted_pyramid[0]
+                )
                 # Add gradient penalty to the loss
                 c_loss += gp * self.gp_weight
             # Get gradient w.r.t. critic's loss and update weights
@@ -220,21 +265,29 @@ class MSDeblurWGAN(WGAN):
         self.g_optimizer.apply_gradients(zip(g_grad, self.generator.trainable_variables))
 
         # Compute metrics
-        ssim_metric = tf.image.ssim(sharp_pyramid[0],
-                                    tf.cast(predicted_pyramid[0], dtype='bfloat16'),
-                                    max_val=2.)
-        psnr_metric = tf.image.psnr(sharp_pyramid[0],
-                                    tf.cast(predicted_pyramid[0], dtype='bfloat16'),
-                                    max_val=2.)
+        ssim_metric = tf.image.ssim(
+            sharp_pyramid[0],
+            tf.cast(predicted_pyramid[0], dtype='bfloat16'),
+            max_val=2.
+        )
+        psnr_metric = tf.image.psnr(
+            sharp_pyramid[0],
+            tf.cast(predicted_pyramid[0], dtype='bfloat16'),
+            max_val=2.
+        )
 
-        return {'g_loss': g_loss,
-                'ssim': tf.reduce_mean(ssim_metric),
-                'psnr': tf.reduce_mean(psnr_metric),
-                'c_loss': tf.reduce_mean(c_losses)}
+        return {
+            'g_loss': g_loss,
+            'ssim': tf.reduce_mean(ssim_metric),
+            'psnr': tf.reduce_mean(psnr_metric),
+            'c_loss': tf.reduce_mean(c_losses)
+        }
 
     @tf.function
-    def test_step(self,
-                  val_batch: typing.Tuple[tf.Tensor, tf.Tensor]):
+    def test_step(
+            self,
+            val_batch: typing.Tuple[tf.Tensor, tf.Tensor]
+    ):
         # Determine height and width
         height = tf.shape(val_batch[0])[1]
         width = tf.shape(val_batch[0])[2]
@@ -259,14 +312,20 @@ class MSDeblurWGAN(WGAN):
         g_loss = self.g_loss(sharp_pyramid, predicted_pyramid, fake_logits)
 
         # Compute metrics
-        ssim_metric = tf.image.ssim(sharp_pyramid[0],
-                                    tf.cast(predicted_pyramid[0], dtype='bfloat16'),
-                                    max_val=2.)
-        psnr_metric = tf.image.psnr(sharp_pyramid[0],
-                                    tf.cast(predicted_pyramid[0], dtype='bfloat16'),
-                                    max_val=2.)
+        ssim_metric = tf.image.ssim(
+            sharp_pyramid[0],
+            tf.cast(predicted_pyramid[0], dtype='bfloat16'),
+            max_val=2.
+        )
+        psnr_metric = tf.image.psnr(
+            sharp_pyramid[0],
+            tf.cast(predicted_pyramid[0], dtype='bfloat16'),
+            max_val=2.
+        )
 
-        return {'g_loss': g_loss,
-                'ssim': tf.reduce_mean(ssim_metric),
-                'psnr': tf.reduce_mean(psnr_metric),
-                'c_loss': c_loss}
+        return {
+            'g_loss': g_loss,
+            'ssim': tf.reduce_mean(ssim_metric),
+            'psnr': tf.reduce_mean(psnr_metric),
+            'c_loss': c_loss
+        }

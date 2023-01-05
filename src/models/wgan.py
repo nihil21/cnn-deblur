@@ -1,94 +1,108 @@
 import os
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras.layers import Input, Conv2D, ELU, LeakyReLU, Activation, BatchNormalization, LayerNormalization
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Optimizer
-from tqdm import notebook
 import typing
 
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tqdm.auto import tqdm
 
-def create_patchgan_critic(input_shape,
-                           use_elu: bool = False,
-                           use_sigmoid: bool = False,
-                           use_bn: bool = False):
-    in_layer = Input(input_shape)
+
+
+def create_patchgan_critic(
+        input_shape,
+        use_elu: bool = False,
+        use_sigmoid: bool = False,
+        use_bn: bool = False
+):
+    in_layer = keras.layers.Input(input_shape)
     # Block 1
-    x = Conv2D(filters=64,
-               kernel_size=4,
-               strides=2,
-               padding='same',
-               name='conv1')(in_layer)
+    x = keras.layers.Conv2D(
+        filters=64,
+        kernel_size=4,
+        strides=2,
+        padding='same',
+        name='conv1'
+    )(in_layer)
     if use_bn:
-        x = BatchNormalization(name='bn1')(x)
+        x = keras.layers.BatchNormalization(name='bn1')(x)
     else:
-        x = LayerNormalization(name='ln1')(x)
+        x = keras.layers.LayerNormalization(name='ln1')(x)
     if use_elu:
-        x = ELU(name='elu1')(x)
+        x = keras.layers.ELU(name='elu1')(x)
     else:
-        x = LeakyReLU(name='lrelu1')(x)
+        x = keras.layers.LeakyReLU(name='lrelu1')(x)
     # Block 2
-    x = Conv2D(filters=128,
-               kernel_size=4,
-               strides=2,
-               padding='same',
-               name='conv2')(x)
+    x = keras.layers.Conv2D(
+        filters=128,
+        kernel_size=4,
+        strides=2,
+        padding='same',
+        name='conv2'
+    )(x)
     if use_bn:
-        x = BatchNormalization(name='bn2')(x)
+        x = keras.layers.BatchNormalization(name='bn2')(x)
     else:
-        x = LayerNormalization(name='ln2')(x)
+        x = keras.layers.LayerNormalization(name='ln2')(x)
     if use_elu:
-        x = ELU(name='elu2')(x)
+        x = keras.layers.ELU(name='elu2')(x)
     else:
-        x = LeakyReLU(name='lrelu2')(x)
+        x = keras.layers.LeakyReLU(name='lrelu2')(x)
     # Block 3
-    x = Conv2D(filters=256,
-               kernel_size=4,
-               strides=2,
-               padding='same',
-               name='conv3')(x)
+    x = keras.layers.Conv2D(
+        filters=256,
+        kernel_size=4,
+        strides=2,
+        padding='same',
+        name='conv3'
+    )(x)
     if use_bn:
-        x = BatchNormalization(name='bn3')(x)
+        x = keras.layers.BatchNormalization(name='bn3')(x)
     else:
-        x = LayerNormalization(name='ln3')(x)
+        x = keras.layers.LayerNormalization(name='ln3')(x)
     if use_elu:
-        x = ELU(name='elu3')(x)
+        x = keras.layers.ELU(name='elu3')(x)
     else:
-        x = LeakyReLU(name='lrelu3')(x)
+        x = keras.layers.LeakyReLU(name='lrelu3')(x)
     # Block 4
-    x = Conv2D(filters=512,
-               kernel_size=4,
-               strides=1,
-               padding='same',
-               name='conv4')(x)
+    x = keras.layers.Conv2D(
+        filters=512,
+        kernel_size=4,
+        strides=1,
+        padding='same',
+        name='conv4'
+    )(x)
     if use_bn:
-        x = BatchNormalization(name='bn4')(x)
+        x = keras.layers.BatchNormalization(name='bn4')(x)
     else:
-        x = LayerNormalization(name='ln4')(x)
+        x = keras.layers.LayerNormalization(name='ln4')(x)
     if use_elu:
-        x = ELU(name='elu4')(x)
+        x = keras.layers.ELU(name='elu4')(x)
     else:
-        x = LeakyReLU(name='lrelu4')(x)
+        x = keras.layers.LeakyReLU(name='lrelu4')(x)
     # Block 5
-    out_layer = Conv2D(filters=1,
-                       kernel_size=4,
-                       strides=1,
-                       padding='same',
-                       name='conv5')(x)
+    out_layer = keras.layers.Conv2D(
+        filters=1,
+        kernel_size=4,
+        strides=1,
+        padding='same',
+        name='conv5'
+    )(x)
     if use_sigmoid:
-        out_layer = Activation('sigmoid')(x)
+        out_layer = keras.layers.Activation('sigmoid')(x)
 
-    return Model(inputs=in_layer, outputs=out_layer, name='Critic')
+    return keras.models.Model(inputs=in_layer, outputs=out_layer, name='Critic')
 
 
 class WGAN:
-    def __init__(self,
-                 generator: Model,
-                 critic: Model,
-                 generator_loss: typing.Callable,
-                 critic_loss: typing.Callable,
-                 generator_optimizer: Optimizer,
-                 critic_optimizer: Optimizer):
+    def __init__(
+            self,
+            generator: keras.models.Model,
+            critic: keras.models.Model,
+            generator_loss: typing.Callable,
+            critic_loss: typing.Callable,
+            generator_optimizer: keras.optimizers.Optimizer,
+            critic_optimizer: keras.optimizers.Optimizer
+    ):
         # Set generator's and critic's models
         self.generator = generator
         self.critic = critic
@@ -105,14 +119,18 @@ class WGAN:
         self.gp_weight = 10.0
 
     @tf.function
-    def gradient_penalty(self,
-                         batch_size,
-                         real_imgs,
-                         fake_imgs):
+    def gradient_penalty(
+            self,
+            batch_size,
+            real_imgs,
+            fake_imgs
+    ):
         # Get interpolated pyramid
-        alpha = tf.random.normal(shape=[batch_size, 1, 1, 1],
-                                 mean=0.,
-                                 stddev=1.)
+        alpha = tf.random.normal(
+            shape=[batch_size, 1, 1, 1],
+            mean=0.,
+            stddev=1.
+        )
         interpolated = alpha * real_imgs + (1. - alpha) * fake_imgs
 
         with tf.GradientTape() as gp_tape:
@@ -128,8 +146,10 @@ class WGAN:
 
     # Override train_step and test_step in order to account for pyramids instead of single-scale images
     @tf.function
-    def train_step(self,
-                   train_batch: typing.Tuple[tf.Tensor, tf.Tensor]):
+    def train_step(
+            self,
+            train_batch: typing.Tuple[tf.Tensor, tf.Tensor]
+    ):
         (blurred_batch, sharp_batch) = train_batch
         batch_size = tf.shape(blurred_batch)[0]
         c_losses = []
@@ -168,39 +188,59 @@ class WGAN:
         self.g_optimizer.apply_gradients(zip(g_grad, self.generator.trainable_variables))
 
         # Compute metrics
-        ssim_metric = tf.image.ssim(sharp_batch,
-                                    tf.cast(predicted_batch, dtype='bfloat16'),
-                                    max_val=2.)
-        psnr_metric = tf.image.psnr(sharp_batch,
-                                    tf.cast(predicted_batch, dtype='bfloat16'),
-                                    max_val=2.)
+        ssim_metric = tf.image.ssim(
+            sharp_batch,
+            tf.cast(predicted_batch, dtype='bfloat16'),
+            max_val=2.
+        )
+        psnr_metric = tf.image.psnr(
+            sharp_batch,
+            tf.cast(predicted_batch, dtype='bfloat16'),
+            max_val=2.
+        )
 
-        return {'g_loss': g_loss,
-                'ssim': tf.reduce_mean(ssim_metric),
-                'psnr': tf.reduce_mean(psnr_metric),
-                'c_loss': tf.reduce_mean(c_losses)}
+        return {
+            'g_loss': g_loss,
+            'ssim': tf.reduce_mean(ssim_metric),
+            'psnr': tf.reduce_mean(psnr_metric),
+            'c_loss': tf.reduce_mean(c_losses)
+        }
 
     @tf.function
-    def distributed_train_step(self,
-                               train_batch: tf.data.Dataset,
-                               strategy: typing.Optional[tf.distribute.Strategy] = None):
+    def distributed_train_step(
+            self,
+            train_batch: tf.data.Dataset,
+            strategy: typing.Optional[tf.distribute.Strategy] = None
+    ):
         per_replica_results = strategy.run(self.train_step, args=(train_batch,))
-        reduced_g_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                         per_replica_results['g_loss'], axis=None)
-        reduced_ssim = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                       per_replica_results['ssim'], axis=None)
-        reduced_psnr = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                       per_replica_results['psnr'], axis=None)
-        reduced_c_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                         per_replica_results['c_loss'], axis=None)
-        return {'g_loss': reduced_g_loss,
-                'ssim': reduced_ssim,
-                'psnr': reduced_psnr,
-                'c_loss': reduced_c_loss}
+        reduced_g_loss = strategy.reduce(
+            tf.distribute.ReduceOp.MEAN,
+            per_replica_results['g_loss'], axis=None
+        )
+        reduced_ssim = strategy.reduce(
+            tf.distribute.ReduceOp.MEAN,
+            per_replica_results['ssim'], axis=None
+        )
+        reduced_psnr = strategy.reduce(
+            tf.distribute.ReduceOp.MEAN,
+            per_replica_results['psnr'], axis=None
+        )
+        reduced_c_loss = strategy.reduce(
+            tf.distribute.ReduceOp.MEAN,
+            per_replica_results['c_loss'], axis=None
+        )
+        return {
+            'g_loss': reduced_g_loss,
+            'ssim': reduced_ssim,
+            'psnr': reduced_psnr,
+            'c_loss': reduced_c_loss
+        }
 
     @tf.function
-    def test_step(self,
-                  val_batch: typing.Tuple[tf.Tensor, tf.Tensor]):
+    def test_step(
+            self,
+            val_batch: typing.Tuple[tf.Tensor, tf.Tensor]
+    ):
         (blurred_batch, sharp_batch) = val_batch
 
         # Generate fake inputs
@@ -214,37 +254,56 @@ class WGAN:
         g_loss = self.g_loss(sharp_batch, predicted_batch, fake_logits)
 
         # Compute metrics
-        ssim_metric = tf.image.ssim(sharp_batch,
-                                    tf.cast(predicted_batch, dtype='bfloat16'),
-                                    max_val=2.)
-        psnr_metric = tf.image.psnr(sharp_batch,
-                                    tf.cast(predicted_batch, dtype='bfloat16'),
-                                    max_val=2.)
+        ssim_metric = tf.image.ssim(
+            sharp_batch,
+            tf.cast(predicted_batch, dtype='bfloat16'),
+            max_val=2.
+        )
+        psnr_metric = tf.image.psnr(
+            sharp_batch,
+            tf.cast(predicted_batch, dtype='bfloat16'),
+            max_val=2.
+        )
 
-        return {'g_loss': g_loss,
-                'ssim': tf.reduce_mean(ssim_metric),
-                'psnr': tf.reduce_mean(psnr_metric),
-                'c_loss': c_loss}
+        return {
+            'g_loss': g_loss,
+            'ssim': tf.reduce_mean(ssim_metric),
+            'psnr': tf.reduce_mean(psnr_metric),
+            'c_loss': c_loss
+        }
 
     @tf.function
-    def distributed_train_step(self,
-                               train_batch: tf.data.Dataset,
-                               strategy: typing.Optional[tf.distribute.Strategy] = None):
+    def distributed_train_step(
+            self,
+            train_batch: tf.data.Dataset,
+            strategy: typing.Optional[tf.distribute.Strategy] = None
+    ):
         per_replica_results = strategy.run(self.train_step, args=(train_batch,))
-        reduced_g_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                         per_replica_results['g_loss'], axis=None)
-        reduced_ssim = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                       per_replica_results['ssim'], axis=None)
-        reduced_psnr = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                       per_replica_results['psnr'], axis=None)
-        reduced_c_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                         per_replica_results['c_loss'], axis=None)
-        return {'g_loss': reduced_g_loss,
-                'ssim': reduced_ssim,
-                'psnr': reduced_psnr,
-                'c_loss': reduced_c_loss}
+        reduced_g_loss = strategy.reduce(
+            tf.distribute.ReduceOp.MEAN,
+            per_replica_results['g_loss'], axis=None
+        )
+        reduced_ssim = strategy.reduce(
+            tf.distribute.ReduceOp.MEAN,
+            per_replica_results['ssim'], axis=None
+        )
+        reduced_psnr = strategy.reduce(
+            tf.distribute.ReduceOp.MEAN,
+            per_replica_results['psnr'], axis=None
+        )
+        reduced_c_loss = strategy.reduce(
+            tf.distribute.ReduceOp.MEAN,
+            per_replica_results['c_loss'], axis=None
+        )
+        return {
+            'g_loss': reduced_g_loss,
+            'ssim': reduced_ssim,
+            'psnr': reduced_psnr,
+            'c_loss': reduced_c_loss
+        }
 
-    def fit(self,
+    def fit(
+            self,
             train_data: typing.Union[tf.data.Dataset, np.ndarray],
             epochs: int,
             steps_per_epoch: int,
@@ -252,23 +311,42 @@ class WGAN:
             validation_data: typing.Optional[tf.data.Dataset] = None,
             validation_steps: typing.Optional[int] = None,
             checkpoint_dir: typing.Optional[str] = None,
-            checkpoint_freq: int = 15):
+            checkpoint_freq: int = 15
+    ):
         if isinstance(train_data, tf.data.Dataset):
-            return self.__fit_on_dataset(train_data, epochs, steps_per_epoch, initial_epoch,
-                                         validation_data, validation_steps, checkpoint_dir, checkpoint_freq)
+            return self.__fit_on_dataset(
+                train_data,
+                epochs,
+                steps_per_epoch,
+                initial_epoch,
+                validation_data,
+                validation_steps,
+                checkpoint_dir,
+                checkpoint_freq
+            )
         elif isinstance(train_data, typing.Tuple):
-            return self.__fit_on_tensor(train_data, epochs, steps_per_epoch, initial_epoch,
-                                        validation_data, validation_steps, checkpoint_dir, checkpoint_freq)
+            return self.__fit_on_tensor(
+                train_data,
+                epochs,
+                steps_per_epoch,
+                initial_epoch,
+                validation_data,
+                validation_steps,
+                checkpoint_dir,
+                checkpoint_freq
+            )
 
-    def __fit_on_dataset(self,
-                         train_data: tf.data.Dataset,
-                         epochs: int,
-                         steps_per_epoch: int,
-                         initial_epoch: int = 0,
-                         validation_data: typing.Optional[tf.data.Dataset] = None,
-                         validation_steps: typing.Optional[int] = None,
-                         checkpoint_dir: typing.Optional[str] = None,
-                         checkpoint_freq: int = 15):
+    def __fit_on_dataset(
+            self,
+            train_data: tf.data.Dataset,
+            epochs: int,
+            steps_per_epoch: int,
+            initial_epoch: int = 0,
+            validation_data: typing.Optional[tf.data.Dataset] = None,
+            validation_steps: typing.Optional[int] = None,
+            checkpoint_dir: typing.Optional[str] = None,
+            checkpoint_freq: int = 15
+    ):
         # Set up lists that will contain training history
         g_loss_hist = []
         ssim_hist = []
@@ -278,7 +356,7 @@ class WGAN:
         val_ssim_hist = []
         val_psnr_hist = []
         val_c_loss_hist = []
-        for ep in notebook.tqdm(range(initial_epoch, epochs)):
+        for ep in tqdm(range(initial_epoch, epochs)):
             print('=' * 50)
             print('Epoch {:d}/{:d}'.format(ep + 1, epochs))
 
@@ -289,7 +367,7 @@ class WGAN:
             c_losses = []
 
             # Perform training
-            for train_batch in notebook.tqdm(train_data, total=steps_per_epoch):
+            for train_batch in tqdm(train_data, total=steps_per_epoch):
                 # Perform train step
                 step_result = self.train_step(train_batch)
 
@@ -326,7 +404,7 @@ class WGAN:
                 val_ssim_metrics = []
                 val_psnr_metrics = []
                 val_c_losses = []
-                for val_batch in notebook.tqdm(validation_data, total=validation_steps):
+                for val_batch in tqdm(validation_data, total=validation_steps):
                     # Perform eval step
                     step_result = self.test_step(val_batch)
 
@@ -375,24 +453,28 @@ class WGAN:
                 print(' OK')
 
         # Return history
-        return {'g_loss': g_loss_hist,
-                'ssim': ssim_hist,
-                'psnr': psnr_hist,
-                'c_loss': c_loss_hist,
-                'val_g_loss': val_g_loss_hist,
-                'val_ssim': val_ssim_hist,
-                'val_psnr': val_psnr_hist,
-                'val_c_loss': val_c_loss_hist}
+        return {
+            'g_loss': g_loss_hist,
+            'ssim': ssim_hist,
+            'psnr': psnr_hist,
+            'c_loss': c_loss_hist,
+            'val_g_loss': val_g_loss_hist,
+            'val_ssim': val_ssim_hist,
+            'val_psnr': val_psnr_hist,
+            'val_c_loss': val_c_loss_hist
+        }
 
-    def __fit_on_tensor(self,
-                        train_data: typing.Tuple[np.ndarray, np.ndarray],
-                        epochs: int,
-                        steps_per_epoch: int,
-                        initial_epoch: int = 0,
-                        validation_data: typing.Optional[typing.Tuple[np.ndarray, np.ndarray]] = None,
-                        validation_steps: typing.Optional[int] = None,
-                        checkpoint_dir: typing.Optional[str] = None,
-                        checkpoint_freq: int = 15):
+    def __fit_on_tensor(
+            self,
+            train_data: typing.Tuple[np.ndarray, np.ndarray],
+            epochs: int,
+            steps_per_epoch: int,
+            initial_epoch: int = 0,
+            validation_data: typing.Optional[typing.Tuple[np.ndarray, np.ndarray]] = None,
+            validation_steps: typing.Optional[int] = None,
+            checkpoint_dir: typing.Optional[str] = None,
+            checkpoint_freq: int = 15
+    ):
         batch_size = train_data[0].shape[0]
         val_batch_size = validation_data[0].shape[0] \
             if validation_data is not None and validation_steps is not None \
@@ -406,7 +488,7 @@ class WGAN:
         val_ssim_hist = []
         val_psnr_hist = []
         val_c_loss_hist = []
-        for ep in notebook.tqdm(range(initial_epoch, epochs)):
+        for ep in tqdm(range(initial_epoch, epochs)):
             print('=' * 50)
             print('Epoch {:d}/{:d}'.format(ep + 1, epochs))
 
@@ -420,7 +502,7 @@ class WGAN:
             c_losses = []
 
             # Perform training
-            for i in notebook.tqdm(range(steps_per_epoch)):
+            for i in tqdm(range(steps_per_epoch)):
                 # Prepare batch
                 batch_indexes = permuted_indexes[i * batch_size:(i + 1) * batch_size]
                 blurred_batch = train_data[0][batch_indexes]
@@ -465,7 +547,7 @@ class WGAN:
                 val_ssim_metrics = []
                 val_psnr_metrics = []
                 val_c_losses = []
-                for i in notebook.tqdm(range(validation_steps)):
+                for i in tqdm(range(validation_steps)):
                     # Prepare batch
                     val_batch_indexes = val_permuted_indexes[i * val_batch_size:(i + 1) * val_batch_size]
                     val_blurred_batch = validation_data[0][val_batch_indexes]
@@ -519,25 +601,29 @@ class WGAN:
                 print(' OK')
 
         # Return history
-        return {'g_loss': g_loss_hist,
-                'ssim': ssim_hist,
-                'psnr': psnr_hist,
-                'c_loss': c_loss_hist,
-                'val_g_loss': val_g_loss_hist,
-                'val_ssim': val_ssim_hist,
-                'val_psnr': val_psnr_hist,
-                'val_c_loss': val_c_loss_hist}
+        return {
+            'g_loss': g_loss_hist,
+            'ssim': ssim_hist,
+            'psnr': psnr_hist,
+            'c_loss': c_loss_hist,
+            'val_g_loss': val_g_loss_hist,
+            'val_ssim': val_ssim_hist,
+            'val_psnr': val_psnr_hist,
+            'val_c_loss': val_c_loss_hist
+        }
 
-    def distributed_fit(self,
-                        train_data: tf.data.Dataset,
-                        epochs: int,
-                        steps_per_epoch: int,
-                        strategy: tf.distribute.Strategy,
-                        initial_epoch: typing.Optional[int] = 0,
-                        validation_data: typing.Optional[tf.data.Dataset] = None,
-                        validation_steps: typing.Optional[int] = None,
-                        checkpoint_dir: typing.Optional[str] = None,
-                        checkpoint_freq: typing.Optional[int] = 15):
+    def distributed_fit(
+            self,
+            train_data: tf.data.Dataset,
+            epochs: int,
+            steps_per_epoch: int,
+            strategy: tf.distribute.Strategy,
+            initial_epoch: typing.Optional[int] = 0,
+            validation_data: typing.Optional[tf.data.Dataset] = None,
+            validation_steps: typing.Optional[int] = None,
+            checkpoint_dir: typing.Optional[str] = None,
+            checkpoint_freq: typing.Optional[int] = 15
+    ):
         # Set up lists that will contain training history
         g_loss_hist = []
         ssim_hist = []
@@ -547,7 +633,7 @@ class WGAN:
         val_ssim_hist = []
         val_psnr_hist = []
         val_c_loss_hist = []
-        for ep in notebook.tqdm(range(initial_epoch, epochs)):
+        for ep in tqdm(range(initial_epoch, epochs)):
             print('=' * 50)
             print('Epoch {:d}/{:d}'.format(ep + 1, epochs))
 
@@ -558,7 +644,7 @@ class WGAN:
             c_losses = []
 
             # Perform training
-            for batch in notebook.tqdm(train_data, total=steps_per_epoch):
+            for batch in tqdm(train_data, total=steps_per_epoch):
                 # Perform train step
                 step_result = self.distributed_train_step(batch, strategy)
 
@@ -595,7 +681,7 @@ class WGAN:
                 val_ssim_metrics = []
                 val_psnr_metrics = []
                 val_c_losses = []
-                for val_batch in notebook.tqdm(validation_data, total=validation_steps):
+                for val_batch in tqdm(validation_data, total=validation_steps):
                     # Perform eval step
                     step_result = self.test_step(val_batch)
 
@@ -644,14 +730,16 @@ class WGAN:
                 print(' OK')
 
         # Return history
-        return {'g_loss': g_loss_hist,
-                'ssim': ssim_hist,
-                'psnr': psnr_hist,
-                'c_loss': c_loss_hist,
-                'val_g_loss': val_g_loss_hist,
-                'val_ssim': val_ssim_hist,
-                'val_psnr': val_psnr_hist,
-                'val_c_loss': val_c_loss_hist}
+        return {
+            'g_loss': g_loss_hist,
+            'ssim': ssim_hist,
+            'psnr': psnr_hist,
+            'c_loss': c_loss_hist,
+            'val_g_loss': val_g_loss_hist,
+            'val_ssim': val_ssim_hist,
+            'val_psnr': val_psnr_hist,
+            'val_c_loss': val_c_loss_hist
+        }
 
     def evaluate(self,
                  test_data: tf.data.Dataset,
@@ -660,7 +748,7 @@ class WGAN:
         ssim_metrics = []
         psnr_metrics = []
         c_losses = []
-        for batch in notebook.tqdm(test_data, total=steps):
+        for batch in tqdm(test_data, total=steps):
             # Perform test step
             step_result = self.test_step(batch)
 

@@ -17,8 +17,7 @@ import numpy as np
 import os
 import glob
 import matplotlib.pyplot as plt
-from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow import keras
 from datasets import cifar_dataset
 from models.resnet import ResNet16, ResNet16Dense, ResNet20
 from models.unet import UNet16, UNet20
@@ -42,7 +41,13 @@ def main():
     args = vars(ap.parse_args())
 
     filepath = '/home/uni/weights/cifar/ep:{epoch:03d}-val_loss:{val_loss:.3f}.hdf5'
-    checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
+    checkpoint = keras.callbacks.ModelCheckpoint(
+        filepath,
+        monitor='val_loss',
+        verbose=1,
+        save_best_only=True,
+        mode='min'
+    )
     callbacks_list = [checkpoint]
 
     print('=' * 50)
@@ -101,8 +106,8 @@ def main():
     steps_val = len(valX) // BATCH_SIZE
 
     # Data augmentation
-    trainX_datagen = ImageDataGenerator(horizontal_flip=True, vertical_flip=True)
-    trainY_datagen = ImageDataGenerator(horizontal_flip=True, vertical_flip=True)
+    trainX_datagen = keras.preprocessing.image.ImageDataGenerator(horizontal_flip=True, vertical_flip=True)
+    trainY_datagen = keras.preprocessing.image.ImageDataGenerator(horizontal_flip=True, vertical_flip=True)
     trainX_data = trainX_datagen.flow(trainX, batch_size=BATCH_SIZE, seed=RND)
     trainY_data = trainY_datagen.flow(trainY, batch_size=BATCH_SIZE, seed=RND)
     train_data = (pair for pair in zip(trainX_data, trainY_data))

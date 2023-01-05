@@ -1,29 +1,35 @@
-from tensorflow.keras.datasets import cifar10
-import cv2
-import numpy as np
-from datasets.dataset_utils import load_dataset_from_gcs
-from sklearn.model_selection import train_test_split
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import typing
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+import cv2
+import numpy as np
+from sklearn.model_selection import train_test_split
+from tensorflow import keras
+
+from .dataset_utils import load_dataset_from_gcs
 
 
-def load_data(batch_size: int,
-              epochs: int,
-              val_size: int,
-              seed: int = 42,
-              repeat: bool = True,
-              zero_mean: bool = False):
-    return load_dataset_from_gcs(project_id='cnn-deblur',
-                                 bucket_name='cnn-d3blur-buck3t',
-                                 prefix='cifar10',
-                                 res=(32, 32),
-                                 val_size=val_size,
-                                 batch_size=batch_size,
-                                 epochs=epochs,
-                                 seed=seed,
-                                 repeat=repeat,
-                                 zero_mean=zero_mean)
+def load_data(
+        batch_size: int,
+        epochs: int,
+        val_size: int,
+        seed: int = 42,
+        repeat: bool = True,
+        zero_mean: bool = False
+):
+    return load_dataset_from_gcs(
+        project_id='cnn-deblur',
+        bucket_name='cnn-d3blur-buck3t',
+        prefix='cifar10',
+        res=(32, 32),
+        val_size=val_size,
+        batch_size=batch_size,
+        epochs=epochs,
+        seed=seed,
+        repeat=repeat,
+        zero_mean=zero_mean
+    )
 
 
 def load_image_dataset(val_ratio: float = 0.125, normalization: int = 1):
@@ -37,7 +43,7 @@ def load_image_dataset(val_ratio: float = 0.125, normalization: int = 1):
         :return test: tuple containing predictor and target images of the test set"""
 
     # Load training and test sets from Cifar10 dataset (labels are ignored)
-    (train_set, _), (test_set, _) = cifar10.load_data()
+    (train_set, _), (test_set, _) = keras.datasets.cifar10.load_data()
 
     # Set random state to ensure reproducible results and blur the dataset
     rnd = np.random.RandomState(seed=42)
@@ -51,10 +57,12 @@ def load_image_dataset(val_ratio: float = 0.125, normalization: int = 1):
         return (trainX, trainY), (testX, testY)
 
 
-def blur_dataset(train_set: np.ndarray,
-                 test_set: np.ndarray,
-                 normalization: int = 1,
-                 rnd: typing.Optional[np.random.RandomState] = None):
+def blur_dataset(
+        train_set: np.ndarray,
+        test_set: np.ndarray,
+        normalization: int = 1,
+        rnd: typing.Optional[np.random.RandomState] = None
+):
     """Function which concurrently blurs a training and a test datasets by applying random Gaussian noise
         :param train_set: NumPy array representing the training set (clean images)
         :param test_set: NumPy array representing the test set (clean images)
